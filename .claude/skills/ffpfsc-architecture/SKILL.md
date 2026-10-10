@@ -36,13 +36,16 @@ grep -rnE "^(import|from) (subprocess|mkpfs)" src/ffpfsc_converter/ui
 | Una nueva entidad o valor | `domain/models.py` (`@dataclass(frozen=True)` si es un valor) |
 | Notificar algo a la UI desde un hilo | nueva clase en `domain/events.py` + añadirla a la unión `Event` |
 | Un flag o parámetro de MkPFS | `ConversionOptions` + `infrastructure/mkpfs_adapter.build_pack_command` |
-| Leer algo de MkPFS (metadatos, exFAT) | `infrastructure/mkpfs_adapter.py` (import diferido de `mkpfs`) |
+| Leer algo de MkPFS (metadatos, exFAT) | `infrastructure/mkpfs_adapter/metadata.py` (import diferido de `mkpfs`) |
 | Operación de disco/SO | `infrastructure/filesystem.py` o `infrastructure/system.py` |
 | Un caso de uso / regla de negocio | `services/<caso_de_uso>.py` |
 | Un error que verá el usuario | subclase de `ConverterError` en `errors.py`, mensaje en español |
 | Un texto que muestra la UI | función pura en `ui/presenters.py` |
 | Color, fuente, medida | `ui/theme.py` |
-| Un widget o diálogo | `ui/app.py` (si crece, extraer a `ui/widgets/<nombre>.py`) |
+| Un widget nuevo | módulo propio en `ui/` (como `options_panel.py`, `job_table.py`) compuesto en `ui/main_view.py` |
+| Un diálogo o mensaje | `ui/dialogs.py` |
+| Reaccionar a un evento en la vista | `ui/event_handlers.py` (`ViewUpdater`) |
+| Una acción del usuario | callback en `ViewCallbacks` + método en `ui/app.py` (`MainWindow`) |
 
 ## Comunicación entre hilos
 
@@ -50,10 +53,11 @@ grep -rnE "^(import|from) (subprocess|mkpfs)" src/ffpfsc_converter/ui
    (`Callable[[Event], None]`) por constructor o parámetro. **Nunca** reciben
    widgets ni la ventana.
 2. Publican eventos inmutables de `domain/events.py`.
-3. `MainWindow` los consume en `_poll_events` y los despacha con el
-   diccionario `self._handlers` (`tipo de evento → método _on_<evento>`).
+3. `MainWindow._poll_events` los consume en el hilo de la interfaz y se los
+   entrega a `ViewUpdater`, que los despacha con el diccionario `_handlers`
+   (`tipo de evento → método _on_<evento>`).
 4. Para un evento nuevo: crear la dataclass → añadirla a `Event` → publicarla
-   en el servicio → registrar el manejador en `_handlers` → test del servicio.
+   en el servicio → registrar el manejador en `ViewUpdater._handlers` → test del servicio.
 
 ## Inyección de dependencias
 
@@ -67,7 +71,7 @@ parámetro con un valor por defecto real.
 - Un servicio importa `tkinter` o llama a `messagebox` → mover la decisión a la UI.
 - La UI construye un comando o lee un archivo del juego → mover a un servicio.
 - Aparece un literal numérico de negocio fuera de `config.py`.
-- Un módulo supera ~300 líneas o mezcla dos responsabilidades → dividir.
+- Un archivo supera **250 líneas** o mezcla dos responsabilidades → dividir (regla `limite-de-lineas.md`).
 - Un evento se publica como tupla o dict → debe ser una dataclass de `domain/events.py`.
 
 Al terminar, actualiza `docs/ARCHITECTURE.md` si cambiaste la estructura.

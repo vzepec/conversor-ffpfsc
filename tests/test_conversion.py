@@ -21,29 +21,35 @@ class FakeProcess:
     """Doble de PackProcess: escribe la salida y emite líneas predefinidas."""
 
     def __init__(self, command: list[str], lines: list[str], return_code: int) -> None:
+        """Guarda la salida esperada y las líneas que emitirá el proceso."""
         self.output = Path(command[-1])
         self._lines = lines
         self._rc = return_code
         self.terminated = False
 
     def lines(self) -> Iterator[str]:
+        """Crea el archivo de salida y emite las líneas predefinidas."""
         self.output.write_bytes(b"x" * 10)
         yield from self._lines
 
     def wait(self) -> int:
+        """Devuelve el código de salida configurado."""
         return self._rc
 
     def terminate(self) -> None:
+        """Registra que se pidió terminar el proceso."""
         self.terminated = True
 
 
 def _job(tmp_path: Path, name: str) -> ConversionJob:
+    """Crea un trabajo de imagen con un archivo de origen de 100 bytes."""
     image = tmp_path / f"{name}.exfat"
     image.write_bytes(b"x" * 100)
     return ConversionJob(image, image, tmp_path / f"{name}.ffpfsc", size=100)
 
 
 def _run(tmp_path: Path, jobs: list[ConversionJob], rc: int) -> list[Event]:
+    """Ejecuta la cola con procesos falsos y devuelve los eventos publicados."""
     events: list[Event] = []
     runner = ConversionRunner(
         events.append,
@@ -55,6 +61,7 @@ def _run(tmp_path: Path, jobs: list[ConversionJob], rc: int) -> list[Event]:
 
 
 def test_successful_queue(tmp_path: Path) -> None:
+    """Convierte dos trabajos en orden y publica todos sus eventos."""
     jobs = [_job(tmp_path, "a"), _job(tmp_path, "b")]
     events = _run(tmp_path, jobs, rc=0)
 
@@ -70,6 +77,7 @@ def test_successful_queue(tmp_path: Path) -> None:
 
 
 def test_failure_removes_partial_output(tmp_path: Path) -> None:
+    """Borra la salida parcial y marca el trabajo como fallido."""
     job = _job(tmp_path, "a")
     events = _run(tmp_path, [job], rc=1)
     result = next(e for e in events if isinstance(e, JobFinished)).result
@@ -79,7 +87,8 @@ def test_failure_removes_partial_output(tmp_path: Path) -> None:
     assert not job.output.exists()
 
 
-def test_cancel_before_start_skips_everything(tmp_path: Path) -> None:
+def test_previous_cancel_does_not_affect_new_queue(tmp_path: Path) -> None:
+    """Una cancelación previa no afecta a la siguiente cola."""
     events: list[Event] = []
     runner = ConversionRunner(events.append, process_factory=lambda cmd: FakeProcess(cmd, [], 0))
     runner.cancel()
@@ -89,7 +98,9 @@ def test_cancel_before_start_skips_everything(tmp_path: Path) -> None:
 
 
 def test_spawn_error_is_reported(tmp_path: Path) -> None:
+    """Informa el error si el proceso no se puede lanzar."""
     def boom(_cmd: list[str]) -> FakeProcess:
+        """Simula que el ejecutable no existe."""
         raise OSError("no python")
 
     events: list[Event] = []

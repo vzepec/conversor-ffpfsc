@@ -17,7 +17,7 @@ description: Buenas prácticas del Conversor FFPFSC — hilos y Tkinter, integra
 
 ## 2. MkPFS
 
-- Todo el conocimiento de MkPFS vive en `infrastructure/mkpfs_adapter.py`.
+- Todo el conocimiento de MkPFS vive en `infrastructure/mkpfs_adapter/` (`command.py`, `output.py`, `process.py`, `metadata.py`).
 - El backend de compresión es **siempre `zlib-ng`** (`COMPRESSION_BACKEND`).
   No lo cambies sin verificar en consola: `isal` produce imágenes que la PS5
   lee mal (MkPFS #132).
@@ -48,7 +48,7 @@ Los juegos ocupan decenas de GB y tardan horas en copiarse:
 - Sustituye procesos con dobles (`FakeProcess`) a través de la inyección de
   dependencias; `monkeypatch` solo para casos puntuales.
 - Un bug corregido = un test que lo reproduce primero.
-- La UI (`ui/app.py`) no se testea automáticamente: mantenla delgada. Si una
+- La UI (`ui/app.py`, `ui/main_view.py` y sus widgets) no se testea automáticamente: mantenla delgada. Si una
   lógica de la UI merece un test, es señal de que debe moverse a `presenters.py`
   o a un servicio.
 
@@ -73,7 +73,8 @@ Los juegos ocupan decenas de GB y tardan horas en copiarse:
 
 ```bash
 source .venv/bin/activate
-ruff check src tests      # sin errores
+ruff check src tests tools          # sin errores
+python tools/check_standards.py     # ≤ 250 líneas y docstrings completas
 pytest                    # todo en verde
 ```
 

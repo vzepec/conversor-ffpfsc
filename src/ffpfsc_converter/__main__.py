@@ -6,7 +6,14 @@ from pathlib import Path
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Abre la ventana principal y encola las rutas recibidas por argumento."""
+    """Abre la ventana principal y encola las rutas recibidas por argumento.
+
+    Args:
+        argv (list[str] | None): Rutas a encolar; ``None`` usa ``sys.argv[1:]``.
+
+    Returns:
+        int: Código de salida del proceso (``0`` al cerrar la ventana).
+    """
     # Import diferido: permite usar el paquete sin tkinter (tests, scripts).
     from ffpfsc_converter.ui.app import MainWindow
 

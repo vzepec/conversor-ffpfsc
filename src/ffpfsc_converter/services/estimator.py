@@ -32,7 +32,19 @@ def estimate_sizes(
     sample_blocks: int = ESTIMATE_SAMPLE_BLOCKS,
     seed: int = ESTIMATE_SEED,
 ) -> dict[int, int]:
-    """Estima el tamaño final en bytes para cada nivel de compresión."""
+    """Estima el tamaño final en bytes para cada nivel de compresión.
+
+    Args:
+        files (Sequence[FileEntry]): Archivos que forman el juego.
+        levels (Sequence[int]): Niveles de compresión zlib a estimar.
+        sample_blocks (int): Cantidad de bloques de 64 KiB a muestrear.
+        seed (int): Semilla del muestreo; fija para resultados reproducibles.
+
+    Returns:
+        dict[int, int]: Nivel → bytes estimados, con la sobrecarga PFS incluida.
+        Si no hay datos devuelve ``0``; si no se pudo leer ningún bloque, el
+        tamaño original.
+    """
     total = sum(f.size for f in files)
     if total == 0:
         return {level: 0 for level in levels}
@@ -49,7 +61,21 @@ def estimate_sizes(
 
 
 def compression_ratio(blocks: Sequence[bytes], level: int) -> float:
-    """Razón almacenado/original; un bloque que no reduce se guarda en crudo."""
+    """Calcula la razón almacenado/original de una muestra de bloques.
+
+    Un bloque que no se reduce al comprimirlo se cuenta en crudo, igual que
+    hace PFSC.
+
+    Args:
+        blocks (Sequence[bytes]): Bloques de la muestra (no vacía).
+        level (int): Nivel de compresión zlib.
+
+    Returns:
+        float: Valor entre ``0`` y ``1``; ``1.0`` = sin ahorro.
+
+    Raises:
+        ZeroDivisionError: Si ``blocks`` está vacía.
+    """
     stored = original = 0
     for block in blocks:
         stored += min(len(_zlib.compress(block, level)), len(block))
@@ -60,7 +86,16 @@ def compression_ratio(blocks: Sequence[bytes], level: int) -> float:
 def _sample_offsets(
     files: Sequence[FileEntry], count: int, seed: int
 ) -> dict[int, list[int]]:
-    """Elige ``count`` offsets alineados a bloque: {índice de archivo: [offsets]}."""
+    """Elige offsets alineados a bloque, ponderados por tamaño de archivo.
+
+    Args:
+        files (Sequence[FileEntry]): Archivos del juego (tamaño total > 0).
+        count (int): Cantidad de offsets a elegir.
+        seed (int): Semilla del generador aleatorio.
+
+    Returns:
+        dict[int, list[int]]: Índice de archivo → offsets elegidos en ese archivo.
+    """
     rng = random.Random(seed)
     cumulative: list[int] = []
     acc = 0
@@ -78,6 +113,15 @@ def _sample_offsets(
 
 
 def _read_blocks(files: Sequence[FileEntry], picks: dict[int, list[int]]) -> list[bytes]:
+    """Lee del disco los bloques elegidos, en orden para minimizar saltos.
+
+    Args:
+        files (Sequence[FileEntry]): Archivos del juego.
+        picks (dict[int, list[int]]): Índice de archivo → offsets a leer.
+
+    Returns:
+        list[bytes]: Bloques leídos; los archivos ilegibles se omiten.
+    """
     blocks: list[bytes] = []
     for i in sorted(picks):
         try:

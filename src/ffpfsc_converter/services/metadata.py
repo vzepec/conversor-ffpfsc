@@ -13,7 +13,18 @@ _FALLBACK_TITLE_KEYS = ("titleName", "title", "name")
 
 
 def parse_param_json(data: bytes) -> GameInfo:
-    """Extrae los metadatos de un ``param.json`` de PS5."""
+    """Extrae los metadatos de un ``param.json`` de PS5.
+
+    Args:
+        data (bytes): Contenido del archivo, con o sin BOM UTF-8.
+
+    Returns:
+        GameInfo: Metadatos leídos; vacío si el JSON no es un objeto.
+
+    Raises:
+        json.JSONDecodeError: Si el contenido no es JSON válido.
+        UnicodeDecodeError: Si el contenido no es UTF-8.
+    """
     root = json.loads(data.decode("utf-8-sig"))
     if not isinstance(root, dict):
         return GameInfo()
@@ -25,6 +36,18 @@ def parse_param_json(data: bytes) -> GameInfo:
 
 
 def _pick_title(root: dict[str, Any]) -> str:
+    """Elige el nombre del juego según la prioridad de idiomas.
+
+    Orden: idioma predeterminado del juego, ``en-US``, español
+    (``PREFERRED_LANGUAGES``), cualquier otro idioma y, por último, las claves
+    de primer nivel.
+
+    Args:
+        root (dict[str, Any]): Objeto raíz de ``param.json``.
+
+    Returns:
+        str: Nombre encontrado sin espacios extremos, o cadena vacía.
+    """
     localized = root.get("localizedParameters")
     if isinstance(localized, dict):
         order = [str(localized.get("defaultLanguage") or "en-US"), "en-US", *PREFERRED_LANGUAGES]
@@ -45,8 +68,14 @@ def _pick_title(root: dict[str, Any]) -> str:
 def read_game_info(target: Path) -> GameInfo:
     """Lee los metadatos desde una carpeta de juego o una imagen.
 
-    Es *best effort*: ante cualquier problema devuelve un :class:`GameInfo`
-    vacío, porque el nombre es informativo y nunca debe bloquear la conversión.
+    Es *best effort*: ante cualquier problema devuelve un ``GameInfo`` vacío,
+    porque el nombre es informativo y nunca debe bloquear la conversión.
+
+    Args:
+        target (Path): Carpeta con ``eboot.bin`` o imagen ``.exfat``/``.ffpkg``.
+
+    Returns:
+        GameInfo: Metadatos leídos, o vacío si no se pudieron obtener.
     """
     try:
         if target.is_dir():

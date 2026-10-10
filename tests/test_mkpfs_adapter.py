@@ -11,6 +11,7 @@ from ffpfsc_converter.infrastructure.mkpfs_adapter import (
 
 
 def test_parse_progress() -> None:
+    """Reconoce solo las líneas de progreso de MkPFS."""
     assert parse_progress("[2/4] 37% compress @ 512.3 MB/s") == ProgressUpdate(
         37, "compress", "512.3 MB/s")
     assert parse_progress("[1/4] 5% scan") == ProgressUpdate(5, "scan", None)
@@ -19,11 +20,13 @@ def test_parse_progress() -> None:
 
 
 def test_split_lines_handles_carriage_returns_across_chunks() -> None:
+    """Corta en retorno de carro y salto de línea aunque la línea llegue repartida."""
     chunks = [b"[1] 1% sc", b"an\r[1] 2% scan\r", b"\nhola\n", b"fin"]
     assert list(split_lines(chunks)) == ["[1] 1% scan", "[1] 2% scan", "hola", "fin"]
 
 
 def test_build_command_for_folder(game_folder: Path) -> None:
+    """Arma el comando de carpeta con todas las opciones."""
     root = game_folder / "PPSA00000-app"
     job = ConversionJob(game_folder, root, Path("/out/x.ffpfsc"))
     cmd = build_pack_command(job, ConversionOptions(6, 4, False), python_executable="py")
@@ -38,6 +41,7 @@ def test_build_command_for_folder(game_folder: Path) -> None:
 
 
 def test_build_command_for_image_with_full_verify(tmp_path: Path) -> None:
+    """Arma el comando de imagen con verificación completa."""
     image = tmp_path / "g.exfat"
     image.touch()
     job = ConversionJob(image, image, tmp_path / "g.ffpfsc")

@@ -6,7 +6,7 @@
 
 **Carpeta de juego · `.exfat` · `.ffpkg` &nbsp;→&nbsp; `.ffpfsc`**
 
-[![Versión](https://img.shields.io/badge/versión-1.0.0-6366f1?style=for-the-badge)](CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-1.1.0-6366f1?style=for-the-badge)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#-instalación)
 [![MkPFS](https://img.shields.io/badge/motor-MkPFS-0ea5e9?style=for-the-badge)](https://github.com/PSBrew/MkPFS)
@@ -154,12 +154,19 @@ secuencia y decisiones técnicas en **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 source .venv/bin/activate
 
 pytest                         # tests
-ruff check src tests           # lint
+ruff check src tests tools     # lint
+python tools/check_standards.py  # ≤ 250 líneas por archivo y docstrings completas
 python -m ffpfsc_converter     # ejecutar desde el código
 ```
 
-Este repositorio incluye **skills de Claude Code** en [`.claude/skills/`](.claude/skills/)
-que estandarizan la arquitectura, el código limpio y las buenas prácticas:
+El repositorio define **rules** obligatorias en [`.claude/rules/`](.claude/rules/), verificadas
+automáticamente por `pytest`:
+
+- 📏 **Ningún archivo supera 250 líneas**; si crece, se modulariza.
+- 📝 **Toda función documentada** en español neutro: descripción breve, `Args`, `Returns` y `Raises`.
+- 🧹 **Código limpio** y ✅ **buenas prácticas** con una definición de terminado clara.
+
+Además incluye **skills de Claude Code** en [`.claude/skills/`](.claude/skills/) con guías detalladas:
 
 | Skill | Define |
 |:------|:-------|

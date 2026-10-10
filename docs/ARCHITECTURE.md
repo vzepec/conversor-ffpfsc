@@ -41,7 +41,11 @@ src/ffpfsc_converter/
 │   ├── models.py          # ConversionJob, GameInfo, ConversionOptions, JobState…
 │   └── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
 ├── infrastructure/
-│   ├── mkpfs_adapter.py   # Comando `mkpfs pack`, proceso, parseo de progreso, metadatos
+│   ├── mkpfs_adapter/     # Todo lo relativo a MkPFS (API pública en __init__.py)
+│   │   ├── command.py     #   línea de comandos de `mkpfs pack`
+│   │   ├── output.py      #   corte de líneas y parseo del progreso
+│   │   ├── process.py     #   PackProcess: lanzar, leer y terminar el proceso
+│   │   └── metadata.py    #   metadatos y lectura de imágenes exFAT
 │   ├── filesystem.py      # Listado de archivos, espacio libre, borrado seguro
 │   └── system.py          # Abrir carpeta con xdg-open
 ├── services/
@@ -52,7 +56,12 @@ src/ffpfsc_converter/
 │   ├── preflight.py       # Comprobación de espacio libre
 │   └── conversion.py      # ConversionRunner: cola secuencial con cancelación
 └── ui/
-    ├── app.py             # MainWindow: construye widgets y despacha eventos
+    ├── app.py             # MainWindow: controlador (acciones del usuario → servicios)
+    ├── main_view.py       # MainView + ViewCallbacks: construye los widgets
+    ├── options_panel.py   # Modo, núcleos, destino y verificación
+    ├── job_table.py       # Tabla de la cola
+    ├── dialogs.py         # Selectores de archivos y mensajes
+    ├── event_handlers.py  # ViewUpdater: eventos → cambios en la vista
     ├── presenters.py      # Funciones puras que generan los textos mostrados
     ├── theme.py           # Colores, fuentes y medidas
     └── dnd.py             # Arrastrar y soltar opcional (tkinterdnd2)
@@ -91,8 +100,9 @@ sequenceDiagram
 - **Tkinter no es seguro entre hilos.** Ningún servicio toca widgets.
 - Los servicios reciben un `EventSink` (en la app: `queue.Queue.put`) y
   publican eventos inmutables (`@dataclass(frozen=True)`).
-- `MainWindow._poll_events` vacía la cola cada 100 ms en el hilo de la UI y
-  despacha cada evento a su manejador mediante un diccionario `tipo → método`.
+- `MainWindow._poll_events` vacía la cola cada 100 ms en el hilo de la interfaz
+  y entrega cada evento a `ViewUpdater`, que lo despacha mediante un
+  diccionario `tipo → método`.
 - La cancelación usa un `threading.Event`; el proceso de MkPFS se lanza con
   `start_new_session=True` para matar también sus procesos hijo con `killpg`.
 
@@ -114,10 +124,11 @@ sequenceDiagram
 | Quiero… | Dónde |
 |---------|-------|
 | Añadir un modo de compresión | Agrega un `CompressionPreset` a `PRESETS` en `config.py`. La estimación lo calcula sola. |
-| Pasar una opción nueva a MkPFS | Campo en `ConversionOptions` → `build_pack_command` → control en `ui/app.py`. Test en `test_mkpfs_adapter.py`. |
+| Pasar una opción nueva a MkPFS | Campo en `ConversionOptions` → `build_pack_command` → control en `ui/options_panel.py`. Test en `test_mkpfs_adapter.py`. |
 | Soportar otro formato de origen | `IMAGE_EXTENSIONS` en `config.py`; si necesita lógica, `services/discovery.py`. |
-| Mostrar un dato nuevo en la tabla | Evento en `domain/events.py` → publicarlo en el servicio → manejador en `MainWindow._handlers` → texto en `presenters.py`. |
+| Mostrar un dato nuevo en la tabla | Evento en `domain/events.py` → publicarlo en el servicio → manejador en `ViewUpdater` (`ui/event_handlers.py`) → texto en `presenters.py`. |
 | Crear una CLI sin interfaz | Nuevo paquete `cli/` que use `services/` con un `EventSink` que imprima. No requiere tocar servicios. |
 | Soportar Windows/macOS | `infrastructure/system.py` (abrir carpeta) y `PackProcess.terminate` (señales). |
 
-Las reglas detalladas están en las skills de [`.claude/skills/`](../.claude/skills/).
+Las normas obligatorias están en [`.claude/rules/`](../.claude/rules/) y las guías
+detalladas en las skills de [`.claude/skills/`](../.claude/skills/).

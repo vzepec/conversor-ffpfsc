@@ -44,9 +44,14 @@ description: Estándar de código limpio del Conversor FFPFSC — idioma, nombre
 
 ## Docstrings y comentarios
 
-- Docstring de una línea en toda función/clase pública que no sea obvia.
+> La regla completa está en [`.claude/rules/documentacion.md`](../../rules/documentacion.md)
+> y la verifica `tools/check_standards.py`.
+
+- **Toda** función y método lleva docstring estilo Google: descripción breve de
+  una línea, `Args:` (`nombre (tipo): descripción.`), `Returns:`/`Yields:`
+  (`tipo: descripción.`) y `Raises:` (`Error: condición.`) cuando correspondan.
+- Documentación siempre en **español neutro** (tuteo, sin regionalismos).
 - Documenta el **porqué**, no el qué: `# isal genera bloques que la PS5 lee mal (#132)`.
-- `Raises:` en el docstring si la función lanza excepciones de dominio.
 - No dejes código comentado ni `print` de depuración.
 
 ## Errores
@@ -67,7 +72,8 @@ description: Estándar de código limpio del Conversor FFPFSC — idioma, nombre
 
 ## Estilo
 
-- `ruff check src tests` sin errores (configuración en `pyproject.toml`, línea de 100).
+- `ruff check src tests tools` sin errores (configuración en `pyproject.toml`, línea de 100).
+- **Ningún archivo supera 250 líneas** ([`limite-de-lineas.md`](../../rules/limite-de-lineas.md)); si crece, se modulariza.
 - Imports ordenados por ruff (`I`): stdlib, terceros, proyecto; absolutos
   (`from ffpfsc_converter.x import y`).
 - Imports diferidos solo para dependencias opcionales o pesadas (`mkpfs`,

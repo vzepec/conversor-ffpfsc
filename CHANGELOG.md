@@ -5,6 +5,23 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.1.0] - 2026-10-09
+
+### Añadido
+- Rules de Claude Code en `.claude/rules/`: documentación en español neutro,
+  límite de 250 líneas por archivo, código limpio y buenas prácticas.
+- `tools/check_standards.py`: verifica el límite de líneas y que toda función
+  tenga docstring con `Args`, `Returns`, `Yields` y `Raises`; se ejecuta en `pytest`.
+- Tests del verificador y de la comprobación de espacio libre.
+
+### Cambiado
+- Todas las funciones y métodos documentados con descripción breve, parámetros,
+  retorno y excepciones.
+- `ui/app.py` dividido en `main_view.py`, `options_panel.py`, `job_table.py`,
+  `dialogs.py` y `event_handlers.py`; `app.py` queda como controlador.
+- `infrastructure/mkpfs_adapter.py` convertido en subpaquete (`command`,
+  `output`, `process`, `metadata`) con la misma API pública.
+
 ## [1.0.0] - 2026-10-09
 
 ### Añadido
