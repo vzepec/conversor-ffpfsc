@@ -1,7 +1,6 @@
 # Instalación
 
-El conversor funciona en **Linux** y en **Windows 10/11 de 64 bits** (**beta**:
-el soporte para Windows aún no se ha validado en un equipo Windows real). En ambos
+El conversor funciona en **Linux** y en **Windows 10/11 de 64 bits**. En ambos
 casos se instala dentro de un entorno virtual (`.venv/`) en la carpeta del
 proyecto, así que no modifica el Python del sistema.
 
@@ -34,7 +33,7 @@ El instalador:
 En distribuciones sin `apt`, instala antes los equivalentes de `python3-tk` y
 `python3-venv` con tu gestor de paquetes.
 
-## Windows (beta)
+## Windows
 
 ### 1. Instalar Python
 

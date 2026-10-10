@@ -5,6 +5,9 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Cambiado
+- Windows 10/11 deja de estar en *beta*: la app ya se probó en un equipo Windows real.
+
 ## [1.3.1] - 2026-10-10
 
 ### Corregido
