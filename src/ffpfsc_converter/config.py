@@ -87,6 +87,10 @@ FTP_MAX_RESUME_OFFSET = 2**31 - 1
 CRC_CHUNK_BYTES = 8 * 1024 * 1024
 #: Cada cuánto se consulta el avance del CRC32 que calcula la PS5.
 CRC_POLL_SECONDS = 0.5
+#: Conexión automática a la PS5: espera al abrir la app, intentos y pausa al reconectar.
+AUTO_CONNECT_DELAY_MS = 800
+RECONNECT_ATTEMPTS = 3
+RECONNECT_DELAY_MS = 5000
 #: Tamaño máximo de cada archivo de registro y cuántos anteriores se conservan.
 LOG_MAX_BYTES = 2 * 1024 * 1024
 LOG_BACKUPS = 3

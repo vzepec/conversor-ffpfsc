@@ -11,7 +11,7 @@ import queue
 import threading
 from collections.abc import Callable
 
-from ffpfsc_converter.config import PAIRING_CODE_TIMEOUT_SECONDS
+from ffpfsc_converter.config import AVA1_PORT, PAIRING_CODE_TIMEOUT_SECONDS
 from ffpfsc_converter.domain.events import EventSink
 from ffpfsc_converter.domain.remote import ConsoleTarget
 from ffpfsc_converter.domain.remote_events import FtpReady, PairingCodeRequired, RemoteError
@@ -53,18 +53,22 @@ class FtpLauncher:
         self._probe = probe
         self._codes: queue.Queue[str | None] = queue.Queue()
 
-    def connect(self, host: str, ftp_port: int, restart: bool = False) -> threading.Thread:
+    def connect(self, host: str, ftp_port: int, restart: bool = False,
+                quick: bool = False) -> threading.Thread:
         """Comprueba el FTP y, si no está activo (o ``restart``), lo inicia en solo lectura.
 
         Args:
             host (str): Dirección de la PS5.
             ftp_port (int): Puerto FTP deseado.
             restart (bool): ``True`` para detenerlo y volver a iniciarlo con credenciales nuevas.
+            quick (bool): ``True`` para rendirse enseguida si la consola no responde (conexión
+                automática): se comprueba el puerto del helper antes de esperar el saludo AVA1.
 
         Returns:
             threading.Thread: Hilo ya iniciado.
         """
-        thread = threading.Thread(target=self._run, args=(host, ftp_port, restart), daemon=True)
+        thread = threading.Thread(target=self._run, args=(host, ftp_port, restart, quick),
+                                  daemon=True)
         thread.start()
         return thread
 
@@ -76,16 +80,20 @@ class FtpLauncher:
         """
         self._codes.put(code)
 
-    def _run(self, host: str, ftp_port: int, restart: bool) -> None:
+    def _run(self, host: str, ftp_port: int, restart: bool, quick: bool) -> None:
         """Publica ``FtpReady`` o ``RemoteError`` según el resultado.
 
         Args:
             host (str): Dirección de la PS5.
             ftp_port (int): Puerto FTP deseado.
             restart (bool): ``True`` para reiniciar el FTP.
+            quick (bool): ``True`` para rendirse si el helper no responde.
         """
         if not restart and self._probe(host, ftp_port):
             self._emit(FtpReady(saved_target(host, ftp_port), started=False))
+            return
+        if quick and not self._probe(host, AVA1_PORT):
+            self._emit(RemoteError(f"La PS5 ({host}) no responde."))
             return
         try:
             target = self._start(host, ftp_port, restart)

@@ -44,6 +44,9 @@ class ExplorerController:
             que también recibe sus eventos (la vista Convertir sigue así sus subidas).
         pending_on_connect (list[Callable[[], None]]): Acciones a ejecutar al conectar.
         ftp_restarted (bool): ``True`` si ya se reinició el FTP por credenciales rechazadas.
+        quiet (bool): ``True`` durante una conexión automática (sin diálogos de error).
+        user_disconnected (bool): ``True`` si el usuario pulsó «Desconectar» (no se reconecta).
+        reconnects (int): Intentos de reconexión automática hechos tras un corte.
         browser (RemoteBrowser): Navegación por la PS5.
         downloads (DownloadRunner): Cola de descargas.
         storage (StorageMonitor): Espacio libre de las unidades de la PS5.
@@ -70,7 +73,8 @@ class ExplorerController:
             on_delete=lambda: self.modify.delete_selected(),
             on_convert=lambda: self.modify.convert_selected(),
         ))
-        self.launcher = FtpLauncher(emit, TrustStore(settings_path().parent))
+        self._trust = TrustStore(settings_path().parent)
+        self.launcher = FtpLauncher(emit, self._trust)
         self.browser = RemoteBrowser(emit)
         self.downloads = DownloadRunner(emit)
         self.storage = StorageMonitor(emit, self.launcher.access)
@@ -82,6 +86,7 @@ class ExplorerController:
         self.upload_listeners: dict[str, Callable[[object], None]] = {}
         self.pending_on_connect: list[Callable[[], None]] = []
         self.ftp_restarted = False
+        self.quiet, self.user_disconnected, self.reconnects = False, False, 0
         settings = load_settings()
         self.download_dir = Path(settings["download_dir"]) if settings.get("download_dir") else None
         self.view.connection.set_values(str(settings.get("ps5_host", "")),
@@ -98,9 +103,24 @@ class ExplorerController:
         if not host or port is None:
             dialogs.show_error("Escribe la IP de la PS5 y un puerto FTP válido.")
             return
+        self.quiet, self.user_disconnected, self.reconnects = False, False, 0
         save_settings({"ps5_host": host, "ps5_ftp_port": port})
         self.view.connection.set_state(False, f"Conectando con {host}…", busy=True)
         self.launcher.connect(host, port, restart=restart)
+
+    def auto_connect(self) -> None:
+        """Se conecta sin molestar si la PS5 ya está vinculada (al abrir o tras un corte).
+
+        No muestra errores ni pide el código de emparejamiento; si la consola no
+        responde, se rinde enseguida.
+        """
+        host, port = self.view.connection.host(), self.view.connection.port()
+        if (not host or port is None or self.target is not None
+                or self._trust.known_key(host) is None):
+            return
+        self.quiet = True
+        self.view.connection.set_state(False, f"Conectando con {host}…", busy=True)
+        self.launcher.connect(host, port, quick=True)
 
     def when_connected(self, action: Callable[[], None]) -> None:
         """Ejecuta una acción ahora si hay conexión o, si no, apenas se conecte.
@@ -115,6 +135,7 @@ class ExplorerController:
 
     def disconnect(self) -> None:
         """Cierra la sesión del explorador (las descargas en curso continúan)."""
+        self.user_disconnected = True
         self.browser.disconnect()
 
     def open_entry(self, entry: RemoteEntry) -> None:

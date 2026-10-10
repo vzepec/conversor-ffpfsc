@@ -142,6 +142,7 @@ src/ffpfsc_converter/
         ├── transfer_panel.py, transfer_row.py  # descargas y subidas
         ├── controller.py  #   ExplorerController: acciones → servicios
         ├── updater.py     #   ExplorerUpdater: eventos remotos → vista
+        ├── connection_updater.py  # conexión, emparejamiento, errores y reconexión
         ├── modify_actions.py, changes_updater.py  # eliminar, subir, reemplazar
         ├── retry_actions.py    # "Reintentar fallidas"
         ├── pipeline_tracker.py  # fila de "comprimir y reemplazar" en Transferencias

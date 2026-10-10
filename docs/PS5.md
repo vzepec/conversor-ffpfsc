@@ -23,7 +23,10 @@ reemplazar** un juego directamente en la consola.
    el cuadro que abre la app (tienes menos de un minuto).
 
 El emparejamiento se hace **una sola vez**: la app recuerda la consola y las
-siguientes conexiones no piden código.
+siguientes conexiones no piden código. Desde entonces, al abrir la app se
+**conecta sola** si la PS5 responde (si está apagada, queda en «Sin conexión» sin
+mostrar errores), y si la conexión se corta sin que pulses **Desconectar**, intenta
+**reconectar** hasta 3 veces y vuelve a la carpeta en la que estabas.
 
 > [!IMPORTANT]
 > La PS5 solo acepta emparejamientos nuevos durante los **5 minutos siguientes a

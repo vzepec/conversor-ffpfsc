@@ -12,6 +12,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from types import TracebackType
 
+from ffpfsc_converter.config import AUTO_CONNECT_DELAY_MS
 from ffpfsc_converter.domain.events import Event
 from ffpfsc_converter.domain.remote_events import RemoteEvent
 from ffpfsc_converter.domain.update import UpdateAvailable
@@ -67,6 +68,7 @@ class MainWindow:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._convert.add_paths(initial_paths)
         start_update_check(self._events.put)
+        self.root.after(AUTO_CONNECT_DELAY_MS, self._explorer.auto_connect)
 
     def run(self) -> None:
         """Inicia el bucle principal de Tkinter hasta que se cierra la ventana."""
