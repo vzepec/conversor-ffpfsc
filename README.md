@@ -69,6 +69,16 @@ de sobrescribir y borrado automático de salidas incompletas al cancelar o falla
 </tr>
 </table>
 
+### 🎮 Explorador de la PS5
+
+Pestaña **PS5** para navegar por los archivos de una consola con el payload de
+[ps5upload](https://github.com/phantomptr/ps5upload): **descargar** archivos o carpetas,
+**subir**, **eliminar** y **♻ comprimir y reemplazar** un juego en un solo paso (descarga,
+compresión, subida verificada y reemplazo del original), con porcentaje, tiempo restante,
+reanudación y verificación. El payload necesario está en [`payload/`](payload/). La app inicia sola el
+FTP del helper (en solo lectura y con credenciales aleatorias) tras un emparejamiento
+de una única vez con el código que muestra la PS5. Guía: **[docs/PS5.md](docs/PS5.md)**.
+
 ### Modos de compresión
 
 | Modo | Nivel zlib | Cuándo usarlo |
@@ -206,6 +216,7 @@ Más en **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 |:----------|:----------|
 | [📦 Instalación](docs/INSTALLATION.md) | Linux y Windows: requisitos, pasos y solución de problemas |
 | [📖 Guía de uso](docs/USER_GUIDE.md) | Formatos aceptados, opciones, preguntas frecuentes |
+| [🎮 Pestaña PS5](docs/PS5.md) | Emparejamiento, explorar y descargar desde la consola |
 | [🏗️ Arquitectura](docs/ARCHITECTURE.md) | Capas, flujo, modelo de hilos, decisiones, cómo extender |
 | [🧑‍💻 Desarrollo](docs/DEVELOPMENT.md) | Entorno, tests, flujo de Git, versiones |
 | [📝 Changelog](CHANGELOG.md) | Historial de cambios |
@@ -216,6 +227,8 @@ Más en **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 
 - **[MkPFS](https://github.com/PSBrew/MkPFS)** de PSBrew: el motor que genera las imágenes PFS/PFSC.
 - **[zlib-ng](https://github.com/zlib-ng/zlib-ng)**: compresión rápida y compatible con la PS5.
+- **[ps5upload](https://github.com/phantomptr/ps5upload)** de PhantomPtr: el helper de la PS5, su
+  servidor FTP y la especificación del protocolo AVA1 que implementa la pestaña PS5.
 - **[tkinterdnd2](https://github.com/Eliav2/tkinterdnd2)**: arrastrar y soltar en Tkinter.
 
 > [!IMPORTANT]

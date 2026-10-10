@@ -71,6 +71,13 @@ ese proceso; no cambia la política de ejecución del sistema.
   con ese juego ya en la cola, o
 - desde una terminal: `abrir.bat "D:\Juegos\Mi Juego"`.
 
+## Pestaña PS5 (opcional)
+
+Para explorar, descargar, subir o reemplazar juegos directamente en la consola
+no hace falta instalar nada más en el equipo, ni en Linux ni en Windows: la PS5
+necesita el payload de ps5upload incluido en [`payload/`](../payload/) (cómo
+cargarlo, versión y SHA-256 en su README). El uso está en [PS5.md](PS5.md).
+
 ## Actualizar
 
 Descarga la versión nueva (`git pull` o un ZIP nuevo en la misma carpeta) y

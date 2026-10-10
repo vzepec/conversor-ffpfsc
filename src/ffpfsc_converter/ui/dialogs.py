@@ -6,7 +6,7 @@ principal no mezcle textos de diálogo con su lógica.
 from __future__ import annotations
 
 from pathlib import Path
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 
 from ffpfsc_converter.config import APP_TITLE, FREE_SPACE_MARGIN
 from ffpfsc_converter.infrastructure.system import desktop_dir
@@ -111,3 +111,105 @@ def confirm_quit_while_running() -> bool:
         bool: ``True`` si el usuario acepta cancelar y salir.
     """
     return messagebox.askyesno(APP_TITLE, "Hay una conversión en curso. ¿Cancelarla y salir?")
+
+
+def ask_pairing_code(console_name: str) -> str | None:
+    """Pide el código de emparejamiento que muestra la PS5.
+
+    Args:
+        console_name (str): Nombre de la consola, para el mensaje.
+
+    Returns:
+        str | None: Código escrito, o ``None`` si el usuario canceló.
+    """
+    return simpledialog.askstring(
+        APP_TITLE,
+        f"Emparejar con {console_name}\n\n"
+        "La PS5 muestra una notificación con un código de 6 dígitos.\n"
+        "Escríbelo aquí (tienes menos de un minuto):",
+    )
+
+
+def ask_download_dir() -> Path | None:
+    """Pide la carpeta donde guardar las descargas de la PS5.
+
+    Returns:
+        Path | None: Carpeta elegida, o ``None`` si canceló.
+    """
+    folder = filedialog.askdirectory(title="Carpeta donde guardar las descargas de la PS5",
+                                     initialdir=_initial_dir())
+    return Path(folder) if folder else None
+
+
+def confirm_resume_download(path: Path) -> bool:
+    """Advierte que el destino ya existe y se completará o reemplazará.
+
+    Args:
+        path (Path): Archivo o carpeta local que ya existe.
+
+    Returns:
+        bool: ``True`` si el usuario acepta continuar.
+    """
+    return messagebox.askyesno(
+        APP_TITLE,
+        f"Ya existe:\n{path}\n\nSe completarán los archivos que falten o estén a medias, y se "
+        "reemplazarán los que tengan otro tamaño. ¿Continuar?")
+
+
+def confirm_quit_while_downloading() -> bool:
+    """Pregunta si se cancelan las descargas en curso para salir.
+
+    Returns:
+        bool: ``True`` si el usuario acepta salir (las descargas se podrán reanudar).
+    """
+    return messagebox.askyesno(
+        APP_TITLE, "Hay descargas en curso. ¿Salir igualmente? Podrás reanudarlas después.")
+
+
+def confirm_remote_delete(summary: str) -> bool:
+    """Pide confirmación antes de borrar en la PS5.
+
+    Args:
+        summary (str): Rutas que se borrarán, una por línea.
+
+    Returns:
+        bool: ``True`` si el usuario acepta borrar.
+    """
+    return messagebox.askyesno(
+        APP_TITLE, f"Se BORRARÁ de la PS5 (incluido todo su contenido):\n\n{summary}\n\n"
+        "Esta acción no se puede deshacer. ¿Continuar?", icon="warning", default="no")
+
+
+def ask_upload_files() -> list[Path]:
+    """Pide los archivos de este equipo que se subirán a la PS5.
+
+    Returns:
+        list[Path]: Archivos elegidos (vacía si canceló).
+    """
+    files = filedialog.askopenfilenames(title="Archivos a subir a la PS5",
+                                        initialdir=_initial_dir())
+    return [Path(f) for f in files]
+
+
+def confirm_warning(message: str) -> bool:
+    """Pide una confirmación con icono de advertencia (por defecto, "No").
+
+    Args:
+        message (str): Pregunta.
+
+    Returns:
+        bool: ``True`` si el usuario acepta.
+    """
+    return messagebox.askyesno(APP_TITLE, message, icon="warning", default="no")
+
+
+def confirm(message: str) -> bool:
+    """Pide una confirmación simple (Sí / No).
+
+    Args:
+        message (str): Pregunta.
+
+    Returns:
+        bool: ``True`` si el usuario acepta.
+    """
+    return messagebox.askyesno(APP_TITLE, message)

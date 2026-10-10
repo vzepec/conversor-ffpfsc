@@ -5,3 +5,4 @@
 *.py   text eol=lf
 *.md   text eol=lf
 *.png  binary
+*.elf  binary

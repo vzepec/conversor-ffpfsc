@@ -1,0 +1,5 @@
+# AVA1 pairing commitment (SPEC.md §4.6), computed with Python's hashlib.blake2b.
+# nonce_s -> commit = BLAKE2b-256(nonce_s). The pairing code is no longer derived (SPEC.md §4.6); see cpace.txt.
+pairing 22222222222222222222222222222222 c6b110a3f5c0df677094f9fc9de4dd11fb7c7d465eb16a2a7837e771f46abbaf
+pairing 101112131415161718191a1b1c1d1e1f 5b4deb633100de6fcf7bfc81f148d4328978e4a8e6f313e468582746b11af998
+pairing 23232323232323232323232323232323 c383e4db326ba1b4625f8f494ab8987863f39dabb2f8e02c6afcea0fb8760be6

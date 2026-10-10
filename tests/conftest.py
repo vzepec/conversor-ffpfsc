@@ -1,9 +1,20 @@
 from __future__ import annotations
 
 import json
+import logging
+import shutil
+import struct
+import threading
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
+from pyftpdlib.authorizers import DummyAuthorizer
+from pyftpdlib.handlers import FTPHandler
+from pyftpdlib.servers import ThreadedFTPServer
+
+from ffpfsc_converter.domain.remote import ConsoleTarget
+from ffpfsc_converter.infrastructure.ava1.codec import Decoder, Encoder
 
 
 @pytest.fixture
@@ -21,3 +32,82 @@ def game_folder(tmp_path: Path) -> Path:
         },
     }))
     return tmp_path / "Juego"
+
+
+@pytest.fixture
+def ftp_root(tmp_path: Path) -> Path:
+    """Carpeta que sirve el FTP de prueba, con estructura parecida a la PS5."""
+    root = tmp_path / "ps5"
+    game = root / "data" / "homebrew" / "Juego"
+    (game / "sce_sys").mkdir(parents=True)
+    (game / "eboot.bin").write_bytes(b"E" * 300_000)
+    (game / "sce_sys" / "param.json").write_text('{"titleId": "PPSA00000"}')
+    (game / "vacia").mkdir()
+    (root / "data" / "homebrew" / "imagen.ffpfsc").write_bytes(b"F" * 50_000)
+    return root
+
+
+@pytest.fixture
+def ftp_server(ftp_root: Path) -> Iterator[int]:
+    """Servidor FTP anónimo de solo lectura en localhost; devuelve su puerto."""
+    logging.getLogger("pyftpdlib").setLevel(logging.WARNING)
+    authorizer = DummyAuthorizer()
+    authorizer.add_anonymous(str(ftp_root), perm="elr")
+    handler = type("Handler", (FTPHandler,), {"authorizer": authorizer})
+    server = ThreadedFTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever,
+                              kwargs={"timeout": 0.05, "handle_exit": False}, daemon=True)
+    thread.start()
+    yield server.address[1]
+    server.close_all()
+    thread.join(timeout=5)
+
+
+@pytest.fixture
+def writable_ftp(ftp_root: Path) -> Iterator[int]:
+    """FTP anónimo con escritura sobre la carpeta de prueba."""
+    logging.getLogger("pyftpdlib").setLevel(logging.WARNING)
+    auth = DummyAuthorizer()
+    auth.add_anonymous(str(ftp_root), perm="elradfmw")
+    server = ThreadedFTPServer(("127.0.0.1", 0), type("H", (FTPHandler,), {"authorizer": auth}))
+    thread = threading.Thread(target=server.serve_forever,
+                              kwargs={"timeout": 0.05, "handle_exit": False}, daemon=True)
+    thread.start()
+    yield server.address[1]
+    server.close_all()
+
+
+class FakeConsole:
+    """Simula el helper: espacio libre y borrado reales sobre la carpeta del FTP."""
+
+    def __init__(self, root: Path, port: int, usable: int) -> None:
+        """Guarda la raíz servida, el puerto FTP y el espacio a informar."""
+        self.root, self.port, self.usable = root, port, usable
+        self.modes: list[bool] = []
+        self.deleted: list[str] = []
+
+    def open_session(self, host: str, ask_code: Callable[[str], str] | None = None) -> FakeConsole:
+        """Devuelve el propio doble como sesión."""
+        return self
+
+    def start_ftp(self, session: object, host: str, port: int, writable: bool,
+                  restart: bool) -> ConsoleTarget:
+        """Registra el modo pedido y devuelve el FTP local."""
+        self.modes.append(writable)
+        return ConsoleTarget("127.0.0.1", self.port)
+
+    def call(self, method: int, body: bytes) -> bytes:
+        """Responde fs.freespace (44) y job.run DELETE (20) como el helper."""
+        if method == 44:
+            return Encoder().u64(self.usable).u64(self.usable).u64(10**12).u64(0).u64(1).build()
+        d = Decoder(body)
+        job_id, _op, args = d.raw(16), d.u8(), d.blob()
+        path = args.decode().split('"path": "')[1].rstrip('"}')
+        self.deleted.append(path)
+        shutil.rmtree(self.root / path.lstrip("/"), ignore_errors=True)
+        base = Encoder().raw(job_id).u32(1).u32(1).u64(0).u64(0).u64(0)
+        status = base.u8(0).u8(0).u8(0).u8(0).build()[:-2]
+        return status + struct.pack("<HHI", 1, 2, 1) + b"\x01"
+
+    def close(self) -> None:
+        """No hace nada (sesión simulada)."""

@@ -26,6 +26,7 @@ from ffpfsc_converter.infrastructure.mkpfs_adapter import (
     build_pack_command,
     parse_progress,
 )
+from ffpfsc_converter.timing import PercentEta
 
 
 class ProcessHandle(Protocol):
@@ -166,9 +167,13 @@ class ConversionRunner:
         self._process = process
         if self._cancel.is_set():  # cancelado mientras arrancaba
             process.terminate()
+        eta = PercentEta()
         for line in process.lines():
             progress = parse_progress(line)
-            self._emit(JobProgress(job, progress) if progress else LogMessage(line))
+            if progress is None:
+                self._emit(LogMessage(line))
+            else:
+                self._emit(JobProgress(job, progress, eta.update(progress.phase, progress.percent)))
         return_code = process.wait()
         self._process = None
         return return_code
