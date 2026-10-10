@@ -1,4 +1,4 @@
-"""Aplica los eventos del explorador de la PS5 sobre la pestaña."""
+"""Aplica los eventos del explorador de la PS5 sobre la vista."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -22,6 +22,7 @@ from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
 from ffpfsc_converter.ui.explorer.changes_updater import ChangesUpdater
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
+from ffpfsc_converter.ui.explorer.pairing_dialog import PairingDialog
 
 
 class ExplorerUpdater:
@@ -31,7 +32,7 @@ class ExplorerUpdater:
         """Registra los manejadores.
 
         Args:
-            controller (ExplorerController): Controlador de la pestaña.
+            controller (ExplorerController): Controlador de la vista.
         """
         self._ctl = controller
         self._view = controller.view
@@ -53,7 +54,7 @@ class ExplorerUpdater:
         }
 
     def handles(self, event: object) -> bool:
-        """Indica si el evento pertenece a la pestaña PS5.
+        """Indica si el evento pertenece a la vista PS5.
 
         Args:
             event (object): Evento recibido.
@@ -67,7 +68,7 @@ class ExplorerUpdater:
         """Ejecuta el manejador del evento.
 
         Args:
-            event (object): Evento de la pestaña PS5.
+            event (object): Evento de la vista PS5.
         """
         self._handlers[type(event)](event)
 
@@ -104,7 +105,8 @@ class ExplorerUpdater:
             event (PairingCodeRequired): Solicitud de código.
         """
         self._view.connection.set_state(False, "Esperando el código de emparejamiento…", True)
-        self._ctl.launcher.provide_code(dialogs.ask_pairing_code(event.console_name))
+        code = PairingDialog(self._view, self._ctl.theme, event.console_name).ask()
+        self._ctl.launcher.provide_code(code)
 
     def _on_connected(self, event: RemoteConnected) -> None:
         """Marca la conexión como activa.
@@ -128,8 +130,8 @@ class ExplorerUpdater:
         """
         self._ctl.target = None
         self._view.remote.clear()
-        self._view.set_storage_text("")
         self._view.set_browsing_enabled(False)
+        self._view.set_storage((), "")
         self._view.connection.set_state(False, "Sin conexión.")
 
     def _on_listing(self, event: RemoteListing) -> None:
@@ -153,7 +155,7 @@ class ExplorerUpdater:
             event (StorageUpdated): Resultado de la consulta.
         """
         if self._ctl.target is not None:
-            self._view.set_storage_text(presenters.storage_text(event.volumes, event.error))
+            self._view.set_storage(event.volumes, event.error)
 
     def _on_error(self, event: RemoteError) -> None:
         """Muestra el error y restablece el estado de la barra de conexión.
@@ -197,9 +199,9 @@ class ExplorerUpdater:
         Args:
             event (TransferRetrying): Reintento automático en curso.
         """
-        self._view.transfers.set_status(
-            event.row_id, f"⚠ {event.reason} Reintentando ({event.attempt} de "
-            f"{event.max_attempts})…")
+        self._view.transfers.set_state(
+            event.row_id, "warn", f"Reintentando ({event.attempt} de {event.max_attempts})…",
+            event.reason, active=True)
         listener = self._ctl.upload_listeners.get(event.row_id)
         if listener is not None:
             listener(event)

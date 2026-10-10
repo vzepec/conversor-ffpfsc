@@ -12,7 +12,11 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from ffpfsc_converter.config import PARTIAL_SUFFIX, PROGRESS_INTERVAL_SECONDS
+from ffpfsc_converter.config import (
+    FTP_MAX_RESUME_OFFSET,
+    PARTIAL_SUFFIX,
+    PROGRESS_INTERVAL_SECONDS,
+)
 from ffpfsc_converter.domain.remote import ConsoleTarget
 from ffpfsc_converter.errors import DownloadCancelledError, TransientError
 from ffpfsc_converter.services.remote_client import ClientFactory, RemoteClient
@@ -117,7 +121,8 @@ def resume_offset(client: RemoteClient, local: Path, remote_part: str, total: in
 
     Compara el último tramo del ``.part`` remoto con los mismos bytes del archivo
     local. Si no coinciden (por ejemplo, el juego se volvió a comprimir con otras
-    opciones), la subida empieza de cero: reanudar mezclaría dos archivos.
+    opciones), la subida empieza de cero: reanudar mezclaría dos archivos. Tampoco
+    se reanuda por encima de ``FTP_MAX_RESUME_OFFSET``, que la PS5 no sabe retomar.
 
     Args:
         client (RemoteClient): Cliente conectado.
@@ -129,7 +134,7 @@ def resume_offset(client: RemoteClient, local: Path, remote_part: str, total: in
         int: Bytes que ya están bien en la PS5 (``0`` = subir desde el principio).
     """
     existing = client.size(remote_part) or 0
-    if existing == 0 or existing > total:
+    if existing == 0 or existing > total or existing > FTP_MAX_RESUME_OFFSET:
         return 0
     probe = min(_RESUME_PROBE_BYTES, existing)
     remote_tail = io.BytesIO()

@@ -12,6 +12,8 @@ authors = [{ name = "Victor Zepeda" }]
 dependencies = [
     "mkpfs>=1.1",
     "cryptography>=41",  # AVA1: X25519 y ChaCha20-Poly1305 (pestaña PS5)
+    "pillow>=9",         # iconos de la interfaz (ya lo instala MkPFS)
+    "darkdetect>=0.7",   # seguir el tema claro/oscuro del sistema (ya lo instala MkPFS)
     "zlib-ng>=0.5",
     "tkinterdnd2>=0.4",
 ]

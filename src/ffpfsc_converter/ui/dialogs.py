@@ -6,7 +6,7 @@ principal no mezcle textos de diálogo con su lógica.
 from __future__ import annotations
 
 from pathlib import Path
-from tkinter import filedialog, messagebox, simpledialog
+from tkinter import filedialog, messagebox
 
 from ffpfsc_converter.config import APP_TITLE, FREE_SPACE_MARGIN
 from ffpfsc_converter.infrastructure.system import desktop_dir
@@ -111,23 +111,6 @@ def confirm_quit_while_running() -> bool:
         bool: ``True`` si el usuario acepta cancelar y salir.
     """
     return messagebox.askyesno(APP_TITLE, "Hay una conversión en curso. ¿Cancelarla y salir?")
-
-
-def ask_pairing_code(console_name: str) -> str | None:
-    """Pide el código de emparejamiento que muestra la PS5.
-
-    Args:
-        console_name (str): Nombre de la consola, para el mensaje.
-
-    Returns:
-        str | None: Código escrito, o ``None`` si el usuario canceló.
-    """
-    return simpledialog.askstring(
-        APP_TITLE,
-        f"Emparejar con {console_name}\n\n"
-        "La PS5 muestra una notificación con un código de 6 dígitos.\n"
-        "Escríbelo aquí (tienes menos de un minuto):",
-    )
 
 
 def ask_download_dir() -> Path | None:

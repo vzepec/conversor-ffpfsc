@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from ffpfsc_converter.infrastructure import system
 from ffpfsc_converter.infrastructure.mkpfs_adapter.process import kill_tree_command, popen_options
 from ffpfsc_converter.infrastructure.system import desktop_dir, file_manager_command
 
@@ -40,3 +41,9 @@ def test_desktop_dir_prefers_spanish_then_english(tmp_path: Path) -> None:
     assert desktop_dir(tmp_path) == tmp_path / "Desktop"
     (tmp_path / "Escritorio").mkdir()
     assert desktop_dir(tmp_path) == tmp_path / "Escritorio"
+
+
+def test_windows_only_helpers_do_nothing_elsewhere() -> None:
+    """La identidad de la app y la escala de Windows no hacen nada en Linux."""
+    assert system.set_windows_app_id("x.y", platform="linux") is False
+    assert system.enable_dpi_awareness(platform="linux") is False

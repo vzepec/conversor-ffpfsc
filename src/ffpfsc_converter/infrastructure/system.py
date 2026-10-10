@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import webbrowser
 from pathlib import Path
 
 #: Nombres habituales de la carpeta Escritorio, en orden de preferencia.
@@ -62,3 +63,77 @@ def desktop_dir(home: Path | None = None) -> Path:
         if (home / candidate).is_dir():
             return home / candidate
     return home
+
+
+def system_prefers_dark() -> bool | None:
+    """Consulta si el sistema operativo usa el tema oscuro.
+
+    Returns:
+        bool | None: ``True`` si es oscuro, ``False`` si es claro, o ``None`` si no se
+        puede saber (por ejemplo, un escritorio Linux sin esa preferencia).
+    """
+    try:
+        import darkdetect  # import diferido: dependencia opcional para seguir el tema
+    except ImportError:
+        return None
+    try:
+        value = darkdetect.theme()
+    except Exception:  # noqa: BLE001 - la consulta depende del escritorio; nunca debe romper la UI
+        return None
+    return None if value is None else value.lower() == "dark"
+
+
+def enable_dpi_awareness(platform: str = sys.platform) -> bool:
+    """Pide a Windows dibujar la ventana a resolución real (evita que se vea borrosa).
+
+    Debe llamarse antes de crear la ventana. En otros sistemas no hace nada.
+
+    Args:
+        platform (str): Valor de ``sys.platform`` del sistema.
+
+    Returns:
+        bool: ``True`` si se activó el modo de alta resolución.
+    """
+    if platform != "win32":
+        return False
+    try:
+        import ctypes  # import diferido: solo existe la API en Windows
+
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)  # type: ignore[attr-defined]
+    except (AttributeError, OSError):
+        return False
+    return True
+
+
+def set_windows_app_id(app_id: str, platform: str = sys.platform) -> bool:
+    """Da a la app un identificador propio en Windows.
+
+    Sin él, Windows agrupa la ventana con ``pythonw.exe`` y la barra de tareas
+    muestra el icono de Python en vez del de la app. En otros sistemas no hace nada.
+
+    Args:
+        app_id (str): Identificador, por ejemplo ``"vzepec.ConversorFFPFSC"``.
+        platform (str): Valor de ``sys.platform`` del sistema.
+
+    Returns:
+        bool: ``True`` si se aplicó.
+    """
+    if platform != "win32":
+        return False
+    try:
+        import ctypes  # import diferido: solo existe la API en Windows
+
+        shell32 = ctypes.windll.shell32  # type: ignore[attr-defined]
+        shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except (AttributeError, OSError):
+        return False
+    return True
+
+
+def open_url(url: str) -> None:
+    """Abre una dirección web en el navegador predeterminado (Linux y Windows).
+
+    Args:
+        url (str): Dirección a abrir.
+    """
+    webbrowser.open(url)

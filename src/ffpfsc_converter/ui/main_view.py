@@ -1,27 +1,26 @@
-"""Vista principal: construye los widgets y expone métodos para actualizarlos.
+"""Vista Convertir: construye los widgets y expone métodos para actualizarlos.
 
 La vista no conoce los servicios: avisa de las acciones del usuario mediante
 los callbacks de :class:`ViewCallbacks` y el controlador decide qué hacer.
 """
 from __future__ import annotations
 
-import contextlib
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import ttk
 
-from ffpfsc_converter.ui import presenters, theme
-from ffpfsc_converter.ui.dnd import HAS_DND, register_drop_target
-from ffpfsc_converter.ui.job_table import JobTable
+from ffpfsc_converter.ui.dnd import HAS_DND
+from ffpfsc_converter.ui.job_list import JobList
 from ffpfsc_converter.ui.options_panel import OptionsPanel
+from ffpfsc_converter.ui.theme import Palette, ThemeManager
+from ffpfsc_converter.ui.widgets.basics import icon_button
+from ffpfsc_converter.ui.widgets.drop_zone import DropZone
 
-_DROP_HINT_DND = (
-    "Arrastra aquí la(s) carpeta(s) del juego\n"
-    "(o un archivo .exfat / .ffpkg) — o haz clic para elegir"
-)
-_DROP_HINT_CLICK = "Haz clic para seleccionar la carpeta del juego"
+_DROP_TITLE = ("Arrastra juegos: carpetas o imágenes .exfat / .ffpkg" if HAS_DND
+               else "Elige un juego: carpeta o imagen .exfat / .ffpkg")
+_DROP_HINT = "Encuentra el eboot.bin aunque esté en subcarpetas."
 
 
 @dataclass(frozen=True)
@@ -30,15 +29,16 @@ class ViewCallbacks:
 
     Attributes:
         on_paths (Callable[[list[Path]], None]): Se soltaron rutas en la ventana.
-        on_pick_folder (Callable[[], None]): Clic en la zona de soltar.
-        on_pick_file (Callable[[], None]): Botón "+ Archivo .exfat…".
-        on_pick_output_dir (Callable[[], None]): Botón "Cambiar…".
+        on_pick_folder (Callable[[], None]): Botón "Elegir carpeta" o clic en la zona.
+        on_pick_file (Callable[[], None]): Botón "Elegir imagen".
+        on_pick_output_dir (Callable[[], None]): Enlace "Cambiar" de la carpeta de destino.
         on_preset_changed (Callable[[], None]): Cambió el modo de compresión.
         on_start (Callable[[], None]): Botón "Convertir".
         on_cancel (Callable[[], None]): Botón "Cancelar".
-        on_remove (Callable[[], None]): Botón "Quitar seleccionado".
+        on_remove (Callable[[], None]): Botón "Quitar seleccionados".
         on_open_output (Callable[[], None]): Botón "Abrir carpeta de salida".
-        on_upload_ps5 (Callable[[], None]): Botón "Subir a la PS5".
+        on_upload_all (Callable[[], None]): Botón "Subir completados a la PS5".
+        on_upload_row (Callable[[str], None]): Botón "Subir a la PS5" de una fila.
     """
 
     on_paths: Callable[[list[Path]], None]
@@ -50,94 +50,122 @@ class ViewCallbacks:
     on_cancel: Callable[[], None]
     on_remove: Callable[[], None]
     on_open_output: Callable[[], None]
-    on_upload_ps5: Callable[[], None]
+    on_upload_all: Callable[[], None]
+    on_upload_row: Callable[[str], None]
 
 
 class MainView:
-    """Widgets de la ventana principal.
+    """Widgets de la vista Convertir.
 
     Attributes:
-        options (OptionsPanel): Panel con las opciones de conversión.
-        table (JobTable): Tabla con los juegos de la cola.
+        options (OptionsPanel): Tarjeta con las opciones de conversión.
+        table (JobList): Filas de los juegos de la cola.
     """
 
-    def __init__(self, parent: tk.Misc, callbacks: ViewCallbacks) -> None:
-        """Construye todos los widgets dentro de su contenedor (la pestaña "Convertir").
+    def __init__(self, parent: tk.Misc, theme: ThemeManager, callbacks: ViewCallbacks) -> None:
+        """Construye la vista dentro de su contenedor.
 
         Args:
             parent (tk.Misc): Contenedor de la vista.
+            theme (ThemeManager): Tema.
             callbacks (ViewCallbacks): Acciones a notificar al controlador.
         """
-        self._root = parent
-        with contextlib.suppress(tk.TclError):
-            ttk.Style().theme_use(theme.TTK_THEME)
-        self._build_drop_zone(callbacks)
-        self.options = OptionsPanel(parent, callbacks.on_preset_changed,
+        self._theme = theme
+        m = theme.metrics
+        self._root = ttk.Frame(parent, style="TFrame", padding=(m.px(26), m.px(22)))
+        self._root.pack(fill="both", expand=True)
+        self._build_header(callbacks)
+        DropZone(self._root, theme, _DROP_TITLE, _DROP_HINT,
+                 (("Elegir carpeta…", callbacks.on_pick_folder),
+                  ("Elegir imagen…", callbacks.on_pick_file)),
+                 callbacks.on_paths).pack(fill="x", pady=(m.px(16), 0))
+        self.options = OptionsPanel(self._root, theme, callbacks.on_preset_changed,
                                     callbacks.on_pick_output_dir)
-        self.options.pack(fill="x", **theme.PADDING)
-        self.table = JobTable(parent)
-        self.table.pack(fill="both", expand=True, **theme.PADDING)
-        self._build_progress()
-        self._build_buttons(callbacks)
+        self.options.pack(fill="x", pady=(m.px(14), 0))
+        head = ttk.Frame(self._root, style="TFrame")
+        head.pack(fill="x", pady=(m.px(18), m.px(8)))
+        ttk.Label(head, text="Cola", style="Heading.TLabel").pack(side="left")
+        self._summary = ttk.Label(head, style="Muted.TLabel")
+        self._summary.pack(side="left", padx=(m.px(12), 0))
+        icon_button(head, theme, "Quitar seleccionados", "x", callbacks.on_remove,
+                    style="Ghost.TButton", role="muted").pack(side="right")
+        self._build_footer(callbacks)
         self._build_log()
+        self.table = JobList(self._root, theme, callbacks.on_upload_row)
+        self.table.pack(fill="both", expand=True)
 
-    def _build_drop_zone(self, callbacks: ViewCallbacks) -> None:
-        """Crea la zona superior donde se sueltan o eligen los juegos.
-
-        Args:
-            callbacks (ViewCallbacks): Acciones a notificar al controlador.
-        """
-        drop = tk.Label(
-            self._root, text=_DROP_HINT_DND if HAS_DND else _DROP_HINT_CLICK,
-            relief="ridge", bd=2, height=5, cursor="hand2",
-            font=theme.DROP_ZONE_FONT, bg=theme.DROP_ZONE_BG, fg=theme.DROP_ZONE_FG,
-        )
-        drop.pack(fill="x", **theme.PADDING)
-        drop.bind("<Button-1>", lambda _e: callbacks.on_pick_folder())
-        register_drop_target(drop, callbacks.on_paths)
-        register_drop_target(self._root, callbacks.on_paths)
-
-    def _build_progress(self) -> None:
-        """Crea la barra de progreso, la línea de estado y la versión de la app."""
-        frame = ttk.Frame(self._root)
-        frame.pack(fill="x", **theme.PADDING)
-        self._pbar = ttk.Progressbar(frame, maximum=100)
-        self._pbar.pack(fill="x")
-        status_row = ttk.Frame(frame)
-        status_row.pack(fill="x", pady=(4, 0))
-        self._status = ttk.Label(status_row, text="Listo.")
-        self._status.pack(side="left")
-        ttk.Label(status_row, text=presenters.version_text(),
-                  foreground=theme.VERSION_FG).pack(side="right")
-
-    def _build_buttons(self, callbacks: ViewCallbacks) -> None:
-        """Crea la barra de botones de acción.
+    def _build_header(self, callbacks: ViewCallbacks) -> None:
+        """Crea el título de la vista y el acceso a la carpeta de salida.
 
         Args:
             callbacks (ViewCallbacks): Acciones a notificar al controlador.
         """
-        bar = ttk.Frame(self._root)
-        bar.pack(fill="x", **theme.PADDING)
-        self._start_btn = ttk.Button(bar, text="▶ Convertir", command=callbacks.on_start)
-        self._start_btn.pack(side="left")
-        self._cancel_btn = ttk.Button(bar, text="■ Cancelar", command=callbacks.on_cancel,
-                                      state="disabled")
-        self._cancel_btn.pack(side="left", padx=6)
-        ttk.Button(bar, text="+ Archivo .exfat…", command=callbacks.on_pick_file).pack(
-            side="left", padx=6)
-        ttk.Button(bar, text="Quitar seleccionado", command=callbacks.on_remove).pack(
-            side="left", padx=6)
-        ttk.Button(bar, text="Abrir carpeta de salida", command=callbacks.on_open_output).pack(
-            side="right")
-        self._upload_btn = ttk.Button(bar, text="⬆ Subir a la PS5", command=callbacks.on_upload_ps5,
-                                      state="disabled")
-        self._upload_btn.pack(side="right", padx=6)
+        head = ttk.Frame(self._root, style="TFrame")
+        head.pack(fill="x")
+        texts = ttk.Frame(head, style="TFrame")
+        texts.pack(side="left")
+        ttk.Label(texts, text="Convertir", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(texts, text="Comprime juegos a .ffpfsc para ShadowMount+",
+                  style="Muted.TLabel").pack(anchor="w")
+        icon_button(head, self._theme, "Abrir carpeta de salida", "folder",
+                    callbacks.on_open_output, style="Ghost.TButton", role="muted").pack(
+            side="right", anchor="s")
+
+    def _build_footer(self, callbacks: ViewCallbacks) -> None:
+        """Crea el pie: registro plegable, estado y botones de acción.
+
+        Args:
+            callbacks (ViewCallbacks): Acciones a notificar al controlador.
+        """
+        m, theme = self._theme.metrics, self._theme
+        bar = ttk.Frame(self._root, style="TFrame")
+        bar.pack(side="bottom", fill="x", pady=(m.px(12), 0))
+        # Los botones se empaquetan primero para que, si falta ancho, se recorte el estado.
+        self._start_btn = icon_button(bar, theme, "Convertir", "play", callbacks.on_start,
+                                      style="Accent.TButton", role="accent_ink")
+        self._start_btn.pack(side="right")
+        self._upload_btn = icon_button(bar, theme, "Subir completados a la PS5", "upload",
+                                       callbacks.on_upload_all)
+        self._upload_btn.pack(side="right", padx=(0, m.px(8)))
+        self._upload_btn.state(["disabled"])
+        self._cancel_btn = icon_button(bar, theme, "Cancelar", "stop", callbacks.on_cancel,
+                                       style="Danger.TButton", role="bad")
+        self._cancel_btn.pack(side="right", padx=(0, m.px(8)))
+        self._cancel_btn.state(["disabled"])
+        self._log_toggle = icon_button(bar, theme, "Registro técnico", "chevron_right",
+                                       self._toggle_log, style="Ghost.TButton", role="muted")
+        self._log_toggle.pack(side="left")
+        self._status = ttk.Label(bar, text="Listo.", style="Muted.TLabel")
+        self._status.pack(side="left", padx=(m.px(8), 0))
 
     def _build_log(self) -> None:
-        """Crea el recuadro de registro de solo lectura."""
-        self._log = tk.Text(self._root, height=7, font=theme.LOG_FONT,
-                            bg=theme.LOG_BG, fg=theme.LOG_FG, state="disabled")
-        self._log.pack(fill="both", **theme.PADDING)
+        """Crea el registro técnico de MkPFS (oculto hasta que se despliega)."""
+        p = self._theme.palette
+        self._log = tk.Text(self._root, height=8, font=self._theme.fonts.mono, relief="flat",
+                            bd=0, padx=self._theme.metrics.px(10), pady=self._theme.metrics.px(8),
+                            background=p.log_bg, foreground=p.log_fg, state="disabled",
+                            highlightthickness=1, highlightbackground=p.line)
+        self._log_visible = False
+        self._theme.on_change(self._paint_log)
+
+    def _paint_log(self, p: Palette) -> None:
+        """Aplica los colores del tema al registro.
+
+        Args:
+            p (Palette): Paleta actual.
+        """
+        self._log.configure(background=p.log_bg, foreground=p.log_fg, highlightbackground=p.line)
+
+    def _toggle_log(self) -> None:
+        """Muestra u oculta el registro técnico."""
+        self._log_visible = not self._log_visible
+        icon = "chevron_down" if self._log_visible else "chevron_right"
+        self._log_toggle.configure(image=self._theme.icons.get(icon, 16, "muted"))
+        if self._log_visible:
+            self._log.pack(side="bottom", fill="x", pady=(self._theme.metrics.px(10), 0),
+                           before=self.table)
+        else:
+            self._log.pack_forget()
 
     def write_log(self, text: str) -> None:
         """Agrega una línea al registro y desplaza la vista al final.
@@ -151,28 +179,28 @@ class MainView:
         self._log.configure(state="disabled")
 
     def set_status(self, text: str) -> None:
-        """Cambia la línea de estado bajo la barra de progreso.
+        """Cambia el texto de estado del pie.
 
         Args:
             text (str): Texto a mostrar.
         """
         self._status.configure(text=text)
 
-    def set_progress(self, percent: int) -> None:
-        """Cambia el valor de la barra de progreso.
+    def set_summary(self, text: str) -> None:
+        """Muestra el resumen de la cola (cantidad y tamaños).
 
         Args:
-            percent (int): Porcentaje entre ``0`` y ``100``.
+            text (str): Resumen ya formateado.
         """
-        self._pbar["value"] = percent
+        self._summary.configure(text=text)
 
     def set_upload_enabled(self, enabled: bool) -> None:
-        """Habilita "Subir a la PS5" si hay juegos comprimidos pendientes de subir.
+        """Habilita "Subir completados a la PS5" si hay juegos listos sin subir.
 
         Args:
             enabled (bool): ``True`` para habilitar el botón.
         """
-        self._upload_btn.configure(state="normal" if enabled else "disabled")
+        self._upload_btn.state(["!disabled"] if enabled else ["disabled"])
 
     def set_running(self, running: bool) -> None:
         """Habilita o deshabilita los botones según haya una conversión en curso.
@@ -180,5 +208,5 @@ class MainView:
         Args:
             running (bool): ``True`` mientras se convierte la cola.
         """
-        self._start_btn.configure(state="disabled" if running else "normal")
-        self._cancel_btn.configure(state="normal" if running else "disabled")
+        self._start_btn.state(["disabled"] if running else ["!disabled"])
+        self._cancel_btn.state(["!disabled"] if running else ["disabled"])

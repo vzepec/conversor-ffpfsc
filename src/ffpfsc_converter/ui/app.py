@@ -10,25 +10,28 @@ from __future__ import annotations
 import queue
 from collections.abc import Iterable
 from pathlib import Path
-from tkinter import ttk
 
 from ffpfsc_converter.config import PRESETS
-from ffpfsc_converter.domain.events import Event, JobFinished, QueueFinished
+from ffpfsc_converter.domain.events import Event
 from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
 from ffpfsc_converter.domain.remote_events import RemoteEvent
+from ffpfsc_converter.domain.update import UpdateAvailable
 from ffpfsc_converter.errors import ConverterError
 from ffpfsc_converter.infrastructure.system import open_in_file_manager
 from ffpfsc_converter.services.analysis import start_analysis
 from ffpfsc_converter.services.conversion import ConversionRunner
 from ffpfsc_converter.services.discovery import create_job, output_path_for
 from ffpfsc_converter.services.preflight import check_free_space
-from ffpfsc_converter.ui import dialogs, job_table, presenters, theme
-from ffpfsc_converter.ui.convert_upload import ConvertedUploader, tab_selector
-from ffpfsc_converter.ui.dnd import create_root
+from ffpfsc_converter.services.update_check import start_update_check
+from ffpfsc_converter.ui import dialogs, presenters, theme
+from ffpfsc_converter.ui import job_presenters as jp
+from ffpfsc_converter.ui.convert_upload import ConvertedUploader
 from ffpfsc_converter.ui.event_handlers import ViewUpdater
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
 from ffpfsc_converter.ui.explorer.updater import ExplorerUpdater
 from ffpfsc_converter.ui.main_view import MainView, ViewCallbacks
+from ffpfsc_converter.ui.shell import AppShell
+from ffpfsc_converter.ui.window import create_window
 
 _ESTIMATE_LEVELS = sorted({p.level for p in PRESETS})
 
@@ -42,36 +45,48 @@ class MainWindow:
         Args:
             initial_paths (Iterable[Path]): Rutas recibidas por línea de comandos.
         """
-        self.root = create_root()
-        self.root.title(presenters.window_title())
-        self.root.geometry(theme.WINDOW_SIZE)
-        self.root.minsize(*theme.WINDOW_MIN_SIZE)
+        self._window = create_window()
+        self.root, self.theme = self._window.root, self._window.theme
 
         self._jobs: list[ConversionJob] = []
         self._events: queue.Queue[Event | RemoteEvent] = queue.Queue()
         self._runner = ConversionRunner(self._events.put)
         self._output_dir: Path | None = None  # None = junto a cada juego
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True)
-        convert_tab, ps5_tab = ttk.Frame(notebook), ttk.Frame(notebook)
-        notebook.add(convert_tab, text="  Convertir  ")
-        notebook.add(ps5_tab, text="  PS5  ")
-        self._explorer = ExplorerController(ps5_tab, self._events.put)
+        self._shell = AppShell(self.root, self.theme, presenters.version_text())
+        self._shell.pack(fill="both", expand=True)
+        convert_tab = self._shell.add_view("convert", "Convertir", "convert")
+        ps5_tab = self._shell.add_view("ps5", "PS5", "console")
+        self._explorer = ExplorerController(ps5_tab, self.theme, self._events.put)
         self._explorer.view.pack(fill="both", expand=True)
+        self._explorer.view.add_status_listener(
+            lambda status: self._shell.show_connection(presenters.connection_card(status)))
+        self._explorer.view.transfers.add_listener(
+            lambda active: self._shell.set_badge("ps5", str(active) if active else ""))
         self._explorer_updater = ExplorerUpdater(self._explorer)
-        self._view = MainView(convert_tab, ViewCallbacks(
+        self._view = MainView(convert_tab, self.theme, self._callbacks())
+        self._updater = ViewUpdater(self._view)
+        self._uploader = ConvertedUploader(self._view, self._explorer, lambda: self._jobs,
+                                           lambda: self._shell.show("ps5"))
+        self.root.after(theme.EVENT_POLL_MS, self._poll_events)
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.add_paths(initial_paths)
+        start_update_check(self._events.put)
+
+    def _callbacks(self) -> ViewCallbacks:
+        """Reúne las acciones de la vista Convertir.
+
+        Returns:
+            ViewCallbacks: Acciones conectadas a este controlador.
+        """
+        return ViewCallbacks(
             on_paths=self.add_paths, on_pick_folder=self.pick_folder,
             on_pick_file=self.pick_file, on_pick_output_dir=self.pick_output_dir,
             on_preset_changed=self._refresh_estimates, on_start=self.start,
             on_cancel=self.cancel, on_remove=self.remove_selected,
-            on_open_output=self.open_output, on_upload_ps5=lambda: self._uploader.upload(),
-        ))
-        self._updater = ViewUpdater(self._view)
-        self._uploader = ConvertedUploader(self._view, self._explorer, lambda: self._jobs,
-                                           tab_selector(notebook, ps5_tab))
-        self.root.after(theme.EVENT_POLL_MS, self._poll_events)
-        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
-        self.add_paths(initial_paths)
+            on_open_output=self.open_output,
+            on_upload_all=lambda: self._uploader.upload_all(),
+            on_upload_row=lambda row_id: self._uploader.upload_ids({row_id}),
+        )
 
     def run(self) -> None:
         """Inicia el bucle principal de Tkinter hasta que se cierra la ventana."""
@@ -128,13 +143,8 @@ class MainWindow:
         if any(j.game_root == job.game_root for j in self._queued_jobs()):
             return
         self._jobs.append(job)
-        self._view.table.add_row(job.id, {
-            job_table.TITLE: "leyendo…",
-            job_table.SOURCE: presenters.source_display_name(job),
-            job_table.SIZE: "calculando…",
-            job_table.ESTIMATE: presenters.PENDING_TEXT,
-            job_table.STATUS: presenters.QUEUED_TEXT,
-        })
+        self._view.table.add_row(job.id, "Leyendo…", presenters.source_display_name(job))
+        self._refresh_queue()
         if job.game_root != path:
             self._view.write_log(f"Juego detectado en: {job.game_root}")
         start_analysis(job, _ESTIMATE_LEVELS, self._events.put)
@@ -146,6 +156,7 @@ class MainWindow:
         selected = self._view.table.selected_ids()
         self._jobs = [j for j in self._jobs if j.id not in selected]
         self._view.table.delete_rows(selected)
+        self._refresh_queue()
 
     def open_output(self) -> None:
         """Abre la carpeta de destino (o la del último juego) en el gestor de archivos."""
@@ -192,10 +203,11 @@ class MainWindow:
                 event = self._events.get_nowait()
                 if self._explorer_updater.handles(event):
                     self._explorer_updater.handle(event)
+                elif isinstance(event, UpdateAvailable):
+                    self._shell.show_update(event.release)
                 else:
                     self._updater.handle(event)
-                    if isinstance(event, (JobFinished, QueueFinished)):
-                        self._uploader.refresh()
+                    self._refresh_queue()
         except queue.Empty:
             pass
         self.root.after(theme.EVENT_POLL_MS, self._poll_events)
@@ -224,8 +236,15 @@ class MainWindow:
         return space is None or space.is_enough or dialogs.confirm_low_space(space)
 
     def _refresh_estimates(self) -> None:
-        """Actualiza la columna de peso estimado al cambiar el modo."""
+        """Actualiza el peso estimado de cada fila al cambiar el modo."""
         level = self._view.options.selected_preset().level
         for job in self._jobs:
-            self._view.table.set_cell(job.id, job_table.ESTIMATE,
-                                      presenters.estimate_text(job, level))
+            self._view.table.set_sizes(job.id, jp.size_lines(job, level))
+        self._refresh_queue()
+
+    def _refresh_queue(self) -> None:
+        """Actualiza el resumen de la cola, el contador lateral y los botones de subida."""
+        level = self._view.options.selected_preset().level
+        self._view.set_summary(jp.queue_summary(self._jobs, level))
+        self._shell.set_badge("convert", str(len(self._jobs)) if self._jobs else "")
+        self._uploader.refresh()

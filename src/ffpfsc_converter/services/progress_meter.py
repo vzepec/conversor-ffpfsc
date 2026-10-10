@@ -54,6 +54,16 @@ class ProgressMeter:
         self._last_bytes += size
         self._skipped += size
 
+    def rewind(self, size: int) -> None:
+        """Descuenta bytes que se habían contado como ya descargados y se descartaron.
+
+        Args:
+            size (int): Bytes que hay que volver a descargar.
+        """
+        self._job.done_bytes -= size
+        self._last_bytes -= size
+        self._skipped -= size
+
     def advance(self, size: int, current_file: str) -> None:
         """Suma bytes recibidos y publica el avance si ya pasó el intervalo.
 

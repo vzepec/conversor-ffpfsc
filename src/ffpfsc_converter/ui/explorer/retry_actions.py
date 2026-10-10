@@ -18,7 +18,7 @@ class RetryActions:
         """Empieza sin transferencias fallidas.
 
         Args:
-            controller (ExplorerController): Controlador de la pestaña.
+            controller (ExplorerController): Controlador de la vista.
         """
         self._ctl = controller
         self._downloads: dict[str, DownloadJob] = {}

@@ -19,13 +19,16 @@ except Exception:  # noqa: BLE001 - cualquier fallo de carga desactiva DnD
     HAS_DND = False
 
 
-def create_root() -> tk.Tk:
+def create_root(class_name: str) -> tk.Tk:
     """Crea la ventana raíz, con soporte de arrastrar y soltar si está disponible.
+
+    Args:
+        class_name (str): Clase de la ventana (Linux la usa para asociarla a su icono).
 
     Returns:
         tk.Tk: Ventana raíz de la aplicación.
     """
-    return TkinterDnD.Tk() if HAS_DND else tk.Tk()
+    return TkinterDnD.Tk(className=class_name) if HAS_DND else tk.Tk(className=class_name)
 
 
 def register_drop_target(widget: tk.Misc, on_paths: Callable[[list[Path]], None]) -> None:

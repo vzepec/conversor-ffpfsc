@@ -8,6 +8,17 @@ from __future__ import annotations
 from ffpfsc_converter.domain.models import CompressionPreset
 
 APP_TITLE = "Conversor FFPFSC (PS5)"
+#: Nombre de la clase de la ventana en Linux; Tk lo publica como ``Conversor-ffpfsc``
+#: (con mayúscula), que es el ``StartupWMClass`` del acceso directo ``.desktop``.
+WINDOW_CLASS = "conversor-ffpfsc"
+#: Identificador de la app en Windows: agrupa la ventana con su icono en la barra de tareas.
+WINDOWS_APP_ID = "vzepec.ConversorFFPFSC"
+#: Repositorio de GitHub donde se publican las versiones.
+GITHUB_REPOSITORY = "vzepec/conversor-ffpfsc"
+#: Consulta de la última versión publicada (API pública de GitHub, sin credenciales).
+LATEST_RELEASE_URL = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/latest"
+#: Segundos de espera de la consulta de versión antes de darla por fallida.
+UPDATE_CHECK_TIMEOUT_SECONDS = 6
 
 # --------------------------------------------------------------- compresión
 #: zlib-ng es el backend seguro para el descompresor de la PS5 (isal genera
@@ -66,12 +77,20 @@ FTP_BLOCK_SIZE = 1024 * 1024
 PROGRESS_INTERVAL_SECONDS = 0.25
 #: Sufijo de los archivos a medio descargar; permite reanudar.
 PARTIAL_SUFFIX = ".part"
+#: Bytes ya descargados que se vuelven a pedir al reanudar, para comprobar que el
+#: servidor respeta la posición (el FTP de ps5upload acepta REST pero envía desde 0).
+RESUME_OVERLAP_BYTES = 64 * 1024
+#: Mayor posición que el FTP de ps5upload 6.x sabe retomar con REST: la guarda en
+#: un entero de 32 bits con signo y, por encima, envía desde 0 o desde otro lugar.
+FTP_MAX_RESUME_OFFSET = 2**31 - 1
 #: Carpetas de la PS5 que se ofrecen como accesos rápidos.
 PS5_FAVORITE_PATHS = (
     "/data/homebrew", "/mnt/usb0", "/mnt/usb1", "/mnt/ext0", "/mnt/ext1", "/data", "/",
 )
 #: Carpeta inicial al conectar (la que vigila ShadowMount+).
 PS5_START_PATH = "/data/homebrew"
+#: Porcentaje de uso a partir del cual la barra de una unidad de la PS5 se pinta en ámbar.
+STORAGE_WARN_PERCENT = 85
 #: Puerto del helper de ps5upload (protocolo AVA1), usado para iniciar el FTP.
 AVA1_PORT = 9120
 #: Nombre con el que la app se presenta ante la PS5 al emparejarse.

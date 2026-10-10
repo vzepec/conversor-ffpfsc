@@ -42,8 +42,9 @@ src/ffpfsc_converter/
 ├── domain/
 │   ├── models.py          # ConversionJob, GameInfo, ConversionOptions, JobState…
 │   ├── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
-│   ├── remote.py          # ConsoleTarget, RemoteEntry, DownloadJob… (pestaña PS5)
-│   └── remote_events.py   # RemoteListing, FtpReady, DownloadProgress…
+│   ├── remote.py          # ConsoleTarget, RemoteEntry, DownloadJob… (vista PS5)
+│   ├── remote_events.py   # RemoteListing, FtpReady, DownloadProgress…
+│   └── update.py          # ReleaseInfo y UpdateAvailable (aviso de versión nueva)
 ├── infrastructure/
 │   ├── mkpfs_adapter/     # Todo lo relativo a MkPFS (API pública en __init__.py)
 │   │   ├── command.py     #   línea de comandos de `mkpfs pack`
@@ -64,9 +65,10 @@ src/ffpfsc_converter/
 │   │   ├── console.py     #   fs.volumes, fs.freespace y job.run DELETE (borrado)
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
+│   ├── release_feed.py    # Última versión publicada (API pública de GitHub)
 │   ├── network.py         # ¿Puerto TCP abierto?
 │   ├── filesystem.py      # Listado de archivos, espacio libre, borrado seguro
-│   └── system.py          # Abrir carpeta (explorer/open/xdg-open) y localizar el Escritorio
+│   └── system.py          # Abrir carpeta o web, Escritorio, escala e identidad en Windows
 ├── services/
 │   ├── discovery.py       # Encontrar eboot.bin / imagen y crear el ConversionJob
 │   ├── metadata.py        # Nombre, Title ID y versión desde param.json
@@ -81,7 +83,9 @@ src/ffpfsc_converter/
 │   ├── retry.py           # Reintentos automáticos ante fallos transitorios
 │   ├── download_planner.py#   carpeta remota → lista de archivos y rutas locales
 │   ├── file_download.py   #   un archivo: .part, REST, verificación de tamaño
+│   ├── resume_writer.py   #   escribe el .part verificando la reanudación y con tope
 │   ├── progress_meter.py  #   progreso y velocidad con frecuencia limitada
+│   ├── update_check.py    # ¿Hay versión nueva? (hilo, best effort)
 │   ├── remote_client.py   #   Protocol RemoteClient (para tests)
 │   ├── console_access.py  # Sesión AVA1 emparejada, ftp.start y escritura temporal
 │   ├── remote_storage.py  # StorageMonitor: espacio libre de interno, USB y ampliado
@@ -97,24 +101,42 @@ src/ffpfsc_converter/
 │   └── remote_errors.py, launch_errors.py  # errores → mensajes para el usuario
 └── ui/
     ├── app.py             # MainWindow: controlador (acciones del usuario → servicios)
-    ├── main_view.py       # MainView + ViewCallbacks: construye los widgets
-    ├── options_panel.py   # Modo, núcleos, destino y verificación
-    ├── job_table.py       # Tabla de la cola
-    ├── dialogs.py         # Selectores de archivos y mensajes
+    ├── window.py          # Crea la ventana: escala, clase/ID del sistema, tema e icono
+    ├── shell.py           # AppShell: barra lateral (navegación, estado de la PS5, tema)
+    ├── main_view.py       # MainView + ViewCallbacks: vista Convertir
+    ├── options_panel.py   # Modo, núcleos, verificación y destino
+    ├── job_list.py        # Filas de la cola (ficha, tamaños, estado, «Subir a la PS5»)
+    ├── job_presenters.py  # Textos puros de las filas y del resumen de la cola
+    ├── convert_upload.py  # Subida a la PS5 de los juegos convertidos
+    ├── dialogs.py, upload_dialog.py  # Selectores de archivos y mensajes
     ├── event_handlers.py  # ViewUpdater: eventos → cambios en la vista
     ├── presenters.py      # Funciones puras que generan los textos mostrados
-    ├── theme.py           # Colores, fuentes y medidas
     ├── dnd.py             # Arrastrar y soltar opcional (tkinterdnd2)
-    └── explorer/          # Pestaña PS5
-        ├── view.py        #   ExplorerView: compone barra, explorador y descargas
-        ├── connection_bar.py, remote_list.py, transfer_panel.py
+    ├── theme/             # Tema claro/oscuro (sigue al sistema con darkdetect)
+    │   ├── palette.py     #   paletas DARK y LIGHT
+    │   ├── fonts.py, metrics.py  # fuentes por sistema y escala para pantallas HiDPI
+    │   ├── icons.py, icon_shapes.py  # iconos de línea dibujados con Pillow
+    │   ├── shapes.py, rounded.py     # imágenes redondeadas estirables en 9 partes
+    │   ├── app_icon.py    #   icono de la app (ventana, barra lateral y accesos directos)
+    │   ├── styles.py      #   superficies planas y textos
+    │   ├── round_styles.py, widget_styles.py  # botones, tarjetas, píldoras, campos y barras
+    │   └── manager.py     #   ThemeManager: aplica, guarda y cambia el tema en vivo
+    ├── widgets/           # Segmented, Stepper, Tile, StatusDot, DropZone, ScrollFrame,
+    │                      # Steps, Modal (base de los diálogos) y ajuste de textos
+    └── explorer/          # Vista PS5
+        ├── view.py        #   ExplorerView: compone las piezas de la vista
+        ├── connection_bar.py  # tarjeta de conexión (IP, puerto, modo del FTP)
+        ├── drives.py      #   tarjetas de unidades con barra de uso
+        ├── path_bar.py    #   ruta con tramos clicables y accesos rápidos
+        ├── file_list.py   #   lista de archivos dibujada en un lienzo
+        ├── action_bar.py  #   acciones sobre la selección
+        ├── transfer_panel.py, transfer_row.py  # descargas y subidas
         ├── controller.py  #   ExplorerController: acciones → servicios
         ├── updater.py     #   ExplorerUpdater: eventos remotos → vista
         ├── modify_actions.py, changes_updater.py  # eliminar, subir, reemplazar
         ├── retry_actions.py    # "Reintentar fallidas"
-        ├── compress_dialog.py  # ventana modal de compresión
-        ├── pipeline_window.py  # progreso por etapas del pipeline
-        └── presenters.py  #   textos de la pestaña
+        ├── compress_dialog.py, pipeline_window.py, pairing_dialog.py  # diálogos
+        └── presenters.py, view_presenters.py, transfer_presenters.py  # textos puros
 ```
 
 ## Flujo de una conversión
@@ -155,7 +177,7 @@ sequenceDiagram
   diccionario `tipo → método`.
 - La cancelación usa un `threading.Event`; el proceso de MkPFS se lanza con
   `start_new_session=True` para matar también sus procesos hijo con `killpg`.
-- La pestaña PS5 usa la misma cola: `ExplorerUpdater.handles(evento)` decide si
+- La vista PS5 usa la misma cola: `ExplorerUpdater.handles(evento)` decide si
   el evento es suyo; si no, va a `ViewUpdater`.
 - `RemoteBrowser` ejecuta sus órdenes de una en una en un único hilo (una sesión
   FTP no admite operaciones simultáneas). Cada descarga abre **su propia** sesión,
@@ -181,10 +203,13 @@ sequenceDiagram
 | FTP iniciado en solo lectura con credenciales aleatorias | Mientras corre, cualquier equipo de la red podría usarlo; así nadie más puede modificar la consola. |
 | `CWD` antes de `MLSD` | El servidor del helper ignora la ruta de `MLSD` y lista la carpeta actual. |
 | Descargas como `.part` + renombre al verificar el tamaño | Una descarga cortada nunca parece completa y se puede reanudar con `REST`. |
+| Al reanudar se vuelven a pedir 64 KiB ya descargados | El FTP de ps5upload acepta `REST` pero envía desde el principio: se comprueba el solapamiento y, si llega el comienzo del archivo, se reescribe desde cero en vez de pegarlo detrás. Nunca se escribe más allá del tamaño informado. Por encima de 2 GiB (`FTP_MAX_RESUME_OFFSET`) ni se intenta: el FTP de ps5upload 6.x guarda la posición de `REST` en un entero de 32 bits. |
 | Subir, verificar y luego borrar el original | Si la subida falla nunca se pierde el juego. Solo sin espacio se borra antes, con confirmación y la copia local como respaldo. |
 | Borrado con `job.run` DELETE del helper | Un borrado recursivo por FTP serían miles de órdenes; el helper lo hace en la consola y protege raíces y puntos de montaje. |
 | Reintentos automáticos solo ante fallos transitorios | Las transferencias son reanudables, así que reintentar es reconectar y seguir; un error definitivo se informa sin esperar. |
 | Escritura del FTP solo durante la operación | `writable_ftp` reinicia el FTP con escritura y siempre lo restaura a solo lectura al salir. |
+| Aviso de versión con la API pública de GitHub | Sin credenciales ni servidor propio; corre en un hilo y, sin red o sin *Releases*, no muestra nada. El botón abre la página de la versión en vez de actualizar solo: la instalación es una carpeta con `git`/ZIP y el usuario decide cuándo. |
+| Icono dibujado en código (`app_icon.py`) | Una sola fuente para la ventana y la barra lateral; `tools/make_icon.py` genera `assets/icon.png` y `assets/icon.ico` para los accesos directos. |
 | Cliente AVA1 verificado con los vectores oficiales | `tests/vectors/ava1` fija cada byte del protocolo; un cambio que lo rompa falla en `pytest`. |
 
 ## Cómo extender

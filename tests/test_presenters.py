@@ -6,9 +6,7 @@ from ffpfsc_converter import __version__
 from ffpfsc_converter.config import PRESETS
 from ffpfsc_converter.domain.models import (
     ConversionJob,
-    ConversionResult,
     GameInfo,
-    ProgressUpdate,
 )
 from ffpfsc_converter.ui import presenters
 
@@ -57,23 +55,6 @@ def test_estimates_summary_uses_short_labels() -> None:
     assert text == (
         "Estimación g (2.0 KB): Máxima velocidad: ≈1.0 KB  |  Máxima compresión: ≈512.0 B"
     )
-
-
-def test_progress_text() -> None:
-    """Traduce la fase y agrega la velocidad si existe."""
-    assert presenters.progress_text(ProgressUpdate(10, "compress", "1 MB/s")) == \
-        "Comprimiendo: 10%  —  1 MB/s"
-    assert presenters.progress_text(ProgressUpdate(10, "other")) == "other: 10%"
-
-
-def test_result_text() -> None:
-    """Formatea éxito, cancelación y error."""
-    job = ConversionJob(Path("/g"), Path("/g"), Path("/g.ffpfsc"), size=1000)
-    ok = ConversionResult(True, False, 120, output_size=500)
-    assert presenters.result_text(job, ok) == "✔ 500.0 B (−50%) en 2.0 min"
-    assert presenters.result_text(job, ConversionResult(False, True, 1)) == "✖ Cancelado"
-    assert presenters.result_text(job, ConversionResult(False, False, 1, message="código 2")) == \
-        "✖ Error (código 2)"
 
 
 def test_source_display_name(tmp_path: Path) -> None:

@@ -5,6 +5,45 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Corregido
+- Al reanudar una descarga de la PS5 el avance podía pasar del 100 % y el archivo
+  crecer sin límite: el FTP de ps5upload acepta `REST` pero envía el archivo desde
+  el principio, y se pegaba detrás de lo ya descargado. Ahora se verifica la
+  reanudación (si la consola empieza de cero, se reescribe el archivo), se descarta
+  un `.part` que no coincide y nunca se escribe más allá del tamaño esperado.
+  La causa: ps5upload 6.x guarda la posición de `REST` en un entero de 32 bits, así
+  que solo retoma en los primeros 2 GiB; por encima, la app vuelve a transferir ese
+  archivo desde el principio (también en las subidas).
+
+### Documentado
+- ps5upload 7.0 eliminó el servidor FTP: la vista PS5 necesita la versión 6.x
+  (la incluida en `payload/`).
+
+### Cambiado
+- Interfaz rediseñada: barra lateral con navegación, estado de la PS5 (IP, modo del
+  FTP y espacio libre) y selector de tema; tema claro y oscuro que sigue al del
+  sistema; botones, tarjetas, campos y barras con esquinas redondeadas; filas por
+  juego con ficha, estimación, estado y barra de progreso; escala para pantallas HiDPI.
+- Vista PS5 rediseñada: tarjeta de conexión, tarjetas de cada unidad con su espacio
+  libre, ruta con tramos clicables y accesos rápidos, lista de archivos con etiquetas
+  (Juego, Comprimido, Imagen), barra de acciones según la selección y panel de
+  transferencias; contador de transferencias activas en la barra lateral.
+- Diálogos de «Comprimir y reemplazar», subida y emparejamiento con el estilo de la app.
+- Bordes suavizados en los círculos de los pasos, el punto de conexión, las fichas,
+  las etiquetas y el borde punteado de la zona para soltar juegos.
+
+### Añadido
+- Botón «Subir a la PS5» en cada juego convertido y «Subir completados a la PS5»
+  para enviar todos los que aún no están en la consola.
+- La subida omite los archivos que ya están en la PS5 con el mismo tamaño.
+- Icono propio de la app en la ventana, la barra de tareas y los accesos directos
+  de Linux y Windows (`assets/`, generado con `tools/make_icon.py`).
+- Aviso de versión nueva: al abrirse, la app consulta la última *Release* publicada
+  en GitHub y, si es más nueva, muestra el botón verde «Actualizar a vX.Y.Z», que
+  abre su página. Sin conexión no muestra nada.
+- Guía para publicar versiones como *Releases* de GitHub (`docs/DEVELOPMENT.md`) y
+  capturas nuevas en el README.
+
 ## [1.2.0] - 2026-10-10
 
 ### Añadido
