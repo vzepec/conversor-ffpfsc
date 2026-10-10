@@ -66,6 +66,9 @@ sola ante cortes. Más detalles en [PS5.md](PS5.md).
 | **Guardar en** | Por defecto junto al juego original. |
 | **Verificación completa** | Relee y comprueba cada bloque al terminar. Más lento, máxima seguridad. Sin marcarla se verifica solo la estructura. |
 
+Mientras convierte o transfiere con la PS5, **el equipo no se suspende**. Al
+terminar, si la ventana no está en primer plano, aparece un **aviso del escritorio**.
+
 La app **recuerda** el modo, los núcleos, la verificación y la carpeta de destino
 entre sesiones, además del tamaño de la ventana y la última vista abierta. Con
 **Usar «junto a cada juego»** vuelves a guardar los `.ffpfsc` al lado del original.

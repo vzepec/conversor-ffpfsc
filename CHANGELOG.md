@@ -9,6 +9,10 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - «Comprimir y reemplazar» compara con CRC32 lo descargado y lo subido con lo que
   hay en la PS5 (la consola lo calcula con el helper, en paralelo) antes de
   comprimir y antes de borrar el original. Antes solo se comparaba el tamaño.
+- El equipo no se suspende mientras haya una conversión o una transferencia con la
+  PS5 en curso (Linux: `systemd-inhibit`; Windows: `SetThreadExecutionState`).
+- Aviso del escritorio al terminar la cola de conversión, las descargas, una subida
+  o «Comprimir y reemplazar», si la ventana no está en primer plano.
 - La app recuerda entre sesiones el modo, los núcleos, la verificación, la carpeta de
   destino (con un enlace para volver a «junto a cada juego»), el tamaño de la
   ventana y la última vista abierta.

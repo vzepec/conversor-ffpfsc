@@ -15,9 +15,11 @@ from ffpfsc_converter.domain.remote_events import RemoteEvent
 from ffpfsc_converter.domain.update import UpdateAvailable
 from ffpfsc_converter.services.update_check import start_update_check
 from ffpfsc_converter.ui import dialogs, presenters, theme
+from ffpfsc_converter.ui.activity import ActivityWatch
 from ffpfsc_converter.ui.convert_controller import ConvertController, ConvertLinks
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
 from ffpfsc_converter.ui.explorer.updater import ExplorerUpdater
+from ffpfsc_converter.ui.notifications import Notifier
 from ffpfsc_converter.ui.shell import AppShell
 from ffpfsc_converter.ui.window import create_window, remember_window
 
@@ -50,6 +52,8 @@ class MainWindow:
             lambda count: self._shell.set_badge("convert", str(count) if count else ""),
             lambda: self._shell.show("ps5")))
         self._shell.show(self._window.saved.view)
+        self._notifier = Notifier(self.root)
+        self._activity = ActivityWatch(self.root, self._is_busy)
         self.root.after(theme.EVENT_POLL_MS, self._poll_events)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._convert.add_paths(initial_paths)
@@ -67,6 +71,7 @@ class MainWindow:
             return
         self._explorer.downloads.cancel()
         self._convert.runner.cancel()
+        self._activity.stop()
         remember_window(self.root, self._shell.current)
         self.root.destroy()
 
@@ -85,9 +90,19 @@ class MainWindow:
         Args:
             event (Event | RemoteEvent): Evento publicado por un servicio.
         """
+        self._notifier.handle(event)
         if self._explorer_updater.handles(event):
             self._explorer_updater.handle(event)
         elif isinstance(event, UpdateAvailable):
             self._shell.show_update(event.release)
         else:
             self._convert.handle(event)
+
+    def _is_busy(self) -> bool:
+        """Indica si hay una tarea larga en curso (conversión o transferencia con la PS5).
+
+        Returns:
+            bool: ``True`` mientras no conviene que el equipo se suspenda.
+        """
+        return (self._convert.runner.is_running or self._explorer.downloads.is_running
+                or self._explorer.modify.busy)
