@@ -6,6 +6,9 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Sin publicar]
 
 ### Cambiado
+- «Comprimir y reemplazar» ya no abre una ventana de progreso: se sigue en una fila
+  del panel de Transferencias con el paso, la barra, el tiempo restante y los
+  botones Cancelar o Reintentar. El panel crece según sus filas.
 - Windows 10/11 deja de estar en *beta*: la app ya se probó en un equipo Windows real.
 
 ## [1.3.1] - 2026-10-10

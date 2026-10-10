@@ -106,22 +106,22 @@ class ChangesUpdater:
             listener(event)
 
     def _on_stage(self, event: PipelineStageChanged) -> None:
-        """Avanza la ventana del pipeline a la etapa nueva.
+        """Avanza la fila del pipeline a la etapa nueva.
 
         Args:
             event (PipelineStageChanged): Etapa nueva.
         """
-        if self._ctl.modify.window is not None:
-            self._ctl.modify.window.set_stage(event.stage, event.detail)
+        if self._ctl.modify.tracker is not None:
+            self._ctl.modify.tracker.set_stage(event.stage, event.detail)
 
     def _on_progress(self, event: PipelineProgress) -> None:
-        """Actualiza la barra de la ventana del pipeline.
+        """Actualiza la barra de la fila del pipeline.
 
         Args:
             event (PipelineProgress): Avance.
         """
-        if self._ctl.modify.window is not None:
-            self._ctl.modify.window.set_progress(event.percent, event.detail, event.eta_seconds)
+        if self._ctl.modify.tracker is not None:
+            self._ctl.modify.tracker.set_progress(event.percent, event.detail, event.eta_seconds)
 
     def _on_options(self, event: PipelineOptionsRequired) -> None:
         """Muestra la ventana de compresión y entrega la elección al pipeline.
@@ -147,8 +147,8 @@ class ChangesUpdater:
             event (PipelineFinished): Resultado.
         """
         self._ctl.refresh_storage()
-        window = self._ctl.modify.window
-        if window is not None and window.winfo_exists():
-            window.finish(event.result)
+        tracker = self._ctl.modify.tracker
+        if tracker is not None:
+            tracker.finish(event.result)
         elif not event.result.succeeded:
             dialogs.show_error(event.result.message)

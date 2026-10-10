@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ffpfsc_converter.domain.pipeline import PipelineResult, PipelineStage
 from ffpfsc_converter.domain.remote import DownloadResult, RemoteEntry, StorageVolume
 from ffpfsc_converter.ui.explorer import transfer_presenters as tp
 from ffpfsc_converter.ui.explorer import view_presenters as vp
@@ -107,3 +108,15 @@ def test_elide() -> None:
     assert elide("corto", _Monospace(), 50) == "corto"
     assert elide("muy largo", _Monospace(), 50) == "muy …"
     assert elide("abc", _Monospace(), 5) == "…"
+
+
+def test_pipeline_row_texts() -> None:
+    """Describe el paso, limita el porcentaje y resume el resultado del reemplazo."""
+    assert tp.pipeline_step_text(PipelineStage.COMPRESS) == "Paso 2 de 3 · Comprimiendo a .ffpfsc"
+    assert tp.pipeline_step_text(PipelineStage.DOWNLOAD).startswith("Paso 1 de 3")
+    assert tp.pipeline_progress(101.4, "1 GB de 1 GB") == (100.0, "100% · 1 GB de 1 GB")
+    assert tp.pipeline_progress(5, "").text == "5%"
+    assert tp.pipeline_result_status(PipelineResult(True, False, "listo")) == (
+        "ok", "✓ Reemplazado", "listo")
+    assert tp.pipeline_result_status(PipelineResult(False, True, "x")).kind == "warn"
+    assert tp.pipeline_result_status(PipelineResult(False, False, "falló")).kind == "bad"

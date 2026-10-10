@@ -122,7 +122,7 @@ src/ffpfsc_converter/
     │   ├── round_styles.py, widget_styles.py  # botones, tarjetas, píldoras, campos y barras
     │   └── manager.py     #   ThemeManager: aplica, guarda y cambia el tema en vivo
     ├── widgets/           # Segmented, Stepper, Tile, StatusDot, DropZone, ScrollFrame,
-    │                      # Steps, Modal (base de los diálogos) y ajuste de textos
+    │                      # Modal (base de los diálogos) y ajuste de textos
     └── explorer/          # Vista PS5
         ├── view.py        #   ExplorerView: compone las piezas de la vista
         ├── connection_bar.py  # tarjeta de conexión (IP, puerto, modo del FTP)
@@ -135,7 +135,8 @@ src/ffpfsc_converter/
         ├── updater.py     #   ExplorerUpdater: eventos remotos → vista
         ├── modify_actions.py, changes_updater.py  # eliminar, subir, reemplazar
         ├── retry_actions.py    # "Reintentar fallidas"
-        ├── compress_dialog.py, pipeline_window.py, pairing_dialog.py  # diálogos
+        ├── pipeline_tracker.py  # fila de "comprimir y reemplazar" en Transferencias
+        ├── compress_dialog.py, pairing_dialog.py  # diálogos
         └── presenters.py, view_presenters.py, transfer_presenters.py  # textos puros
 ```
 

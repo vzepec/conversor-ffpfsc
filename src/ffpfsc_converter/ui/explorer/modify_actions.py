@@ -12,7 +12,7 @@ from ffpfsc_converter.services.pipeline.runner import Ps5ConversionPipeline
 from ffpfsc_converter.services.remote_changes import RemoteChanges
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
-from ffpfsc_converter.ui.explorer.pipeline_window import PipelineWindow
+from ffpfsc_converter.ui.explorer.pipeline_tracker import PipelineTracker
 
 if TYPE_CHECKING:  # evita la importación circular con el controlador
     from ffpfsc_converter.ui.explorer.controller import ExplorerController
@@ -24,7 +24,7 @@ class ModifyActions:
     Attributes:
         changes (RemoteChanges): Eliminar y subir archivos.
         pipeline (Ps5ConversionPipeline): Comprimir y reemplazar.
-        window (PipelineWindow | None): Ventana de progreso del pipeline en curso.
+        tracker (PipelineTracker | None): Fila del pipeline en el panel de transferencias.
     """
 
     def __init__(self, controller: ExplorerController, emit: EventSink,
@@ -39,7 +39,7 @@ class ModifyActions:
         self._ctl = controller
         self.changes = RemoteChanges(emit, access)
         self.pipeline = Ps5ConversionPipeline(emit, access)
-        self.window: PipelineWindow | None = None
+        self.tracker: PipelineTracker | None = None
 
     @property
     def busy(self) -> bool:
@@ -105,8 +105,8 @@ class ModifyActions:
         assert self._ctl.target is not None and self._ctl.download_dir is not None
         entry = entries[0]
         siblings = [e.name for e in self._ctl.entries]
-        self.window = PipelineWindow(self._ctl.view, self._ctl.theme, entry.path,
-                                     (self.pipeline.cancel, self.retry_pipeline))
+        self.tracker = PipelineTracker(self._ctl.view.transfers, entry.name,
+                                       (self.pipeline.cancel, self.retry_pipeline))
         self.pipeline.start(entry, self._ctl.target, siblings,
                             self._ctl.download_dir / PIPELINE_WORK_DIR_NAME)
 
@@ -115,8 +115,8 @@ class ModifyActions:
         if self.pipeline.last is None or not self._ready():
             return
         assert self._ctl.target is not None
-        if self.window is not None and self.window.winfo_exists():
-            self.window.restart()
+        if self.tracker is not None:
+            self.tracker.restart()
         self.pipeline.retry(self._ctl.target)
 
     def _ready(self) -> bool:

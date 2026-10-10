@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import ttk
 
 from ffpfsc_converter.ui.explorer.transfer_presenters import TransferProgress
@@ -9,7 +10,7 @@ from ffpfsc_converter.ui.theme import ThemeManager
 
 _PILLS = {"wait": "PillWait", "run": "PillRun", "ok": "PillOk", "warn": "PillWarn",
           "bad": "PillBad"}
-_SPEED_W, _ETA_W = 92, 120
+_SPEED_W, _ETA_W, _DETAIL_W = 92, 120, 380
 
 
 class TransferRow(ttk.Frame):
@@ -26,9 +27,10 @@ class TransferRow(ttk.Frame):
             parent (tk.Misc): Contenedor.
             theme (ThemeManager): Tema.
             name (str): Archivo o carpeta.
-            icon (str): ``"download"`` o ``"upload"``.
+            icon (str): ``"download"``, ``"upload"`` o ``"replace"``.
         """
-        m = theme.metrics
+        m = self._m = theme.metrics
+        self._theme = theme
         super().__init__(parent, style="Surface.TFrame")
         body = ttk.Frame(self, style="Surface.TFrame", padding=(m.px(14), m.px(9)))
         body.pack(fill="x")
@@ -37,14 +39,17 @@ class TransferRow(ttk.Frame):
             body.columnconfigure(column, weight=weight, uniform="transfer")
         body.columnconfigure(2, minsize=m.px(_SPEED_W))
         body.columnconfigure(3, minsize=m.px(_ETA_W))
-        ttk.Label(body, text=f" {name}", image=theme.icons.get(icon, 16, "muted"),
-                  compound="left", style="Card.TLabel").grid(row=0, column=0, rowspan=2,
-                                                             sticky="w", padx=(0, m.px(14)))
+        self._body = body
+        self._name = ttk.Label(body, text=f" {name}", image=theme.icons.get(icon, 16, "muted"),
+                               compound="left", style="Card.TLabel")
+        self._name.grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, m.px(14)))
+        self._subtitle = ttk.Label(body, style="CardSmall.TLabel")
+        self._action: ttk.Button | None = None
         self._label = ttk.Label(body, style="CardSmall.TLabel")
         self._label.grid(row=0, column=1, sticky="w")
         self._bar = ttk.Progressbar(body, maximum=100, style="Thin.Horizontal.TProgressbar")
         self._pill = ttk.Label(body)
-        self._detail = ttk.Label(body, style="CardSmall.TLabel")
+        self._detail = ttk.Label(body, style="CardSmall.TLabel", wraplength=m.px(_DETAIL_W))
         self._speed = ttk.Label(body, style="CardSmall.TLabel", anchor="e")
         self._speed.grid(row=0, column=2, rowspan=2, sticky="e")
         self._eta = ttk.Label(body, style="CardSmall.TLabel", anchor="e")
@@ -93,3 +98,48 @@ class TransferRow(ttk.Frame):
             self._detail.grid_remove()
         self._speed.configure(text="—")
         self._eta.configure(text="—")
+
+    def set_subtitle(self, text: str) -> None:
+        """Muestra una línea bajo el nombre (por ejemplo, el paso del reemplazo).
+
+        Args:
+            text (str): Texto de la línea; vacío la oculta.
+        """
+        self._subtitle.configure(text=text)
+        if text:
+            self._name.grid(row=0, column=0, rowspan=1, sticky="sw")
+            self._subtitle.grid(row=1, column=0, sticky="nw", padx=(self._m.px(22), 0),
+                                pady=(self._m.px(3), 0))
+        else:
+            self._subtitle.grid_remove()
+            self._name.grid(row=0, column=0, rowspan=2, sticky="w")
+
+    def set_action(self, text: str, command: Callable[[], None], style: str) -> None:
+        """Muestra un botón en la fila (Cancelar o Reintentar); texto vacío lo oculta.
+
+        Args:
+            text (str): Texto del botón.
+            command (Callable[[], None]): Acción.
+            style (str): Estilo ttk (por ejemplo ``"Card.SmallDanger.TButton"``).
+        """
+        if not text:
+            if self._action is not None:
+                self._action.grid_remove()
+            self._eta.grid(row=0, column=3, rowspan=2, sticky="e")
+            return
+        if self._action is None:
+            self._action = ttk.Button(self._body, takefocus=False)
+        self._action.configure(text=text, command=command, style=style)
+        self._action.state(["!disabled"])
+        self._eta.grid(row=0, column=3, rowspan=1, sticky="se")
+        self._action.grid(row=1, column=3, sticky="ne", pady=(self._m.px(4), 0))
+
+    def disable_action(self, text: str) -> None:
+        """Deshabilita el botón de la fila mientras se atiende (por ejemplo, «Cancelando…»).
+
+        Args:
+            text (str): Texto a mostrar en el botón.
+        """
+        if self._action is not None:
+            self._action.configure(text=text)
+            self._action.state(["disabled"])
