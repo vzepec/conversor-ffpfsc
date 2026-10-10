@@ -78,3 +78,7 @@ AVA1_PORT = 9120
 AVA1_CLIENT_NAME = "Conversor FFPFSC"
 #: Segundos que se espera el código de emparejamiento (la PS5 corta a los 60 s).
 PAIRING_CODE_TIMEOUT_SECONDS = 55
+#: Carpeta (dentro de la de descargas) donde el pipeline deja descargas y .ffpfsc.
+PIPELINE_WORK_DIR_NAME = "ffpfsc-temporal"
+#: Esperas (s) antes de cada reintento automático tras un corte de conexión.
+RETRY_DELAYS_SECONDS = (3.0, 10.0, 20.0)

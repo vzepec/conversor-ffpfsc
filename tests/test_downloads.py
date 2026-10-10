@@ -16,7 +16,7 @@ from ffpfsc_converter.domain.remote_events import (
     DownloadQueueFinished,
     DownloadStarted,
 )
-from ffpfsc_converter.services import downloads
+from ffpfsc_converter.services import remote_download as downloads
 from ffpfsc_converter.services.download_planner import local_name
 from ffpfsc_converter.services.downloads import DownloadRunner
 

@@ -38,6 +38,7 @@ class FtpClient:
         self.target = target
         self._timeout = timeout
         self._ftp: ftplib.FTP | None = None
+        self._interrupted = False
 
     def connect(self) -> None:
         """Abre la conexión, inicia sesión y activa el modo binario pasivo.
@@ -55,9 +56,12 @@ class FtpClient:
         self._ftp = ftp
 
     def close(self) -> None:
-        """Cierra la conexión; si el servidor no responde, la corta igualmente."""
+        """Cierra la conexión; si una transferencia se interrumpió, la corta sin esperar."""
         ftp, self._ftp = self._ftp, None
         if ftp is None:
+            return
+        if self._interrupted:  # el servidor aún puede estar enviando: QUIT esperaría
+            ftp.close()
             return
         try:
             ftp.quit()
@@ -141,8 +145,66 @@ class FtpClient:
             sink.write(block)
             on_chunk(len(block))
 
-        self._session().retrbinary(f"RETR {remote_path}", write,
-                                   blocksize=FTP_BLOCK_SIZE, rest=offset or None)
+        try:
+            self._session().retrbinary(f"RETR {remote_path}", write,
+                                       blocksize=FTP_BLOCK_SIZE, rest=offset or None)
+        except BaseException:
+            self._interrupted = True
+            raise
+
+    def upload(
+        self, source: BinaryIO, remote_path: str, offset: int, on_chunk: Callable[[int], None]
+    ) -> None:
+        """Sube un archivo, opcionalmente continuando desde un desplazamiento (``REST``).
+
+        Args:
+            source (BinaryIO): Archivo local abierto en binario, posicionado en ``offset``.
+            remote_path (str): Ruta remota de destino.
+            offset (int): Bytes que ya están en la PS5; ``0`` para empezar de cero.
+            on_chunk (Callable[[int], None]): Se llama con el tamaño de cada bloque enviado;
+                puede lanzar una excepción para abortar.
+
+        Raises:
+            ftplib.Error: Si el servidor rechaza la escritura (por ejemplo, en solo lectura).
+            OSError: Si se pierde la conexión.
+        """
+        try:
+            self._session().storbinary(f"STOR {remote_path}", source, blocksize=FTP_BLOCK_SIZE,
+                                       callback=lambda block: on_chunk(len(block)),
+                                       rest=offset or None)
+        except BaseException:
+            self._interrupted = True
+            raise
+
+    def size(self, remote_path: str) -> int | None:
+        """Consulta el tamaño de un archivo remoto.
+
+        Args:
+            remote_path (str): Ruta remota.
+
+        Returns:
+            int | None: Tamaño en bytes, o ``None`` si el archivo no existe.
+
+        Raises:
+            OSError: Si se pierde la conexión.
+        """
+        try:
+            return self._session().size(remote_path)
+        except ftplib.error_perm:
+            return None
+
+    def rename(self, source: str, destination: str) -> None:
+        """Renombra un archivo remoto (siempre dentro del mismo disco).
+
+        Args:
+            source (str): Ruta actual.
+            destination (str): Ruta nueva.
+
+        Raises:
+            ftplib.Error: Si el servidor lo rechaza (el de ps5upload rechaza cruzar discos).
+            OSError: Si se pierde la conexión.
+        """
+        self._session().rename(source, destination)
 
     def _session(self) -> ftplib.FTP:
         """Obtiene la sesión abierta.

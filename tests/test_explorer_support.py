@@ -87,3 +87,22 @@ def test_trust_store(tmp_path: Path) -> None:
     assert store.known_key("10.0.0.5") is None
     store.remember("10.0.0.5", b"\x01" * 32, "PS5")
     assert TrustStore(tmp_path).known_key("10.0.0.5") == b"\x01" * 32
+
+
+def test_upload_and_delete_texts() -> None:
+    """Formatea el avance de subida y recorta listas largas de borrado."""
+    assert presenters.upload_progress_text(512, 2048) == "25%  (512.0 B de 2.0 KB)"
+    assert presenters.upload_progress_text(0, 0) == "100%  (0.0 B de 0.0 B)"
+    paths = [f"/data/homebrew/j{i}" for i in range(10)]
+    summary = presenters.delete_summary(paths, limit=3)
+    assert summary.splitlines() == ["/data/homebrew/j0", "/data/homebrew/j1",
+                                    "/data/homebrew/j2", "… y 7 más"]
+
+
+def test_protected_path_message() -> None:
+    """Un rechazo ERR_PATH explica por qué no se puede borrar."""
+    from ffpfsc_converter.infrastructure.ava1.handshake import Ava1Refused
+    from ffpfsc_converter.services.launch_errors import describe_launch_error
+
+    text = describe_launch_error(Ava1Refused(9, "fs_delete_path_is_mount_point"), "ps5", "borrar")
+    assert "no permite borrar" in text and "puntos de montaje" in text

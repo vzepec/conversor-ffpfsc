@@ -13,6 +13,29 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   con el código de la consola, `ftp.start`), verificado con sus vectores oficiales.
 - El FTP de la PS5 se inicia en solo lectura y con credenciales aleatorias.
 - Ajustes persistentes (IP, puerto, carpeta de descargas) y guía `docs/PS5.md`.
+- **Comprimir y reemplazar** un juego de la PS5 (carpeta, `.exfat` o `.ffpkg`):
+  descarga, ventana de compresión con estimación, compresión con MkPFS, subida
+  verificada como `.part`, borrado del original y publicación del `.ffpfsc`.
+- **Subir** archivos a la PS5 (con reanudación) y **eliminar** archivos y carpetas
+  (con el borrado protegido del helper).
+- El FTP solo tiene permiso de escritura mientras dura una operación.
+- **Tiempo restante (ETA)** y porcentaje en compresiones, descargas, subidas y en
+  "comprimir y reemplazar".
+- Ventana de "comprimir y reemplazar" simplificada a 3 pasos: Descarga,
+  Compresión y Reemplazo.
+- Carpeta `payload/` con el helper de ps5upload 6.4.0 y su guía de carga.
+- Reintentos automáticos (hasta 3) ante cortes de conexión en descargas y subidas,
+  y reintento manual: "Reintentar fallidas" en el panel de transferencias y
+  "Reintentar" en "comprimir y reemplazar" (sin volver a comprimir ni a borrar).
+- ETA más estable: velocidad promedio de 30 s y cuenta regresiva entre recálculos.
+- Botón **Subir a la PS5** en la pestaña Convertir para los juegos ya comprimidos;
+  conecta si hace falta (o explica cómo vincular la PS5) y sube cuando se conecta.
+
+### Corregido
+- Tras cancelar "comprimir y reemplazar", el botón "Cerrar" quedaba deshabilitado.
+- Una subida reanudada podía mezclar dos archivos distintos si se volvía a
+  comprimir con otras opciones; ahora se comparan los últimos bytes antes de reanudar.
+- Cancelar una transferencia esperaba al servidor; ahora la conexión se corta al instante.
 
 ## [1.1.0] - 2026-10-09
 

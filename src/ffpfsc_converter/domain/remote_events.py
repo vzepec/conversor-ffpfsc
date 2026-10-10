@@ -109,11 +109,30 @@ class DownloadProgress:
         job (DownloadJob): Descarga en curso (``done_bytes`` y ``total_bytes`` actualizados).
         current_file (str): Archivo que se está descargando.
         bytes_per_second (float): Velocidad media reciente.
+        eta_seconds (float | None): Tiempo restante estimado; ``None`` si aún no se sabe.
     """
 
     job: DownloadJob
     current_file: str
     bytes_per_second: float
+    eta_seconds: float | None = None
+
+
+@dataclass(frozen=True)
+class TransferRetrying:
+    """Se cortó una transferencia y se reintentará automáticamente.
+
+    Attributes:
+        row_id (str): Fila de la transferencia (descarga o subida).
+        attempt (int): Número de reintento (desde 1).
+        max_attempts (int): Reintentos máximos.
+        reason (str): Causa del corte, para el usuario.
+    """
+
+    row_id: str
+    attempt: int
+    max_attempts: int
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -150,6 +169,7 @@ RemoteEvent = (
     | FtpLoginRefused
     | DownloadStarted
     | DownloadProgress
+    | TransferRetrying
     | DownloadFinished
     | DownloadQueueFinished
 )

@@ -71,3 +71,15 @@ def remove_quietly(path: Path) -> None:
     """
     with contextlib.suppress(OSError):
         path.unlink(missing_ok=True)
+
+
+def remove_path(path: Path) -> None:
+    """Borra un archivo o una carpeta completa de este equipo, ignorando errores.
+
+    Args:
+        path (Path): Archivo o carpeta local.
+    """
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path, ignore_errors=True)
+    else:
+        remove_quietly(path)

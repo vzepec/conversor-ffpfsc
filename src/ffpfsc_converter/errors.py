@@ -70,6 +70,10 @@ class GameNotFoundError(ConverterError):
         self.path = path
 
 
+class TransientError(ConverterError):
+    """Error que puede resolverse reintentando (por ejemplo, una transferencia incompleta)."""
+
+
 class RemoteConnectionError(ConverterError):
     """Falló la comunicación con la PS5; el mensaje explica qué revisar."""
 

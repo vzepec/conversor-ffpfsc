@@ -54,13 +54,14 @@ class RemoteBrowser:
         """
         return self._client is not None
 
-    def connect(self, target: ConsoleTarget) -> None:
-        """Encola la conexión con una consola y la apertura de la carpeta inicial.
+    def connect(self, target: ConsoleTarget, start_path: str | None = None) -> None:
+        """Encola la conexión con una consola y la apertura de una carpeta.
 
         Args:
             target (ConsoleTarget): Consola a la que conectarse.
+            start_path (str | None): Carpeta a abrir; ``None`` = la inicial de la config.
         """
-        self._submit(lambda: self._do_connect(target))
+        self._submit(lambda: self._do_connect(target, start_path or PS5_START_PATH))
 
     def open(self, path: str) -> None:
         """Encola el listado de una carpeta remota.
@@ -98,11 +99,12 @@ class RemoteBrowser:
             finally:
                 self._commands.task_done()
 
-    def _do_connect(self, target: ConsoleTarget) -> None:
-        """Se conecta a la consola y abre la carpeta inicial (o la raíz).
+    def _do_connect(self, target: ConsoleTarget, start_path: str) -> None:
+        """Se conecta a la consola y abre una carpeta (o la raíz si no existe).
 
         Args:
             target (ConsoleTarget): Consola a la que conectarse.
+            start_path (str): Carpeta a abrir.
         """
         self._drop(notify=False)
         client = self._factory(target)
@@ -117,7 +119,7 @@ class RemoteBrowser:
             return
         self._client, self._target = client, target
         self._emit(RemoteConnected(target))
-        self._do_list(PS5_START_PATH, fallback="/")
+        self._do_list(start_path, fallback="/")
 
     def _do_list(self, path: str, fallback: str | None = None) -> None:
         """Lista una carpeta y publica el resultado o el error.

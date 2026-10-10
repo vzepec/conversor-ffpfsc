@@ -93,6 +93,19 @@ class Encoder:
         self._parts.append(struct.pack("<I", len(data)) + bytes(data))
         return self
 
+    def text(self, value: str) -> Encoder:
+        """Agrega un campo ``str`` (longitud u16 + UTF-8).
+
+        Args:
+            value (str): Texto a codificar.
+
+        Returns:
+            Encoder: El mismo codificador, para encadenar.
+        """
+        data = value.encode("utf-8")
+        self._parts.append(struct.pack("<H", len(data)) + data)
+        return self
+
     def ext_str(self, tag: int, text: str) -> Encoder:
         """Agrega una extensión de tipo ``str``.
 

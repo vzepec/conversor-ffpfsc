@@ -15,9 +15,11 @@ from ffpfsc_converter.domain.remote_events import (
     RemoteDisconnected,
     RemoteError,
     RemoteListing,
+    TransferRetrying,
 )
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
+from ffpfsc_converter.ui.explorer.changes_updater import ChangesUpdater
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
 
 
@@ -44,6 +46,8 @@ class ExplorerUpdater:
             DownloadProgress: self._on_download_progress,
             DownloadFinished: self._on_download_finished,
             DownloadQueueFinished: self._on_queue_finished,
+            TransferRetrying: self._on_retrying,
+            **ChangesUpdater(controller).handlers,
         }
 
     def handles(self, event: object) -> bool:
@@ -73,7 +77,8 @@ class ExplorerUpdater:
         """
         verb = "FTP iniciado" if event.started else "FTP activo"
         self._view.connection.set_state(False, f"{verb}; abriendo…", busy=True)
-        self._ctl.browser.connect(event.target)
+        start = self._ctl.path if self._ctl.target is not None else None
+        self._ctl.browser.connect(event.target, start_path=start)
 
     def _on_login_refused(self, event: FtpLoginRefused) -> None:
         """Reinicia el FTP con credenciales nuevas (lo había iniciado otro programa).
@@ -108,6 +113,9 @@ class ExplorerUpdater:
         self._ctl.target = event.target
         self._ctl.ftp_restarted = False
         self._view.set_browsing_enabled(True)
+        pending, self._ctl.pending_on_connect = self._ctl.pending_on_connect, []
+        for action in pending:
+            action()
 
     def _on_disconnected(self, _event: RemoteDisconnected) -> None:
         """Vacía el explorador al perder la conexión.
@@ -126,7 +134,7 @@ class ExplorerUpdater:
         Args:
             event (RemoteListing): Carpeta listada.
         """
-        self._ctl.path = event.path
+        self._ctl.path, self._ctl.entries = event.path, event.entries
         self._view.set_path(event.path)
         self._view.remote.show(event.entries)
         target = self._ctl.target
@@ -158,7 +166,8 @@ class ExplorerUpdater:
         Args:
             event (DownloadProgress): Avance.
         """
-        self._view.transfers.update_job(event.job, event.bytes_per_second, event.current_file)
+        self._view.transfers.update_job(event.job, event.bytes_per_second, event.current_file,
+                                        event.eta_seconds)
 
     def _on_download_finished(self, event: DownloadFinished) -> None:
         """Muestra el resultado de la descarga.
@@ -167,6 +176,20 @@ class ExplorerUpdater:
             event (DownloadFinished): Descarga terminada.
         """
         self._view.transfers.finish_job(event.job, event.result)
+        self._ctl.retry.download_finished(event.job, event.result)
+
+    def _on_retrying(self, event: TransferRetrying) -> None:
+        """Avisa en la fila que se reintentará la transferencia.
+
+        Args:
+            event (TransferRetrying): Reintento automático en curso.
+        """
+        self._view.transfers.set_status(
+            event.row_id, f"⚠ {event.reason} Reintentando ({event.attempt} de "
+            f"{event.max_attempts})…")
+        listener = self._ctl.upload_listeners.get(event.row_id)
+        if listener is not None:
+            listener(event)
 
     def _on_queue_finished(self, _event: DownloadQueueFinished) -> None:
         """Deshabilita "Cancelar" al terminar la cola.

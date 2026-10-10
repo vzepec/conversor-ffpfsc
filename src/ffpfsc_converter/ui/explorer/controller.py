@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Callable
 from pathlib import Path
 
 from ffpfsc_converter.config import DEFAULT_FTP_PORT
@@ -20,6 +21,8 @@ from ffpfsc_converter.services.ftp_launcher import FtpLauncher
 from ffpfsc_converter.services.remote_browser import RemoteBrowser
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
+from ffpfsc_converter.ui.explorer.modify_actions import ModifyActions
+from ffpfsc_converter.ui.explorer.retry_actions import RetryActions
 from ffpfsc_converter.ui.explorer.view import ExplorerCallbacks, ExplorerView
 
 
@@ -31,6 +34,12 @@ class ExplorerController:
         launcher (FtpLauncher): Inicia el FTP mediante el helper de ps5upload.
         target (ConsoleTarget | None): Consola conectada, o ``None``.
         path (str): Carpeta remota abierta.
+        entries (tuple[RemoteEntry, ...]): Contenido de la carpeta abierta.
+        modify (ModifyActions): Eliminar, subir y comprimir y reemplazar.
+        retry (RetryActions): Reintento manual de transferencias fallidas.
+        upload_listeners (dict[str, Callable[[object], None]]): Fila de subida → función
+            que también recibe sus eventos (la pestaña Convertir sigue así sus subidas).
+        pending_on_connect (list[Callable[[], None]]): Acciones a ejecutar al conectar.
         ftp_restarted (bool): ``True`` si ya se reinició el FTP por credenciales rechazadas.
         browser (RemoteBrowser): Navegación por la PS5.
         downloads (DownloadRunner): Cola de descargas.
@@ -50,12 +59,21 @@ class ExplorerController:
             on_change_destination=self.change_destination,
             on_cancel_downloads=self.cancel_downloads,
             on_open_destination=self.open_destination,
+            on_retry_failed=lambda: self.retry.retry_failed(),
+            on_upload=lambda: self.modify.upload_files(),
+            on_delete=lambda: self.modify.delete_selected(),
+            on_convert=lambda: self.modify.convert_selected(),
         ))
         self.launcher = FtpLauncher(emit, TrustStore(settings_path().parent))
         self.browser = RemoteBrowser(emit)
         self.downloads = DownloadRunner(emit)
+        self.modify = ModifyActions(self, emit, self.launcher.access)
+        self.retry = RetryActions(self)
         self.target: ConsoleTarget | None = None
         self.path = "/"
+        self.entries: tuple[RemoteEntry, ...] = ()
+        self.upload_listeners: dict[str, Callable[[object], None]] = {}
+        self.pending_on_connect: list[Callable[[], None]] = []
         self.ftp_restarted = False
         settings = load_settings()
         self.download_dir = Path(settings["download_dir"]) if settings.get("download_dir") else None
@@ -76,6 +94,17 @@ class ExplorerController:
         save_settings({"ps5_host": host, "ps5_ftp_port": port})
         self.view.connection.set_state(False, f"Conectando con {host}…", busy=True)
         self.launcher.connect(host, port, restart=restart)
+
+    def when_connected(self, action: Callable[[], None]) -> None:
+        """Ejecuta una acción ahora si hay conexión o, si no, apenas se conecte.
+
+        Args:
+            action (Callable[[], None]): Acción a ejecutar (por ejemplo, una subida).
+        """
+        if self.target is not None:
+            action()
+        else:
+            self.pending_on_connect.append(action)
 
     def disconnect(self) -> None:
         """Cierra la sesión del explorador (las descargas en curso continúan)."""
@@ -115,10 +144,10 @@ class ExplorerController:
         if self.target is None:
             dialogs.show_error("No hay conexión con la PS5.")
             return
-        if self.downloads.is_running:
-            dialogs.show_info("Espera a que terminen las descargas en curso.")
+        if self.downloads.is_running or self.modify.busy:
+            dialogs.show_info("Espera a que termine la operación en curso.")
             return
-        if self.download_dir is None and not self._choose_destination():
+        if self.download_dir is None and not self.choose_destination():
             return
         assert self.download_dir is not None
         jobs = [DownloadJob(entry, self.download_dir) for entry in entries]
@@ -132,7 +161,7 @@ class ExplorerController:
 
     def change_destination(self) -> None:
         """Pide una carpeta de descargas nueva."""
-        self._choose_destination()
+        self.choose_destination()
 
     def cancel_downloads(self) -> None:
         """Cancela las descargas (los archivos a medias se pueden reanudar)."""
@@ -143,7 +172,7 @@ class ExplorerController:
         if self.download_dir is not None:
             open_in_file_manager(self.download_dir)
 
-    def _choose_destination(self) -> bool:
+    def choose_destination(self) -> bool:
         """Pide la carpeta de descargas y la guarda en los ajustes.
 
         Returns:

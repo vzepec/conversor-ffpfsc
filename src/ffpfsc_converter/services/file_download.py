@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import BinaryIO, cast
 
 from ffpfsc_converter.domain.remote import FileTransfer
-from ffpfsc_converter.errors import ConverterError, DownloadCancelledError
+from ffpfsc_converter.errors import ConverterError, DownloadCancelledError, TransientError
 from ffpfsc_converter.services.download_planner import partial_path
 from ffpfsc_converter.services.progress_meter import ProgressMeter
 from ffpfsc_converter.services.remote_client import RemoteClient
@@ -31,7 +31,7 @@ class LocalWriteError(ConverterError):
         super().__init__(f"No se pudo escribir en este equipo:\n{path}\n\n{exc.strerror or exc}")
 
 
-class IncompleteDownloadError(ConverterError):
+class IncompleteDownloadError(TransientError):
     """El archivo descargado no tiene el tamaño que informó la PS5."""
 
     def __init__(self, transfer: FileTransfer, actual: int) -> None:

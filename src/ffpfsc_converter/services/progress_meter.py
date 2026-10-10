@@ -8,6 +8,7 @@ from ffpfsc_converter.config import PROGRESS_INTERVAL_SECONDS
 from ffpfsc_converter.domain.events import EventSink
 from ffpfsc_converter.domain.remote import DownloadJob
 from ffpfsc_converter.domain.remote_events import DownloadProgress
+from ffpfsc_converter.timing import EtaEstimator, SpeedAverage
 
 
 class ProgressMeter:
@@ -38,7 +39,10 @@ class ProgressMeter:
         self._clock = clock
         self._last_time = clock()
         self._last_bytes = job.done_bytes
+        self._skipped = job.done_bytes
         self._speed = 0.0
+        self._average = SpeedAverage()
+        self._eta = EtaEstimator(clock)
 
     def skip(self, size: int) -> None:
         """Cuenta bytes que ya estaban en el equipo, sin afectar la velocidad.
@@ -48,6 +52,7 @@ class ProgressMeter:
         """
         self._job.done_bytes += size
         self._last_bytes += size
+        self._skipped += size
 
     def advance(self, size: int, current_file: str) -> None:
         """Suma bytes recibidos y publica el avance si ya pasó el intervalo.
@@ -60,7 +65,7 @@ class ProgressMeter:
         now = self._clock()
         elapsed = now - self._last_time
         if elapsed >= self._interval:
-            self._speed = (self._job.done_bytes - self._last_bytes) / elapsed
+            self._speed = self._average.add((self._job.done_bytes - self._last_bytes) / elapsed)
             self._last_time, self._last_bytes = now, self._job.done_bytes
             self.publish(current_file)
 
@@ -70,4 +75,6 @@ class ProgressMeter:
         Args:
             current_file (str): Nombre del archivo que se está descargando.
         """
-        self._emit(DownloadProgress(self._job, current_file, self._speed))
+        done, total = self._job.done_bytes, self._job.total_bytes
+        eta = self._eta.update(done - self._skipped, total - done)
+        self._emit(DownloadProgress(self._job, current_file, self._speed, eta))

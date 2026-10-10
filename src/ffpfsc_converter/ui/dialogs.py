@@ -164,3 +164,52 @@ def confirm_quit_while_downloading() -> bool:
     """
     return messagebox.askyesno(
         APP_TITLE, "Hay descargas en curso. ¿Salir igualmente? Podrás reanudarlas después.")
+
+
+def confirm_remote_delete(summary: str) -> bool:
+    """Pide confirmación antes de borrar en la PS5.
+
+    Args:
+        summary (str): Rutas que se borrarán, una por línea.
+
+    Returns:
+        bool: ``True`` si el usuario acepta borrar.
+    """
+    return messagebox.askyesno(
+        APP_TITLE, f"Se BORRARÁ de la PS5 (incluido todo su contenido):\n\n{summary}\n\n"
+        "Esta acción no se puede deshacer. ¿Continuar?", icon="warning", default="no")
+
+
+def ask_upload_files() -> list[Path]:
+    """Pide los archivos de este equipo que se subirán a la PS5.
+
+    Returns:
+        list[Path]: Archivos elegidos (vacía si canceló).
+    """
+    files = filedialog.askopenfilenames(title="Archivos a subir a la PS5",
+                                        initialdir=_initial_dir())
+    return [Path(f) for f in files]
+
+
+def confirm_warning(message: str) -> bool:
+    """Pide una confirmación con icono de advertencia (por defecto, "No").
+
+    Args:
+        message (str): Pregunta.
+
+    Returns:
+        bool: ``True`` si el usuario acepta.
+    """
+    return messagebox.askyesno(APP_TITLE, message, icon="warning", default="no")
+
+
+def confirm(message: str) -> bool:
+    """Pide una confirmación simple (Sí / No).
+
+    Args:
+        message (str): Pregunta.
+
+    Returns:
+        bool: ``True`` si el usuario acepta.
+    """
+    return messagebox.askyesno(APP_TITLE, message)

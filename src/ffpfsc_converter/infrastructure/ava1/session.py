@@ -102,6 +102,27 @@ class Ava1Session:
         if not keys.same(server_mac, keys.pake_mac(key, b"server", h)):
             raise Ava1Refused(ERR_PAIRING_CODE, "la PS5 no pudo demostrar que conoce el código")
 
+    def call(self, method: int, body: bytes) -> bytes:
+        """Llama a un método RPC y devuelve el cuerpo de la respuesta.
+
+        Args:
+            method (int): Número de método AVA1.
+            body (bytes): Cuerpo de la petición ya codificado.
+
+        Returns:
+            bytes: Cuerpo de la respuesta (estado OK).
+
+        Raises:
+            Ava1Refused: Si la consola responde con un estado de error.
+            ConnectionError: Si se pierde la conexión.
+        """
+        request = Encoder().u16(method).blob(body).build()
+        reply = Decoder(self._request(TYPE_RPC_REQUEST, request).body)
+        status, data = reply.u16(), reply.blob()
+        if status != 0:
+            raise Ava1Refused(status, data.decode("utf-8", "replace"))
+        return data
+
     def call_text(self, method: int, payload: dict[str, Any]) -> dict[str, Any]:
         """Llama a un método de gestión cuyo cuerpo es JSON (``MgmtText``).
 
@@ -117,13 +138,7 @@ class Ava1Session:
             ConnectionError: Si se pierde la conexión.
         """
         body = Encoder().blob(json.dumps(payload).encode()).build()
-        reply = Decoder(self._request(TYPE_RPC_REQUEST, Encoder().u16(method).blob(body).build())
-                        .body)
-        status, data = reply.u16(), reply.blob()
-        if status != 0:
-            raise Ava1Refused(status, data.decode("utf-8", "replace"))
-        text = Decoder(data).blob()
-        return json.loads(text.decode("utf-8"))
+        return json.loads(Decoder(self.call(method, body)).blob().decode("utf-8"))
 
     def close(self) -> None:
         """Envía ``Bye`` y cierra la conexión."""

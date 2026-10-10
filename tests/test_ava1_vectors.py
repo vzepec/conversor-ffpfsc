@@ -91,3 +91,18 @@ def test_codec_round_trips_canonical_messages() -> None:
     assert (d.u16(), d.text(), d.extensions()) == (0x0102, "no", {})
     d = Decoder(_x(canon["PairResult"]))
     assert (d.u8(), d.raw(32), d.extensions()) == (1, b"\xcd" * 32, {})
+
+
+def test_status_vector_decodes() -> None:
+    """El estado de una tarea se lee igual que el vector oficial Status."""
+    from ffpfsc_converter.infrastructure.ava1.console import _decode_status
+
+    canon = {row[0]: row[1] for row in _lines("messages.txt")}
+    status = _decode_status(_x(canon["Status"]))
+    assert (status.state, status.code, status.current) == (2, 12, "cause")
+    assert (status.files_done, status.files_total) == (1, 1)
+
+
+def test_text_field_encoding() -> None:
+    """Un campo str se codifica como u16 + UTF-8."""
+    assert Encoder().text("/data").build().hex() == "05002f646174610000"

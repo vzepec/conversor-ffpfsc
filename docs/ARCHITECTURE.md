@@ -37,7 +37,8 @@ src/ffpfsc_converter/
 ├── __main__.py            # python -m ffpfsc_converter [rutas...]
 ├── config.py              # TODAS las constantes (presets, backend, márgenes…)
 ├── errors.py              # ConverterError y subclases con mensajes para el usuario
-├── formatting.py          # format_size, compartido por todas las capas
+├── formatting.py          # format_size, format_eta, nombres de fases (todas las capas)
+├── timing.py              # ETA: media móvil de velocidad y ETA por fase de MkPFS
 ├── domain/
 │   ├── models.py          # ConversionJob, GameInfo, ConversionOptions, JobState…
 │   ├── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
@@ -59,7 +60,8 @@ src/ffpfsc_converter/
 │   │   ├── noise.py       #   handshake Noise_XX_25519_ChaChaPoly_BLAKE2b
 │   │   ├── keys.py        #   claves de carril, compromiso y PAKE CPace (Elligator2)
 │   │   ├── handshake.py   #   pasos 1-4 del handshake y validación del Welcome
-│   │   ├── session.py     #   emparejamiento, RPC (ftp.start) y respuesta a Ping
+│   │   ├── session.py     #   emparejamiento, RPC y respuesta a Ping
+│   │   ├── console.py     #   fs.freespace y job.run DELETE (borrado en la consola)
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
 │   ├── network.py         # ¿Puerto TCP abierto?
@@ -75,10 +77,22 @@ src/ffpfsc_converter/
 │   ├── ftp_launcher.py    # FtpLauncher: FTP activo → listo; si no, AVA1 + ftp.start
 │   ├── remote_browser.py  # RemoteBrowser: navegar en un hilo propio
 │   ├── downloads.py       # DownloadRunner: cola de descargas con su propia sesión
+│   ├── remote_download.py #   descargar un elemento: espacio, transferencia y reintentos
+│   ├── retry.py           # Reintentos automáticos ante fallos transitorios
 │   ├── download_planner.py#   carpeta remota → lista de archivos y rutas locales
 │   ├── file_download.py   #   un archivo: .part, REST, verificación de tamaño
 │   ├── progress_meter.py  #   progreso y velocidad con frecuencia limitada
 │   ├── remote_client.py   #   Protocol RemoteClient (para tests)
+│   ├── console_access.py  # Sesión AVA1 emparejada, ftp.start y escritura temporal
+│   ├── remote_upload.py   #   subida a .part con REST, verificación y renombre
+│   ├── remote_changes.py  # RemoteChanges: eliminar y subir desde el explorador
+│   ├── pipeline/          # "Comprimir y reemplazar en la PS5"
+│   │   ├── runner.py      #   orquesta las etapas; reintento manual sin repetir lo hecho
+│   │   ├── stages.py      #   descargar, preparar, comprimir y limpiar
+│   │   ├── replace.py     #   espacio, subida, borrado del original y renombre
+│   │   ├── compress.py    #   compresión con ConversionRunner
+│   │   ├── plan.py        #   decisiones puras: convertible, nombres, estrategia de espacio
+│   │   └── reporter.py    #   etapas y progreso → eventos
 │   └── remote_errors.py, launch_errors.py  # errores → mensajes para el usuario
 └── ui/
     ├── app.py             # MainWindow: controlador (acciones del usuario → servicios)
@@ -95,6 +109,10 @@ src/ffpfsc_converter/
         ├── connection_bar.py, remote_list.py, transfer_panel.py
         ├── controller.py  #   ExplorerController: acciones → servicios
         ├── updater.py     #   ExplorerUpdater: eventos remotos → vista
+        ├── modify_actions.py, changes_updater.py  # eliminar, subir, reemplazar
+        ├── retry_actions.py    # "Reintentar fallidas"
+        ├── compress_dialog.py  # ventana modal de compresión
+        ├── pipeline_window.py  # progreso por etapas del pipeline
         └── presenters.py  #   textos de la pestaña
 ```
 
@@ -161,6 +179,10 @@ sequenceDiagram
 | FTP iniciado en solo lectura con credenciales aleatorias | Mientras corre, cualquier equipo de la red podría usarlo; así nadie más puede modificar la consola. |
 | `CWD` antes de `MLSD` | El servidor del helper ignora la ruta de `MLSD` y lista la carpeta actual. |
 | Descargas como `.part` + renombre al verificar el tamaño | Una descarga cortada nunca parece completa y se puede reanudar con `REST`. |
+| Subir, verificar y luego borrar el original | Si la subida falla nunca se pierde el juego. Solo sin espacio se borra antes, con confirmación y la copia local como respaldo. |
+| Borrado con `job.run` DELETE del helper | Un borrado recursivo por FTP serían miles de órdenes; el helper lo hace en la consola y protege raíces y puntos de montaje. |
+| Reintentos automáticos solo ante fallos transitorios | Las transferencias son reanudables, así que reintentar es reconectar y seguir; un error definitivo se informa sin esperar. |
+| Escritura del FTP solo durante la operación | `writable_ftp` reinicia el FTP con escritura y siempre lo restaura a solo lectura al salir. |
 | Cliente AVA1 verificado con los vectores oficiales | `tests/vectors/ava1` fija cada byte del protocolo; un cambio que lo rompa falla en `pytest`. |
 
 ## Cómo extender

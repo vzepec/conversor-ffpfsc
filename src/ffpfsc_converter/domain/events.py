@@ -64,10 +64,13 @@ class JobProgress:
     Attributes:
         job (ConversionJob): Trabajo en curso.
         progress (ProgressUpdate): Fase, porcentaje y velocidad.
+        eta_seconds (float | None): Tiempo restante estimado de la fase; ``None`` si aún
+            no se sabe.
     """
 
     job: ConversionJob
     progress: ProgressUpdate
+    eta_seconds: float | None = None
 
 
 @dataclass(frozen=True)

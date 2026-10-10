@@ -7,13 +7,15 @@ from pathlib import Path
 from tkinter import ttk
 
 from ffpfsc_converter.domain.remote import DownloadJob, DownloadResult
+from ffpfsc_converter.formatting import format_eta
 from ffpfsc_converter.ui.explorer import presenters
 
 _COLUMNS = (
-    ("item", "Descarga", 330, "w"),
+    ("item", "Transferencia", 330, "w"),
     ("progress", "Progreso", 250, "w"),
     ("speed", "Velocidad", 100, "e"),
-    ("status", "Estado", 260, "w"),
+    ("eta", "Restante", 150, "w"),
+    ("status", "Estado", 230, "w"),
 )
 _NO_DESTINATION = "(elige una carpeta)"
 
@@ -27,6 +29,7 @@ class TransferPanel(ttk.Frame):
         on_change_destination: Callable[[], None],
         on_cancel: Callable[[], None],
         on_open_destination: Callable[[], None],
+        on_retry_failed: Callable[[], None],
     ) -> None:
         """Crea el panel.
 
@@ -35,6 +38,7 @@ class TransferPanel(ttk.Frame):
             on_change_destination (Callable[[], None]): Botón "Cambiar…".
             on_cancel (Callable[[], None]): Botón "Cancelar descargas".
             on_open_destination (Callable[[], None]): Botón "Abrir carpeta".
+            on_retry_failed (Callable[[], None]): Botón "Reintentar fallidas".
         """
         super().__init__(parent)
         bar = ttk.Frame(self)
@@ -44,6 +48,9 @@ class TransferPanel(ttk.Frame):
         self._cancel = ttk.Button(bar, text="■ Cancelar descargas", command=on_cancel,
                                   state="disabled")
         self._cancel.pack(side="right", padx=6)
+        self._retry = ttk.Button(bar, text="↻ Reintentar fallidas", command=on_retry_failed,
+                                 state="disabled")
+        self._retry.pack(side="right")
         ttk.Label(bar, text="Descargar en:").pack(side="left")
         ttk.Button(bar, text="Cambiar…", command=on_change_destination).pack(side="right")
         self._destination = ttk.Label(bar, text=_NO_DESTINATION)
@@ -71,25 +78,66 @@ class TransferPanel(ttk.Frame):
         """
         self._cancel.configure(state="normal" if running else "disabled")
 
+    def set_retry_enabled(self, enabled: bool) -> None:
+        """Habilita "Reintentar fallidas" solo si hay transferencias fallidas.
+
+        Args:
+            enabled (bool): ``True`` si hay algo que reintentar.
+        """
+        self._retry.configure(state="normal" if enabled else "disabled")
+
+    def set_status(self, row_id: str, status: str) -> None:
+        """Cambia solo el estado de una fila (por ejemplo, un aviso de reintento).
+
+        Args:
+            row_id (str): Identificador de la fila.
+            status (str): Texto de estado.
+        """
+        self._set(row_id, status=status)
+
     def add_job(self, job: DownloadJob) -> None:
         """Agrega una descarga a la tabla.
 
         Args:
             job (DownloadJob): Descarga en cola.
         """
-        self._tree.insert("", "end", iid=job.id, values=(
-            presenters.entry_label(job.entry), "", "", "En cola"))
+        self.add_row(job.id, presenters.entry_label(job.entry))
 
-    def update_job(self, job: DownloadJob, speed: float, current_file: str) -> None:
+    def add_row(self, row_id: str, label: str) -> None:
+        """Agrega una transferencia (descarga o subida) en cola.
+
+        Args:
+            row_id (str): Identificador de la fila.
+            label (str): Texto de la columna "Descarga".
+        """
+        self._tree.insert("", "end", iid=row_id, values=(label, "", "", "", "En cola"))
+
+    def update_row(self, row_id: str, progress: str, speed: str, status: str,
+                   eta: str = "") -> None:
+        """Actualiza una fila cualquiera.
+
+        Args:
+            row_id (str): Identificador de la fila.
+            progress (str): Texto de progreso.
+            speed (str): Velocidad.
+            status (str): Estado.
+            eta (str): Tiempo restante ya formateado.
+        """
+        self._set(row_id, progress=progress, speed=speed, status=status, eta=eta)
+
+    def update_job(self, job: DownloadJob, speed: float, current_file: str,
+                   eta: float | None = None) -> None:
         """Actualiza el progreso de una descarga.
 
         Args:
             job (DownloadJob): Descarga en curso.
             speed (float): Velocidad en bytes por segundo.
             current_file (str): Archivo que se está descargando.
+            eta (float | None): Segundos restantes estimados.
         """
         self._set(job.id, progress=presenters.progress_text(job),
-                  speed=presenters.speed_text(speed), status=f"Descargando {current_file}")
+                  speed=presenters.speed_text(speed), eta=format_eta(eta),
+                  status=f"Descargando {current_file}")
 
     def finish_job(self, job: DownloadJob, result: DownloadResult) -> None:
         """Muestra el resultado de una descarga.
@@ -98,7 +146,7 @@ class TransferPanel(ttk.Frame):
             job (DownloadJob): Descarga terminada.
             result (DownloadResult): Resultado.
         """
-        self._set(job.id, progress=presenters.progress_text(job), speed="",
+        self._set(job.id, progress=presenters.progress_text(job), speed="", eta="",
                   status=presenters.download_result_text(result))
 
     def _set(self, row: str, **values: str) -> None:

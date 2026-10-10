@@ -57,6 +57,39 @@ class RemoteClient(Protocol):
         """
         ...
 
+    def upload(
+        self, source: BinaryIO, remote_path: str, offset: int, on_chunk: Callable[[int], None]
+    ) -> None:
+        """Sube un archivo.
+
+        Args:
+            source (BinaryIO): Archivo local posicionado en ``offset``.
+            remote_path (str): Ruta remota de destino.
+            offset (int): Bytes que ya están en la consola.
+            on_chunk (Callable[[int], None]): Se llama con el tamaño de cada bloque.
+        """
+        ...
+
+    def size(self, remote_path: str) -> int | None:
+        """Consulta el tamaño de un archivo remoto.
+
+        Args:
+            remote_path (str): Ruta remota.
+
+        Returns:
+            int | None: Tamaño, o ``None`` si no existe.
+        """
+        ...
+
+    def rename(self, source: str, destination: str) -> None:
+        """Renombra un archivo remoto.
+
+        Args:
+            source (str): Ruta actual.
+            destination (str): Ruta nueva.
+        """
+        ...
+
 
 #: Crea un cliente para una consola (en la app, ``FtpClient``).
 ClientFactory = Callable[[ConsoleTarget], RemoteClient]

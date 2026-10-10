@@ -71,8 +71,10 @@ de sobrescribir y borrado automático de salidas incompletas al cancelar o falla
 ### 🎮 Explorador de la PS5
 
 Pestaña **PS5** para navegar por los archivos de una consola con el payload de
-[ps5upload](https://github.com/phantomptr/ps5upload) y **descargar archivos o carpetas
-completas**, con progreso, reanudación y verificación de tamaño. La app inicia sola el
+[ps5upload](https://github.com/phantomptr/ps5upload): **descargar** archivos o carpetas,
+**subir**, **eliminar** y **♻ comprimir y reemplazar** un juego en un solo paso (descarga,
+compresión, subida verificada y reemplazo del original), con porcentaje, tiempo restante,
+reanudación y verificación. El payload necesario está en [`payload/`](payload/). La app inicia sola el
 FTP del helper (en solo lectura y con credenciales aleatorias) tras un emparejamiento
 de una única vez con el código que muestra la PS5. Guía: **[docs/PS5.md](docs/PS5.md)**.
 

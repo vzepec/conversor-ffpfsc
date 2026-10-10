@@ -13,7 +13,8 @@ from ffpfsc_converter.ui.explorer.connection_bar import ConnectionBar
 from ffpfsc_converter.ui.explorer.remote_list import RemoteList
 from ffpfsc_converter.ui.explorer.transfer_panel import TransferPanel
 
-_HINT = "Doble clic para abrir una carpeta. Selecciona archivos o carpetas y pulsa «Descargar»."
+_HINT = ("Doble clic para abrir una carpeta. «Comprimir y reemplazar» descarga el juego, lo "
+         "comprime y sustituye el original en la PS5 por el .ffpfsc verificado.")
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,10 @@ class ExplorerCallbacks:
         on_change_destination (Callable[[], None]): Cambiar carpeta de descargas.
         on_cancel_downloads (Callable[[], None]): Cancelar descargas.
         on_open_destination (Callable[[], None]): Abrir carpeta de descargas.
+        on_retry_failed (Callable[[], None]): Reintentar transferencias fallidas.
+        on_upload (Callable[[], None]): Botón "Subir archivo".
+        on_delete (Callable[[], None]): Botón "Eliminar".
+        on_convert (Callable[[], None]): Botón "Comprimir y reemplazar".
     """
 
     on_connect: Callable[[], None]
@@ -43,6 +48,10 @@ class ExplorerCallbacks:
     on_change_destination: Callable[[], None]
     on_cancel_downloads: Callable[[], None]
     on_open_destination: Callable[[], None]
+    on_retry_failed: Callable[[], None]
+    on_upload: Callable[[], None]
+    on_delete: Callable[[], None]
+    on_convert: Callable[[], None]
 
 
 class ExplorerView(ttk.Frame):
@@ -69,13 +78,19 @@ class ExplorerView(ttk.Frame):
         self.remote.pack(fill="both", expand=True, **theme.PADDING)
         actions = ttk.Frame(self)
         actions.pack(fill="x", **theme.PADDING)
-        self._download = ttk.Button(actions, text="⬇ Descargar selección",
-                                    command=callbacks.on_download)
-        self._download.pack(side="left")
-        ttk.Label(actions, text=_HINT, foreground=theme.HINT_FG).pack(side="left", padx=12)
+        self._actions = [
+            ttk.Button(actions, text="⬇ Descargar", command=callbacks.on_download),
+            ttk.Button(actions, text="⬆ Subir archivo…", command=callbacks.on_upload),
+            ttk.Button(actions, text="♻ Comprimir y reemplazar…", command=callbacks.on_convert),
+            ttk.Button(actions, text="🗑 Eliminar", command=callbacks.on_delete),
+        ]
+        for button in self._actions:
+            button.pack(side="left", padx=(0, 6))
+        ttk.Label(self, text=_HINT, foreground=theme.HINT_FG).pack(anchor="w", padx=10)
         self.transfers = TransferPanel(self, callbacks.on_change_destination,
                                        callbacks.on_cancel_downloads,
-                                       callbacks.on_open_destination)
+                                       callbacks.on_open_destination,
+                                       callbacks.on_retry_failed)
         self.transfers.pack(fill="both", **theme.PADDING)
         self.set_browsing_enabled(False)
 
@@ -114,5 +129,5 @@ class ExplorerView(ttk.Frame):
             enabled (bool): ``True`` si hay sesión con la PS5.
         """
         state = "normal" if enabled else "disabled"
-        for widget in (self._up, self._path, self._refresh, self._download):
+        for widget in (self._up, self._path, self._refresh, *self._actions):
             widget.configure(state=state)

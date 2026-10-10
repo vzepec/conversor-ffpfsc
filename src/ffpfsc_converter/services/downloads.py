@@ -22,34 +22,10 @@ from ffpfsc_converter.domain.remote_events import (
     DownloadStarted,
 )
 from ffpfsc_converter.errors import ConverterError, DownloadCancelledError
-from ffpfsc_converter.formatting import format_size
-from ffpfsc_converter.infrastructure.filesystem import free_space
 from ffpfsc_converter.infrastructure.ftp import FTP_ERRORS, FtpClient
-from ffpfsc_converter.services.download_planner import (
-    DownloadPlan,
-    bytes_already_local,
-    plan_download,
-)
-from ffpfsc_converter.services.file_download import LocalWriteError, download_file
-from ffpfsc_converter.services.progress_meter import ProgressMeter
-from ffpfsc_converter.services.remote_client import ClientFactory, RemoteClient
+from ffpfsc_converter.services.remote_client import ClientFactory
+from ffpfsc_converter.services.remote_download import download_with_retries
 from ffpfsc_converter.services.remote_errors import describe_error
-
-
-class NotEnoughSpaceError(ConverterError):
-    """No hay espacio en este equipo para completar la descarga."""
-
-    def __init__(self, needed: int, free: int) -> None:
-        """Crea el error con un mensaje para el usuario.
-
-        Args:
-            needed (int): Bytes que faltan por descargar.
-            free (int): Bytes libres en la carpeta de destino.
-        """
-        super().__init__(
-            f"No hay espacio suficiente en este equipo: faltan {format_size(needed)} "
-            f"y hay {format_size(free)} libres."
-        )
 
 
 class DownloadRunner:
@@ -127,10 +103,9 @@ class DownloadRunner:
         job.state = DownloadState.RUNNING
         self._emit(DownloadStarted(job))
         started = time.monotonic()
-        client = self._factory(target)
         try:
-            client.connect()
-            files = self._transfer(client, job)
+            files = download_with_retries(self._factory, target, job, self._emit,
+                                          self._cancel.is_set)
             result = DownloadResult(True, False, time.monotonic() - started, files=files)
         except DownloadCancelledError:
             result = DownloadResult(False, True, time.monotonic() - started)
@@ -139,60 +114,6 @@ class DownloadRunner:
         except FTP_ERRORS as exc:
             message = describe_error(exc, target, f"descargar {job.entry.name}")
             result = DownloadResult(False, False, time.monotonic() - started, message=message)
-        finally:
-            client.close()
         job.state = (DownloadState.SUCCEEDED if result.succeeded else
                      DownloadState.CANCELLED if result.cancelled else DownloadState.FAILED)
         self._emit(DownloadFinished(job, result))
-
-    def _transfer(self, client: RemoteClient, job: DownloadJob) -> int:
-        """Planifica y descarga todos los archivos de un trabajo.
-
-        Args:
-            client (RemoteClient): Cliente conectado.
-            job (DownloadJob): Descarga en curso.
-
-        Returns:
-            int: Cantidad de archivos descargados u omitidos por estar completos.
-
-        Raises:
-            DownloadCancelledError: Si se canceló.
-            NotEnoughSpaceError: Si no cabe en el disco local.
-            LocalWriteError: Si no se pudo crear una carpeta local.
-        """
-        plan = plan_download(client, job.entry, job.destination)
-        job.total_bytes, job.done_bytes = plan.total_bytes, 0
-        _check_space(plan, job)
-        for directory in plan.directories:
-            try:
-                directory.mkdir(parents=True, exist_ok=True)
-            except OSError as exc:
-                raise LocalWriteError(directory, exc) from exc
-        meter = ProgressMeter(job, self._emit)
-        for transfer in plan.files:
-            if self._cancel.is_set():
-                raise DownloadCancelledError()
-            download_file(client, transfer, meter, self._cancel.is_set)
-        meter.publish(job.entry.name)
-        return len(plan.files)
-
-
-def _check_space(plan: DownloadPlan, job: DownloadJob) -> None:
-    """Comprueba que lo que falta por descargar cabe en el disco local.
-
-    Args:
-        plan (DownloadPlan): Plan de descarga.
-        job (DownloadJob): Descarga en curso (define la carpeta de destino).
-
-    Raises:
-        NotEnoughSpaceError: Si el espacio libre no alcanza.
-        LocalWriteError: Si no se pudo crear o consultar la carpeta de destino.
-    """
-    needed = plan.total_bytes - bytes_already_local(plan)
-    try:
-        job.destination.mkdir(parents=True, exist_ok=True)
-        free = free_space(job.destination)
-    except OSError as exc:
-        raise LocalWriteError(job.destination, exc) from exc
-    if needed > free:
-        raise NotEnoughSpaceError(needed, free)

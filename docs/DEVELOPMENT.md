@@ -44,6 +44,8 @@ los tests.
 | `test_ftp_launcher.py` | inicio del FTP con una sesión AVA1 simulada (emparejamiento, reinicio, errores) |
 | `test_ava1_vectors.py` | cliente AVA1 contra los vectores oficiales de ps5upload |
 | `test_explorer_support.py` | textos de la pestaña PS5, ajustes, progreso y almacén de confianza |
+| `test_pipeline.py` | comprimir y reemplazar: orden seguro, poco espacio, cancelación |
+| `test_remote_changes.py` | eliminar y subir (reanudación), plan y estrategia de espacio |
 | `test_code_standards.py` | que el repositorio cumpla las rules y que el verificador detecte cada violación |
 
 La UI de Tkinter no tiene tests automáticos: por eso toda la lógica de texto

@@ -12,17 +12,11 @@ from ffpfsc_converter.domain.models import (
     GameInfo,
     ProgressUpdate,
 )
-from ffpfsc_converter.formatting import format_size
+from ffpfsc_converter.formatting import PHASE_NAMES, format_eta, format_size
 
 QUEUED_TEXT = "En cola"
 RUNNING_TEXT = "Convirtiendo…"
 PENDING_TEXT = "analizando…"
-_PHASE_NAMES = {
-    "compress": "Comprimiendo",
-    "write": "Escribiendo",
-    "scan": "Escaneando",
-    "verify": "Verificando",
-}
 
 
 def savings_percent(original: int, final: int) -> float:
@@ -120,18 +114,19 @@ def estimates_summary(job: ConversionJob, presets: Iterable[CompressionPreset]) 
     return f"Estimación {job.source.name} ({format_size(job.size)}): {detail}"
 
 
-def progress_text(progress: ProgressUpdate) -> str:
-    """Formatea el progreso de MkPFS con la fase en español.
+def progress_text(progress: ProgressUpdate, eta: float | None = None) -> str:
+    """Formatea el progreso de MkPFS con la fase en español y el tiempo restante.
 
     Args:
         progress (ProgressUpdate): Progreso informado por MkPFS.
+        eta (float | None): Segundos restantes estimados de la fase.
 
     Returns:
-        str: Por ejemplo ``"Comprimiendo: 37%  —  512.3 MB/s"``.
+        str: Por ejemplo ``"Comprimiendo: 37%  —  512.3 MB/s  —  quedan ≈ 2 min 10 s"``.
     """
-    phase = _PHASE_NAMES.get(progress.phase, progress.phase)
-    text = f"{phase}: {progress.percent}%"
-    return f"{text}  —  {progress.speed}" if progress.speed else text
+    phase = PHASE_NAMES.get(progress.phase, progress.phase)
+    parts = [f"{phase}: {progress.percent}%", progress.speed or "", format_eta(eta)]
+    return "  —  ".join(p for p in parts if p)
 
 
 def result_text(job: ConversionJob, result: ConversionResult) -> str:

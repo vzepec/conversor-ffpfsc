@@ -19,3 +19,7 @@ EVENT_POLL_MS = 100
 
 #: Color atenuado de los textos de ayuda.
 HINT_FG = "#6b7280"
+#: Color de advertencias (operaciones que borran en la PS5).
+WARNING_FG = "#b45309"
+#: Color de la etapa en curso del pipeline.
+ACCENT_FG = "#1d4ed8"

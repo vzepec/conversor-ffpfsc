@@ -3,11 +3,39 @@ from __future__ import annotations
 
 import posixpath
 
+from ffpfsc_converter.domain.pipeline import PipelineStage
 from ffpfsc_converter.domain.remote import DownloadJob, DownloadResult, RemoteEntry
 from ffpfsc_converter.formatting import format_size
 
 FOLDER_ICON = "📁"
 FILE_ICON = "📄"
+UPLOAD_ICON = "⬆"
+#: Los 3 pasos que ve el usuario en "comprimir y reemplazar".
+PIPELINE_STEPS = ("Descarga", "Compresión", "Reemplazo")
+#: Paso visible al que pertenece cada etapa interna.
+STEP_OF_STAGE = {
+    PipelineStage.DOWNLOAD: 0,
+    PipelineStage.ANALYZE: 1,
+    PipelineStage.COMPRESS: 1,
+    PipelineStage.CHECK_SPACE: 2,
+    PipelineStage.UPLOAD: 2,
+    PipelineStage.DELETE_ORIGINAL: 2,
+    PipelineStage.RENAME: 2,
+    PipelineStage.RESTORE_FTP: 2,
+    PipelineStage.CLEANUP: 2,
+}
+#: Descripción de cada etapa interna (se muestra como subpaso).
+STAGE_NAMES = {
+    PipelineStage.DOWNLOAD: "Descargando de la PS5",
+    PipelineStage.ANALYZE: "Analizando el juego",
+    PipelineStage.COMPRESS: "Comprimiendo a .ffpfsc",
+    PipelineStage.CHECK_SPACE: "Comprobando el espacio de la PS5",
+    PipelineStage.UPLOAD: "Subiendo y verificando",
+    PipelineStage.DELETE_ORIGINAL: "Borrando el original en la PS5",
+    PipelineStage.RENAME: "Publicando el .ffpfsc",
+    PipelineStage.RESTORE_FTP: "Volviendo el FTP a solo lectura",
+    PipelineStage.CLEANUP: "Borrando archivos temporales",
+}
 
 
 def entry_label(entry: RemoteEntry) -> str:
@@ -127,3 +155,31 @@ def connection_text(host: str, port: int, path: str) -> str:
         str: Por ejemplo ``"Conectado a 192.168.1.13:2122 — /data/homebrew"``.
     """
     return f"Conectado a {host}:{port} — {path}"
+
+
+def upload_progress_text(done: int, total: int) -> str:
+    """Formatea el avance de una subida.
+
+    Args:
+        done (int): Bytes enviados.
+        total (int): Bytes totales.
+
+    Returns:
+        str: Por ejemplo ``"42%  (1.2 GB de 2.9 GB)"``.
+    """
+    percent = min(100, done * 100 // total) if total else 100
+    return f"{percent}%  ({format_size(done)} de {format_size(total)})"
+
+
+def delete_summary(paths: list[str], limit: int = 8) -> str:
+    """Lista las rutas que se van a borrar (recortando si son muchas).
+
+    Args:
+        paths (list[str]): Rutas remotas.
+        limit (int): Máximo de rutas a mostrar.
+
+    Returns:
+        str: Una ruta por línea, con "… y N más" si se recortó.
+    """
+    shown = "\n".join(paths[:limit])
+    return shown + (f"\n… y {len(paths) - limit} más" if len(paths) > limit else "")

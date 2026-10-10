@@ -1,13 +1,15 @@
-# Pestaña PS5: explorar y descargar archivos de la consola
+# Pestaña PS5: explorar, descargar, subir y reemplazar juegos
 
 La pestaña **PS5** permite navegar por los archivos de una PS5 con el payload
-de [ps5upload](https://github.com/phantomptr/ps5upload) cargado y descargar
-archivos o carpetas completas a este equipo.
+de [ps5upload](https://github.com/phantomptr/ps5upload) cargado, descargar
+archivos o carpetas completas, subir archivos, eliminar y **comprimir y
+reemplazar** un juego directamente en la consola.
 
 ## Requisitos
 
 - PS5 con jailbreak y el **payload de ps5upload** cargado (su helper escucha en el
-  puerto **9120**). No hace falta la app de escritorio de ps5upload.
+  puerto **9120**). La carpeta [`payload/`](../payload/) incluye la versión probada
+  (6.4.0) y explica cómo cargarla. No hace falta la app de escritorio de ps5upload.
 - La PS5 y este equipo en la **misma red local** (mejor por cable).
 
 ## Primera conexión: emparejamiento
@@ -71,6 +73,68 @@ sequenceDiagram
 Se puede seguir navegando mientras se descarga: cada descarga usa su propia
 conexión.
 
+## Comprimir y reemplazar un juego
+
+Selecciona **una** carpeta de juego o imagen `.exfat`/`.ffpkg` y pulsa
+**♻ Comprimir y reemplazar…**. La app:
+
+1. **Descarga** el juego a `<carpeta de descargas>/ffpfsc-temporal/` (reanudable).
+2. **Analiza** el juego y abre la ventana de compresión: modo (con peso
+   estimado), núcleos, verificación completa y si borrar los temporales al final.
+   Esa ventana muestra exactamente qué se subirá y qué se borrará.
+3. **Comprime** a `.ffpfsc` con MkPFS (comprueba antes el espacio de este equipo).
+4. **Comprueba el espacio** de la PS5 (`fs.freespace` del helper).
+5. **Sube** el archivo como `Juego.ffpfsc.part` y **verifica** su tamaño.
+6. Recién entonces **borra el original** en la PS5.
+7. **Publica** el archivo renombrándolo a `Juego.ffpfsc` (misma carpeta).
+8. Vuelve el FTP a **solo lectura** y, si lo elegiste, borra los temporales.
+
+Una ventana resume todo en **3 pasos** (*Descarga → Compresión → Reemplazo*) y
+muestra el subpaso actual, el **porcentaje**, la velocidad y el **tiempo restante**
+estimado. Se puede **cancelar** en cualquier momento.
+
+Si cancelas o falla, al volver a intentarlo con el mismo juego:
+
+- la **descarga continúa** donde quedó (los archivos completos se omiten);
+- la **compresión** se repite (MkPFS no puede reanudarse);
+- la **subida continúa** solo si la parte que quedó en la PS5 pertenece al mismo
+  archivo (se comparan sus últimos bytes); si no, empieza de cero.
+
+| Situación | Qué hace la app |
+|---|---|
+| Caben ambos en la PS5 | Sube primero, verifica y después borra el original (orden seguro). |
+| Solo cabe borrando el original | Pregunta antes de **borrar primero**; tu copia local se conserva hasta verificar la subida. |
+| No cabe ni borrando | Se detiene sin tocar nada en la PS5. |
+| Falla o cancelas | No se borra el original si la subida no se verificó; los archivos locales se conservan y la subida se reanuda. |
+
+> [!WARNING]
+> Cierra el juego en la PS5 antes de reemplazarlo. Si el juego estaba registrado
+> desde la carpeta, ShadowMount+ registrará la imagen nueva al detectarla.
+
+## Cortes de conexión y reintentos
+
+- Si la conexión se corta durante una descarga o subida, la app **reintenta sola
+  hasta 3 veces** (esperando 3, 10 y 20 s) y continúa donde quedó. La fila o la
+  ventana muestran "Reintentando (1 de 3)…".
+- Solo se reintentan los fallos transitorios (red, tiempo agotado, verificación);
+  los definitivos (sin espacio, ruta protegida) se informan de inmediato.
+- Si sigue fallando:
+  - en el panel de transferencias, **↻ Reintentar fallidas** vuelve a encolar
+    las descargas y subidas fallidas o canceladas (en sus mismas filas);
+  - en "comprimir y reemplazar", **↻ Reintentar** retoma sin repetir lo hecho:
+    no vuelve a comprimir si ya estaba comprimido ni a borrar el original si ya
+    se había borrado.
+
+## Subir y eliminar
+
+- **⬆ Subir archivo…** sube archivos de este equipo a la carpeta abierta (como
+  `.part`, verificados y luego renombrados; una subida cortada se reanuda).
+- **🗑 Eliminar** borra en la PS5 los elementos seleccionados, tras confirmar con
+  la lista exacta de rutas. Lo ejecuta el helper, que **se niega** a borrar raíces,
+  carpetas de primer nivel (`/data`, `/mnt/usb0`) y puntos de montaje.
+- Para escribir, la app reinicia el FTP con permiso de escritura **solo mientras
+  dura la operación** y luego lo vuelve a dejar en solo lectura.
+
 ## Datos que guarda la app
 
 En `~/.config/ffpfsc-converter/` (Linux) o `%APPDATA%\ffpfsc-converter\` (Windows):
@@ -90,3 +154,7 @@ En `~/.config/ffpfsc-converter/` (Linux) o `%APPDATA%\ffpfsc-converter\` (Window
 | *No aceptó el código* | Pulsa **Conectar** otra vez; la PS5 muestra un código nuevo en cada intento. |
 | *No es la PS5 con la que se emparejó* | Cambiaste de consola o reinstalaste: borra `ava1_peers.json` y vuelve a emparejar. |
 | *Se perdió la conexión* | La PS5 entró en reposo o se reinició: carga el payload y conecta de nuevo. |
+| *La PS5 no permite borrar esa ruta* | Es una raíz, una carpeta de primer nivel o un punto de montaje: el helper lo protege. |
+| *La PS5 no tiene espacio* | Libera espacio en la consola o elige otro disco para el juego. |
+| Transferencias de ~10 MB/s | Es el límite de la red, no de la app (medido: 9 MB/s con 1 conexión y 10 MB/s con 4). Conecta la PS5 **y** este equipo por cable a un router o switch gigabit. |
+| *El original ya se borró…* | La subida falló tras borrar (solo en el modo "borrar primero"): sube el `.ffpfsc` de la carpeta temporal con **⬆ Subir archivo…**. |
