@@ -11,7 +11,7 @@
 [![Versión](https://img.shields.io/badge/versión-1.3.1-6366f1?style=for-the-badge)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#-instalación)
-[![Windows](https://img.shields.io/badge/Windows-beta-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#-instalación)
+[![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#-instalación)
 [![MkPFS](https://img.shields.io/badge/motor-MkPFS-0ea5e9?style=for-the-badge)](https://github.com/PSBrew/MkPFS)
 [![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
 [![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?style=for-the-badge&logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
@@ -100,7 +100,7 @@ credenciales aleatorias) tras emparejarse una vez. Guía: **[docs/PS5.md](docs/P
 
 ## 📦 Instalación
 
-Funciona en **Linux** y **Windows 10/11** (64 bits, **beta**) con **Python 3.10+**.
+Funciona en **Linux** y **Windows 10/11** (64 bits) con **Python 3.10+**.
 
 <details open>
 <summary><b>🐧 Linux</b> (probado en Ubuntu)</summary>
@@ -118,11 +118,7 @@ el acceso directo en el Escritorio y en el menú de aplicaciones.
 </details>
 
 <details open>
-<summary><b>🪟 Windows</b> (beta)</summary>
-
-> [!WARNING]
-> El soporte para Windows está en **beta**: aún no se ha validado en un equipo
-> Windows real. Si encuentras un problema, repórtalo en *Issues*.
+<summary><b>🪟 Windows</b> 10/11</summary>
 
 1. Instala [Python 3.10+](https://www.python.org/downloads/windows/) marcando
    **Add python.exe to PATH** (tkinter viene incluido).
