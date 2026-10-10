@@ -130,3 +130,11 @@ def test_ftp_start_failure_is_reported(tmp_path: Path) -> None:
     _launcher(events, tmp_path, port_open=False, needs_code=False, reply=reply) \
         .connect("h", 2122).join(5)
     assert isinstance(events[-1], RemoteError) and "bind_failed" in events[-1].message
+
+
+def test_quick_connect_gives_up_if_console_is_off(tmp_path: Path) -> None:
+    """La conexión automática se rinde enseguida si la PS5 no responde, sin abrir sesión."""
+    events: list[object] = []
+    _launcher(events, tmp_path, port_open=False).connect("10.0.0.5", 2122, quick=True).join(5)
+    assert len(events) == 1 and "no responde" in events[0].message
+    assert not FakeSession.instances

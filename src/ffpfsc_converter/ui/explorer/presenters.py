@@ -16,10 +16,12 @@ PIPELINE_STEPS = ("Descarga", "Compresión", "Reemplazo")
 #: Paso visible al que pertenece cada etapa interna.
 STEP_OF_STAGE = {
     PipelineStage.DOWNLOAD: 0,
+    PipelineStage.VERIFY_DOWNLOAD: 0,
     PipelineStage.ANALYZE: 1,
     PipelineStage.COMPRESS: 1,
     PipelineStage.CHECK_SPACE: 2,
     PipelineStage.UPLOAD: 2,
+    PipelineStage.VERIFY_UPLOAD: 2,
     PipelineStage.DELETE_ORIGINAL: 2,
     PipelineStage.RENAME: 2,
     PipelineStage.RESTORE_FTP: 2,
@@ -28,10 +30,12 @@ STEP_OF_STAGE = {
 #: Descripción de cada etapa interna (se muestra como subpaso).
 STAGE_NAMES = {
     PipelineStage.DOWNLOAD: "Descargando de la PS5",
+    PipelineStage.VERIFY_DOWNLOAD: "Comprobando la descarga (CRC32)",
     PipelineStage.ANALYZE: "Analizando el juego",
     PipelineStage.COMPRESS: "Comprimiendo a .ffpfsc",
     PipelineStage.CHECK_SPACE: "Comprobando el espacio de la PS5",
-    PipelineStage.UPLOAD: "Subiendo y verificando",
+    PipelineStage.UPLOAD: "Subiendo",
+    PipelineStage.VERIFY_UPLOAD: "Comprobando la subida (CRC32)",
     PipelineStage.DELETE_ORIGINAL: "Borrando el original en la PS5",
     PipelineStage.RENAME: "Publicando el .ffpfsc",
     PipelineStage.RESTORE_FTP: "Volviendo el FTP a solo lectura",

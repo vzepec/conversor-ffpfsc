@@ -20,7 +20,9 @@ from ffpfsc_converter.ui.theme import ThemeManager
 from ffpfsc_converter.ui.widgets.basics import icon_button
 from ffpfsc_converter.ui.widgets.scroll_frame import ScrollFrame
 
-_VISIBLE_ROWS = 3
+#: Alto máximo de la lista (píxeles lógicos); con más filas aparece la barra de desplazamiento.
+_MAX_LIST_HEIGHT = 220
+_SCROLL_DELAY_MS = 60
 
 
 @dataclass(frozen=True)
@@ -58,8 +60,8 @@ class TransferPanel(ttk.Frame):
         self._listeners: list[Callable[[int], None]] = []
         self._build_header(actions)
         self._list = ScrollFrame(self, theme)
-        self._list.configure(height=m.px(_VISIBLE_ROWS * 52))
         self._list.pack_propagate(False)
+        self._list.inner.bind("<Configure>", lambda _e: self._fit_height(), add="+")
 
     def _build_header(self, actions: TransferActions) -> None:
         """Crea el título, la carpeta de descargas y los botones.
@@ -87,7 +89,7 @@ class TransferPanel(ttk.Frame):
         self._separator = ttk.Separator(self)
         self.set_running(False)
         self.set_retry_enabled(False)
-        self._update_title()
+        self.refresh()
 
     def add_listener(self, listener: Callable[[int], None]) -> None:
         """Registra una función que recibe la cantidad de transferencias activas.
@@ -135,7 +137,7 @@ class TransferPanel(ttk.Frame):
         Args:
             row_id (str): Identificador de la fila.
             name (str): Archivo o carpeta.
-            icon (str): ``"download"`` o ``"upload"``.
+            icon (str): ``"download"``, ``"upload"`` o ``"replace"``.
         """
         if not self._rows:
             self._separator.pack(fill="x")
@@ -143,7 +145,24 @@ class TransferPanel(ttk.Frame):
         row = TransferRow(self._list.inner, self._theme, name, icon)
         row.pack(fill="x")
         self._rows[row_id] = row
-        self._update_title()
+        self.after(_SCROLL_DELAY_MS, self._list.scroll_to_end)
+        self.refresh()
+
+    def _fit_height(self) -> None:
+        """Ajusta el alto de la lista a sus filas, hasta el máximo permitido."""
+        wanted = self._list.inner.winfo_reqheight()
+        self._list.configure(height=min(wanted, self._theme.metrics.px(_MAX_LIST_HEIGHT)))
+
+    def row(self, row_id: str) -> TransferRow | None:
+        """Obtiene una fila para actualizarla directamente.
+
+        Args:
+            row_id (str): Identificador de la fila.
+
+        Returns:
+            TransferRow | None: La fila, o ``None`` si no existe.
+        """
+        return self._rows.get(row_id)
 
     def set_status(self, row_id: str, text: str) -> None:
         """Muestra un estado de espera (por ejemplo, «En cola (reintento)»).
@@ -167,7 +186,7 @@ class TransferPanel(ttk.Frame):
         """
         if row := self._rows.get(row_id):
             row.set_state(kind, label, detail, active)
-            self._update_title()
+            self.refresh()
 
     def set_progress(self, row_id: str, done: int, total: int, speed: str,
                      eta: str) -> None:
@@ -182,7 +201,7 @@ class TransferPanel(ttk.Frame):
         """
         if row := self._rows.get(row_id):
             row.set_progress(transfer_progress(done, total), speed, eta)
-            self._update_title()
+            self.refresh()
 
     def update_job(self, job: DownloadJob, speed: float, current_file: str,
                    eta: float | None = None) -> None:
@@ -206,7 +225,7 @@ class TransferPanel(ttk.Frame):
         """
         self.set_state(job.id, *download_result_status(result))
 
-    def _update_title(self) -> None:
+    def refresh(self) -> None:
         """Actualiza el contador del título y avisa cuántas siguen activas."""
         self._title.configure(text=f"Transferencias · {len(self._rows)}" if self._rows
                               else "Transferencias")

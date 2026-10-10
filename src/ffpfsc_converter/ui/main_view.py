@@ -5,12 +5,14 @@ los callbacks de :class:`ViewCallbacks` y el controlador decide qué hacer.
 """
 from __future__ import annotations
 
+import logging
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import ttk
 
+from ffpfsc_converter.infrastructure.app_log import LOGGER_NAME
 from ffpfsc_converter.ui.dnd import HAS_DND
 from ffpfsc_converter.ui.job_list import JobList
 from ffpfsc_converter.ui.options_panel import OptionsPanel
@@ -31,7 +33,8 @@ class ViewCallbacks:
         on_paths (Callable[[list[Path]], None]): Se soltaron rutas en la ventana.
         on_pick_folder (Callable[[], None]): Botón "Elegir carpeta" o clic en la zona.
         on_pick_file (Callable[[], None]): Botón "Elegir imagen".
-        on_pick_output_dir (Callable[[], None]): Enlace "Cambiar" de la carpeta de destino.
+        on_output_changed (Callable[[Path | None], None]): Se eligió otra carpeta de destino
+            (``None`` = junto a cada juego).
         on_preset_changed (Callable[[], None]): Cambió el modo de compresión.
         on_start (Callable[[], None]): Botón "Convertir".
         on_cancel (Callable[[], None]): Botón "Cancelar".
@@ -44,7 +47,7 @@ class ViewCallbacks:
     on_paths: Callable[[list[Path]], None]
     on_pick_folder: Callable[[], None]
     on_pick_file: Callable[[], None]
-    on_pick_output_dir: Callable[[], None]
+    on_output_changed: Callable[[Path | None], None]
     on_preset_changed: Callable[[], None]
     on_start: Callable[[], None]
     on_cancel: Callable[[], None]
@@ -80,7 +83,7 @@ class MainView:
                   ("Elegir imagen…", callbacks.on_pick_file)),
                  callbacks.on_paths).pack(fill="x", pady=(m.px(16), 0))
         self.options = OptionsPanel(self._root, theme, callbacks.on_preset_changed,
-                                    callbacks.on_pick_output_dir)
+                                    callbacks.on_output_changed)
         self.options.pack(fill="x", pady=(m.px(14), 0))
         head = ttk.Frame(self._root, style="TFrame")
         head.pack(fill="x", pady=(m.px(18), m.px(8)))
@@ -168,11 +171,12 @@ class MainView:
             self._log.pack_forget()
 
     def write_log(self, text: str) -> None:
-        """Agrega una línea al registro y desplaza la vista al final.
+        """Agrega una línea al registro técnico (y al archivo de registro) y baja al final.
 
         Args:
             text (str): Texto a agregar (se recortan los saltos finales).
         """
+        logging.getLogger(LOGGER_NAME).info(text.rstrip())
         self._log.configure(state="normal")
         self._log.insert("end", text.rstrip() + "\n")
         self._log.see("end")

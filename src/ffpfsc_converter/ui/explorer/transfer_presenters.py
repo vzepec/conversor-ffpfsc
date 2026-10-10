@@ -1,12 +1,18 @@
-"""Textos del panel de transferencias de la vista PS5. Funciones puras."""
+"""Textos del panel de transferencias de la vista PS5 (incluido "comprimir y reemplazar")."""
 from __future__ import annotations
 
 from pathlib import Path
 from typing import NamedTuple
 
+from ffpfsc_converter.domain.pipeline import PipelineResult, PipelineStage
 from ffpfsc_converter.domain.remote import DownloadResult
 from ffpfsc_converter.formatting import format_size
-from ffpfsc_converter.ui.explorer.presenters import duration_text
+from ffpfsc_converter.ui.explorer.presenters import (
+    PIPELINE_STEPS,
+    STAGE_NAMES,
+    STEP_OF_STAGE,
+    duration_text,
+)
 from ffpfsc_converter.ui.job_presenters import RowStatus
 
 
@@ -72,3 +78,47 @@ def download_result_status(result: DownloadResult) -> RowStatus:
         return RowStatus("warn", "Cancelada", "Se puede reanudar")
     first_line = result.message.splitlines()[0] if result.message else "desconocido"
     return RowStatus("bad", "Error", first_line)
+
+
+def pipeline_step_text(stage: PipelineStage) -> str:
+    """Describe el paso de "comprimir y reemplazar" en el que va el juego.
+
+    Args:
+        stage (PipelineStage): Etapa interna actual.
+
+    Returns:
+        str: Por ejemplo ``"Paso 2 de 3 · Comprimiendo a .ffpfsc"``.
+    """
+    step = STEP_OF_STAGE[stage]
+    return f"Paso {step + 1} de {len(PIPELINE_STEPS)} · {STAGE_NAMES[stage]}"
+
+
+def pipeline_progress(percent: float, detail: str) -> TransferProgress:
+    """Prepara el avance de la etapa actual para la barra de la fila.
+
+    Args:
+        percent (float): Porcentaje de la etapa (se limita a 0-100).
+        detail (str): Bytes, velocidad o fase de MkPFS.
+
+    Returns:
+        TransferProgress: Porcentaje y texto como ``"62% · 20.3 GB de 48.2 GB"``.
+    """
+    value = min(max(percent, 0.0), 100.0)
+    text = f"{value:.0f}% · {detail}" if detail else f"{value:.0f}%"
+    return TransferProgress(value, text)
+
+
+def pipeline_result_status(result: PipelineResult) -> RowStatus:
+    """Resume cómo terminó "comprimir y reemplazar".
+
+    Args:
+        result (PipelineResult): Resultado del pipeline.
+
+    Returns:
+        RowStatus: Tipo de píldora, texto y detalle (el mensaje del pipeline).
+    """
+    if result.succeeded:
+        return RowStatus("ok", "✓ Reemplazado", result.message)
+    if result.cancelled:
+        return RowStatus("warn", "Cancelado", result.message)
+    return RowStatus("bad", "Error", result.message)

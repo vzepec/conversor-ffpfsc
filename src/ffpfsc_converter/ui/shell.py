@@ -8,7 +8,8 @@ from tkinter import ttk
 from PIL import ImageTk
 
 from ffpfsc_converter.domain.update import ReleaseInfo
-from ffpfsc_converter.infrastructure.system import open_url
+from ffpfsc_converter.infrastructure.app_log import log_dir
+from ffpfsc_converter.infrastructure.system import open_in_file_manager, open_url
 from ffpfsc_converter.ui.presenters import ConnectionCard, ConsoleStatus, connection_card
 from ffpfsc_converter.ui.theme import SIDEBAR_WIDTH, ThemeManager
 from ffpfsc_converter.ui.theme.app_icon import render_app_icon
@@ -71,7 +72,11 @@ class _NavItem(ttk.Frame):
 
 
 class AppShell(ttk.Frame):
-    """Barra lateral más el área donde se muestra la vista elegida."""
+    """Barra lateral más el área donde se muestra la vista elegida.
+
+    Attributes:
+        current (str): Vista visible.
+    """
 
     def __init__(self, root: tk.Misc, theme: ThemeManager, version: str) -> None:
         """Crea la barra lateral y el área de contenido.
@@ -90,6 +95,7 @@ class AppShell(ttk.Frame):
         self._side.pack_propagate(False)
         self._content = ttk.Frame(self, style="TFrame")
         self._content.pack(side="left", fill="both", expand=True)
+        self.current = ""
         self._views: dict[str, ttk.Frame] = {}
         self._items: dict[str, _NavItem] = {}
         self._brand(version)
@@ -129,6 +135,7 @@ class AppShell(ttk.Frame):
             frame.pack_forget()
             self._items[name].set_active(name == key)
         self._views[key].pack(fill="both", expand=True)
+        self.current = key
 
     def set_badge(self, key: str, text: str) -> None:
         """Muestra un contador junto al nombre de una vista.
@@ -164,7 +171,12 @@ class AppShell(ttk.Frame):
         texts = ttk.Frame(row, style="Side.TFrame")
         texts.pack(side="left", padx=(m.px(10), 0))
         ttk.Label(texts, text="Conversor FFPFSC", style="SideBold.TLabel").pack(anchor="w")
-        ttk.Label(texts, text=version, style="SideSmall.TLabel").pack(anchor="w")
+        line = ttk.Frame(texts, style="Side.TFrame")
+        line.pack(anchor="w")
+        ttk.Label(line, text=version, style="SideSmall.TLabel").pack(side="left")
+        ttk.Button(line, text="Registros", style="Side.SmallLink.TButton", cursor="hand2",
+                   command=lambda: open_in_file_manager(log_dir())).pack(
+            side="left", padx=(m.px(8), 0))
 
     def show_update(self, release: ReleaseInfo) -> None:
         """Muestra el botón verde para descargar una versión nueva.

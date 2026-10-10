@@ -66,6 +66,13 @@ sola ante cortes. Más detalles en [PS5.md](PS5.md).
 | **Guardar en** | Por defecto junto al juego original. |
 | **Verificación completa** | Relee y comprueba cada bloque al terminar. Más lento, máxima seguridad. Sin marcarla se verifica solo la estructura. |
 
+Mientras convierte o transfiere con la PS5, **el equipo no se suspende**. Al
+terminar, si la ventana no está en primer plano, aparece un **aviso del escritorio**.
+
+La app **recuerda** el modo, los núcleos, la verificación y la carpeta de destino
+entre sesiones, además del tamaño de la ventana y la última vista abierta. Con
+**Usar «junto a cada juego»** vuelves a guardar los `.ffpfsc` al lado del original.
+
 ## 5. Antes de empezar, el programa comprueba
 
 - Si el `.ffpfsc` **ya existe**, pregunta si sobrescribirlo.
@@ -84,5 +91,7 @@ comprimidos o cifrados); el resultado ocuparía algo más por las tablas PFS.
 ninguna imagen `.exfat`/`.ffpkg` cerca. Arrastra la carpeta correcta.
 
 **¿Dónde veo los detalles?** Despliega **Registro técnico** (abajo a la
-izquierda): muestra el comando exacto de MkPFS y toda su salida, útil para
-reportar errores.
+izquierda): muestra el comando exacto de MkPFS y toda su salida. Todo eso, más
+los eventos de la PS5 y cualquier error inesperado, queda también en un archivo
+(`conversor.log`) que se abre con el enlace **Registros** de la barra lateral.
+Adjúntalo al reportar un problema.

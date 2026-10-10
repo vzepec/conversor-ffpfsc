@@ -9,6 +9,9 @@ from tkinter import ttk
 
 from ffpfsc_converter.config import DEFAULT_PRESET, PRESETS
 from ffpfsc_converter.domain.models import CompressionPreset
+from ffpfsc_converter.infrastructure.settings_store import load_settings
+from ffpfsc_converter.ui import dialogs
+from ffpfsc_converter.ui.preferences import convert_from, save_convert
 from ffpfsc_converter.ui.theme import ThemeManager
 from ffpfsc_converter.ui.widgets.basics import Segmented
 from ffpfsc_converter.ui.widgets.stepper import Stepper
@@ -20,27 +23,37 @@ _DEFAULT_OUTPUT_TEXT = "Junto a cada juego"
 class OptionsPanel(ttk.Frame):
     """Controles con las opciones de conversión elegidas por el usuario.
 
+    Recuerda entre sesiones el modo, los núcleos, la verificación y la carpeta
+    de destino.
+
     Attributes:
         cpu_total (int): Núcleos detectados en el equipo.
+        output_dir (Path | None): Carpeta de destino; ``None`` = junto a cada juego.
     """
 
     def __init__(self, parent: tk.Misc, theme: ThemeManager,
                  on_preset_changed: Callable[[], None],
-                 on_change_output: Callable[[], None]) -> None:
-        """Crea los controles con los valores predeterminados.
+                 on_output_changed: Callable[[Path | None], None]) -> None:
+        """Crea los controles con las últimas opciones usadas.
 
         Args:
             parent (tk.Misc): Contenedor del panel.
             theme (ThemeManager): Tema.
             on_preset_changed (Callable[[], None]): Se llama al cambiar el modo.
-            on_change_output (Callable[[], None]): Se llama al pulsar "Cambiar".
+            on_output_changed (Callable[[Path | None], None]): Recibe la carpeta de destino
+                nueva (``None`` = junto a cada juego).
         """
         m = self._metrics = theme.metrics
         super().__init__(parent, style="Card.TFrame", padding=(m.px(16), m.px(12)))
         self.cpu_total = os.cpu_count() or 2
-        self._preset_var = tk.StringVar(value=DEFAULT_PRESET.label)
-        self._cores_var = tk.IntVar(value=self.cpu_total)
-        self._verify_var = tk.BooleanVar(value=False)
+        saved = convert_from(load_settings(), _PRESETS_BY_LABEL, self.cpu_total)
+        self.output_dir = saved.output_dir
+        self._on_output_changed = on_output_changed
+        self._preset_var = tk.StringVar(value=saved.preset or DEFAULT_PRESET.label)
+        self._cores_var = tk.IntVar(value=saved.cores or self.cpu_total)
+        self._verify_var = tk.BooleanVar(value=saved.full_verify)
+        for variable in (self._preset_var, self._cores_var, self._verify_var):
+            variable.trace_add("write", lambda *_args: self._remember())
         self.columnconfigure(2, weight=1)
         modes = [(p.label, p.short_label) for p in PRESETS]
         self._field(0, "MODO", Segmented(self, self._preset_var, modes, on_preset_changed))
@@ -48,24 +61,24 @@ class OptionsPanel(ttk.Frame):
         verify = ttk.Checkbutton(self, text="  Más lento, más seguro", variable=self._verify_var,
                                  style=theme.switch_style("surface"))
         self._field(2, "VERIFICACIÓN COMPLETA", verify)
-        self._build_destination(on_change_output)
+        self._build_destination()
 
-    def _build_destination(self, on_change_output: Callable[[], None]) -> None:
-        """Crea la línea inferior con la carpeta donde se guardan los ``.ffpfsc``.
-
-        Args:
-            on_change_output (Callable[[], None]): Se llama al pulsar "Cambiar".
-        """
+    def _build_destination(self) -> None:
+        """Crea la línea inferior con la carpeta donde se guardan los ``.ffpfsc``."""
         m = self._metrics
         ttk.Separator(self).grid(row=2, column=0, columnspan=3, sticky="ew",
                                  pady=(m.px(12), m.px(8)))
         dest = ttk.Frame(self, style="Surface.TFrame")
         dest.grid(row=3, column=0, columnspan=3, sticky="ew")
         ttk.Label(dest, text="GUARDAR EN", style="CardCaption.TLabel").pack(side="left")
-        self._outdir_label = ttk.Label(dest, text=_DEFAULT_OUTPUT_TEXT, style="Card.TLabel")
+        self._outdir_label = ttk.Label(dest, style="Card.TLabel")
         self._outdir_label.pack(side="left", padx=(m.px(10), 0))
         ttk.Button(dest, text="Cambiar", style="Card.Link.TButton", cursor="hand2",
-                   command=on_change_output).pack(side="left", padx=(m.px(6), 0))
+                   command=self._pick_output).pack(side="left", padx=(m.px(6), 0))
+        self._reset = ttk.Button(dest, text=f"Usar «{_DEFAULT_OUTPUT_TEXT.lower()}»",
+                                 style="Card.Link.TButton", cursor="hand2",
+                                 command=lambda: self._set_output(None))
+        self._show_output()
 
     def _field(self, column: int, caption: str, widget: tk.Widget) -> None:
         """Ubica un control con su etiqueta en mayúsculas encima.
@@ -107,10 +120,30 @@ class OptionsPanel(ttk.Frame):
         """
         return self._verify_var.get()
 
-    def set_output_dir(self, folder: Path) -> None:
-        """Muestra la carpeta de destino elegida.
+    def _pick_output(self) -> None:
+        """Pide la carpeta de destino."""
+        folder = dialogs.ask_output_dir()
+        if folder:
+            self._set_output(folder)
+
+    def _set_output(self, folder: Path | None) -> None:
+        """Cambia la carpeta de destino y avisa al controlador.
 
         Args:
-            folder (Path): Carpeta donde se guardarán los ``.ffpfsc``.
+            folder (Path | None): Carpeta elegida, o ``None`` para guardar junto a cada juego.
         """
-        self._outdir_label.configure(text=str(folder))
+        self.output_dir = folder
+        self._show_output()
+        self._on_output_changed(folder)
+
+    def _show_output(self) -> None:
+        """Muestra la carpeta de destino y el enlace para volver a la predeterminada."""
+        self._outdir_label.configure(text=str(self.output_dir or _DEFAULT_OUTPUT_TEXT))
+        if self.output_dir is None:
+            self._reset.pack_forget()
+        else:
+            self._reset.pack(side="left", padx=(self._metrics.px(12), 0))
+
+    def _remember(self) -> None:
+        """Guarda las opciones elegidas para la próxima vez."""
+        save_convert(self._preset_var.get(), self.cpu_count(), self.full_verify())

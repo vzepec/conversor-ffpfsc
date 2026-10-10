@@ -8,21 +8,14 @@ from ffpfsc_converter.domain.remote_events import (
     DownloadProgress,
     DownloadQueueFinished,
     DownloadStarted,
-    FtpLoginRefused,
-    FtpReady,
-    PairingCodeRequired,
-    RemoteConnected,
-    RemoteDisconnected,
-    RemoteError,
     RemoteListing,
     StorageUpdated,
     TransferRetrying,
 )
-from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
 from ffpfsc_converter.ui.explorer.changes_updater import ChangesUpdater
+from ffpfsc_converter.ui.explorer.connection_updater import ConnectionUpdater
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
-from ffpfsc_converter.ui.explorer.pairing_dialog import PairingDialog
 
 
 class ExplorerUpdater:
@@ -37,20 +30,15 @@ class ExplorerUpdater:
         self._ctl = controller
         self._view = controller.view
         self._handlers: dict[type, Callable] = {
-            FtpReady: self._on_ftp_ready,
-            FtpLoginRefused: self._on_login_refused,
-            PairingCodeRequired: self._on_pairing_code,
-            RemoteConnected: self._on_connected,
-            RemoteDisconnected: self._on_disconnected,
             RemoteListing: self._on_listing,
             StorageUpdated: self._on_storage,
-            RemoteError: self._on_error,
             DownloadStarted: self._on_download_started,
             DownloadProgress: self._on_download_progress,
             DownloadFinished: self._on_download_finished,
             DownloadQueueFinished: self._on_queue_finished,
             TransferRetrying: self._on_retrying,
             **ChangesUpdater(controller).handlers,
+            **ConnectionUpdater(controller).handlers,
         }
 
     def handles(self, event: object) -> bool:
@@ -71,71 +59,6 @@ class ExplorerUpdater:
             event (object): Evento de la vista PS5.
         """
         self._handlers[type(event)](event)
-
-    def _on_ftp_ready(self, event: FtpReady) -> None:
-        """Conecta el explorador al FTP ya activo.
-
-        Args:
-            event (FtpReady): FTP listo.
-        """
-        if self._ctl.target is not None:  # vuelve a solo lectura tras escribir: sigue conectada
-            self._view.connection.set_state(True, "Volviendo el FTP a solo lectura…", busy=True)
-        else:
-            verb = "FTP iniciado" if event.started else "FTP activo"
-            self._view.connection.set_state(False, f"{verb}; abriendo…", busy=True)
-        start = self._ctl.path if self._ctl.target is not None else None
-        self._ctl.browser.connect(event.target, start_path=start)
-
-    def _on_login_refused(self, event: FtpLoginRefused) -> None:
-        """Reinicia el FTP con credenciales nuevas (lo había iniciado otro programa).
-
-        Args:
-            event (FtpLoginRefused): Rechazo del inicio de sesión.
-        """
-        if self._ctl.ftp_restarted:
-            self._view.connection.set_state(False, "Sin conexión.")
-            dialogs.show_error("El FTP de la PS5 rechazó las credenciales "
-                               "incluso tras reiniciarlo.")
-            return
-        self._ctl.ftp_restarted = True
-        self._view.connection.set_state(False, "Reiniciando el FTP de la PS5…", busy=True)
-        self._ctl.launcher.connect(event.target.host, event.target.port, restart=True)
-
-    def _on_pairing_code(self, event: PairingCodeRequired) -> None:
-        """Pide al usuario el código que muestra la PS5.
-
-        Args:
-            event (PairingCodeRequired): Solicitud de código.
-        """
-        self._view.connection.set_state(False, "Esperando el código de emparejamiento…", True)
-        code = PairingDialog(self._view, self._ctl.theme, event.console_name).ask()
-        self._ctl.launcher.provide_code(code)
-
-    def _on_connected(self, event: RemoteConnected) -> None:
-        """Marca la conexión como activa.
-
-        Args:
-            event (RemoteConnected): Conexión establecida.
-        """
-        self._ctl.target = event.target
-        self._ctl.ftp_restarted = False
-        self._view.set_connected(True)
-        self._view.set_browsing_enabled(True)
-        self._ctl.refresh_storage()
-        pending, self._ctl.pending_on_connect = self._ctl.pending_on_connect, []
-        for action in pending:
-            action()
-
-    def _on_disconnected(self, _event: RemoteDisconnected) -> None:
-        """Vacía el explorador al perder la conexión.
-
-        Args:
-            _event (RemoteDisconnected): Desconexión.
-        """
-        self._ctl.target = None
-        self._view.remote.clear()
-        self._view.set_connected(False)
-        self._view.connection.set_state(False, "Sin conexión.")
 
     def _on_listing(self, event: RemoteListing) -> None:
         """Muestra el contenido de la carpeta abierta.
@@ -160,16 +83,6 @@ class ExplorerUpdater:
         """
         if self._ctl.target is not None:
             self._view.set_storage(event.volumes, event.error)
-
-    def _on_error(self, event: RemoteError) -> None:
-        """Muestra el error y restablece el estado de la barra de conexión.
-
-        Args:
-            event (RemoteError): Error a mostrar.
-        """
-        connected = self._ctl.browser.is_connected
-        self._view.connection.set_state(connected, "Conectado." if connected else "Sin conexión.")
-        dialogs.show_error(event.message)
 
     def _on_download_started(self, event: DownloadStarted) -> None:
         """Marca la descarga como iniciada.

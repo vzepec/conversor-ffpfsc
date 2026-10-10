@@ -193,6 +193,8 @@ class Ps5ConversionPipeline:
         download = stages.download_stage(self._factory, target, attempt.entry, attempt.work_dir,
                                          self._reporter, self._cancel.is_set)
         attempt.original_size = download.total_bytes
+        stages.verify_download_stage(self._access, target.host, download, self._reporter,
+                                     self._cancel.is_set)
         job = stages.prepare_stage(download.local_path, attempt.work_dir, self._reporter)
         self._emit(PipelineOptionsRequired(job, plan))
         choice = self._answers.get()

@@ -101,6 +101,10 @@ vinculación con la PS5 se conservan (se guardan fuera de la carpeta del proyect
 
 ## Solución de problemas
 
+Ante cualquier error, revisa el archivo de registro (enlace **Registros** en la barra
+lateral): en Linux está en `~/.config/ffpfsc-converter/registros/` y en Windows en
+`%APPDATA%\ffpfsc-converter\registros\`.
+
 | Problema | Solución |
 |----------|----------|
 | Windows: *"No se encontró Python"* | Reinstala Python marcando **Add python.exe to PATH**, o verifica que `py --version` funciona en una terminal nueva. |

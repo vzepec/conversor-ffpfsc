@@ -45,6 +45,11 @@ class ScrollFrame(ttk.Frame):
         """Vuelve al principio del contenido."""
         self._canvas.yview_moveto(0)
 
+    def scroll_to_end(self) -> None:
+        """Muestra el final del contenido (por ejemplo, la última fila agregada)."""
+        self.update_idletasks()
+        self._canvas.yview_moveto(1)
+
     def _on_inner_resize(self, _event: tk.Event) -> None:
         """Ajusta la zona desplazable al tamaño del contenido.
 

@@ -5,6 +5,7 @@ import logging
 import shutil
 import struct
 import threading
+import zlib
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -78,13 +79,15 @@ def writable_ftp(ftp_root: Path) -> Iterator[int]:
 
 
 class FakeConsole:
-    """Simula el helper: espacio libre y borrado reales sobre la carpeta del FTP."""
+    """Simula el helper: espacio libre, borrado y CRC32 reales sobre la carpeta del FTP."""
 
     def __init__(self, root: Path, port: int, usable: int) -> None:
         """Guarda la raíz servida, el puerto FTP y el espacio a informar."""
         self.root, self.port, self.usable = root, port, usable
         self.modes: list[bool] = []
         self.deleted: list[str] = []
+        self.crc_paths: list[str] = []
+        self.crc_override: dict[str, int] = {}  # ruta → CRC32 a informar (para simular daños)
 
     def open_session(self, host: str, ask_code: Callable[[str], str] | None = None) -> FakeConsole:
         """Devuelve el propio doble como sesión."""
@@ -97,17 +100,37 @@ class FakeConsole:
         return ConsoleTarget("127.0.0.1", self.port)
 
     def call(self, method: int, body: bytes) -> bytes:
-        """Responde fs.freespace (44) y job.run DELETE (20) como el helper."""
+        """Responde fs.freespace (44), job.run DELETE/CRC32 (20) y job.status/cancel."""
         if method == 44:
             return Encoder().u64(self.usable).u64(self.usable).u64(10**12).u64(0).u64(1).build()
+        if method in (17, 18):  # job.status / job.cancel: las tareas terminan al iniciarse
+            return b"" if method == 18 else self._status(body[:16], b"")
         d = Decoder(body)
-        job_id, _op, args = d.raw(16), d.u8(), d.blob()
-        path = args.decode().split('"path": "')[1].rstrip('"}')
+        job_id, op, args = d.raw(16), d.u8(), d.blob()
+        path = json.loads(args)["path"]
+        if op == 4:  # CRC32
+            self.crc_paths.append(path)
+            local = self.root / path.lstrip("/")
+            crc = self.crc_override.get(path, zlib.crc32(local.read_bytes()))
+            return self._status(job_id, json.dumps({"crc32": crc, "size": 0}).encode())
         self.deleted.append(path)
-        shutil.rmtree(self.root / path.lstrip("/"), ignore_errors=True)
+        target = self.root / path.lstrip("/")
+        if target.is_dir():
+            shutil.rmtree(target, ignore_errors=True)
+        else:
+            target.unlink(missing_ok=True)
+        return self._status(job_id, b"")
+
+    @staticmethod
+    def _status(job_id: bytes, result: bytes) -> bytes:
+        """Construye un Status terminado bien, con la respuesta de la operación."""
         base = Encoder().raw(job_id).u32(1).u32(1).u64(0).u64(0).u64(0)
         status = base.u8(0).u8(0).u8(0).u8(0).build()[:-2]
-        return status + struct.pack("<HHI", 1, 2, 1) + b"\x01"
+        exts = [(2, b"\x01")] + ([(3, struct.pack("<I", len(result)) + result)] if result else [])
+        block = struct.pack("<H", len(exts))
+        for tag, data in exts:
+            block += struct.pack("<HI", tag, len(data)) + data
+        return status + block
 
     def close(self) -> None:
         """No hace nada (sesión simulada)."""

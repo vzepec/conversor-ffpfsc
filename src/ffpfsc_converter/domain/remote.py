@@ -79,6 +79,7 @@ class DownloadJob:
         total_bytes (int): Bytes a descargar (se conoce al recorrer la carpeta).
         done_bytes (int): Bytes ya descargados, incluidos los reanudados.
         id (str): Identificador único, usado también como fila de la tabla.
+        files (list[FileTransfer]): Archivos descargados (para verificarlos después).
     """
 
     entry: RemoteEntry
@@ -87,6 +88,7 @@ class DownloadJob:
     total_bytes: int = 0
     done_bytes: int = 0
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    files: list[FileTransfer] = field(default_factory=list)
 
     @property
     def local_path(self) -> Path:

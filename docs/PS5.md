@@ -23,7 +23,10 @@ reemplazar** un juego directamente en la consola.
    el cuadro que abre la app (tienes menos de un minuto).
 
 El emparejamiento se hace **una sola vez**: la app recuerda la consola y las
-siguientes conexiones no piden código.
+siguientes conexiones no piden código. Desde entonces, al abrir la app se
+**conecta sola** si la PS5 responde (si está apagada, queda en «Sin conexión» sin
+mostrar errores), y si la conexión se corta sin que pulses **Desconectar**, intenta
+**reconectar** hasta 3 veces y vuelve a la carpeta en la que estabas.
 
 > [!IMPORTANT]
 > La PS5 solo acepta emparejamientos nuevos durante los **5 minutos siguientes a
@@ -89,20 +92,26 @@ conexión.
 Selecciona **una** carpeta de juego o imagen `.exfat`/`.ffpkg` y pulsa
 **Comprimir y reemplazar…**. La app:
 
-1. **Descarga** el juego a `<carpeta de descargas>/ffpfsc-temporal/` (reanudable).
+1. **Descarga** el juego a `<carpeta de descargas>/ffpfsc-temporal/` (reanudable) y
+   **comprueba con CRC32** que cada archivo es idéntico al de la PS5 (la consola
+   calcula el suyo mientras este equipo calcula el propio).
 2. **Analiza** el juego y abre la ventana de compresión: modo (con peso
    estimado), núcleos, verificación completa y si borrar los temporales al final.
    Esa ventana muestra exactamente qué se subirá y qué se borrará.
 3. **Comprime** a `.ffpfsc` con MkPFS (comprueba antes el espacio de este equipo).
 4. **Comprueba el espacio** de la PS5 (`fs.freespace` del helper).
-5. **Sube** el archivo como `Juego.ffpfsc.part` y **verifica** su tamaño.
+5. **Sube** el archivo como `Juego.ffpfsc.part` y **verifica** su tamaño y su CRC32.
+   Si algo no coincide, borra el `.part` y se detiene sin tocar el original.
 6. Recién entonces **borra el original** en la PS5.
 7. **Publica** el archivo renombrándolo a `Juego.ffpfsc` (misma carpeta).
 8. Vuelve el FTP a **solo lectura** y, si lo elegiste, borra los temporales.
 
-Una ventana resume todo en **3 pasos** (*Descarga → Compresión → Reemplazo*) y
-muestra el subpaso actual, el **porcentaje**, la velocidad y el **tiempo restante**
-estimado. Se puede **cancelar** en cualquier momento.
+El avance se sigue en una fila del **panel de Transferencias**, junto a las
+descargas y subidas: indica el paso (*Paso 2 de 3 · Comprimiendo a .ffpfsc*, de
+*Descarga → Compresión → Reemplazo*), una barra con el **porcentaje**, la
+velocidad y el **tiempo restante** estimado. El botón **Cancelar** de la fila lo
+detiene en cualquier momento; si falla o se cancela, la misma fila ofrece
+**Reintentar**.
 
 Si cancelas o falla, al volver a intentarlo con el mismo juego:
 
@@ -125,8 +134,8 @@ Si cancelas o falla, al volver a intentarlo con el mismo juego:
 ## Cortes de conexión y reintentos
 
 - Si la conexión se corta durante una descarga o subida, la app **reintenta sola
-  hasta 3 veces** (esperando 3, 10 y 20 s) y continúa donde quedó. La fila o la
-  ventana muestran "Reintentando (1 de 3)…".
+  hasta 3 veces** (esperando 3, 10 y 20 s) y continúa donde quedó. La
+  fila del panel de transferencias muestra "Reintentando (1 de 3)…".
 - **Límite de ps5upload 6.x:** su FTP solo sabe retomar un archivo en los primeros
   2 GiB (guarda la posición en un entero de 32 bits). Si un archivo más grande se
   corta más allá de ese punto, ese archivo se vuelve a descargar o subir desde el

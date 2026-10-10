@@ -5,7 +5,28 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Añadido
+- «Comprimir y reemplazar» compara con CRC32 lo descargado y lo subido con lo que
+  hay en la PS5 (la consola lo calcula con el helper, en paralelo) antes de
+  comprimir y antes de borrar el original. Antes solo se comparaba el tamaño.
+- El equipo no se suspende mientras haya una conversión o una transferencia con la
+  PS5 en curso (Linux: `systemd-inhibit`; Windows: `SetThreadExecutionState`).
+- Aviso del escritorio al terminar la cola de conversión, las descargas, una subida
+  o «Comprimir y reemplazar», si la ventana no está en primer plano.
+- Registro en archivo (`conversor.log`, rotativo) con la salida de MkPFS, los
+  eventos de la PS5 y cualquier error inesperado con su traza; el enlace
+  «Registros» de la barra lateral abre su carpeta.
+- Conexión automática a la PS5 al abrir la app (si ya está vinculada y responde,
+  sin mostrar errores si está apagada) y reconexión automática tras un corte,
+  hasta 3 intentos, volviendo a la carpeta abierta.
+- La app recuerda entre sesiones el modo, los núcleos, la verificación, la carpeta de
+  destino (con un enlace para volver a «junto a cada juego»), el tamaño de la
+  ventana y la última vista abierta.
+
 ### Cambiado
+- «Comprimir y reemplazar» ya no abre una ventana de progreso: se sigue en una fila
+  del panel de Transferencias con el paso, la barra, el tiempo restante y los
+  botones Cancelar o Reintentar. El panel crece según sus filas.
 - Windows 10/11 deja de estar en *beta*: la app ya se probó en un equipo Windows real.
 
 ## [1.3.1] - 2026-10-10
