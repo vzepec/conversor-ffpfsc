@@ -79,7 +79,7 @@ class AppShell(ttk.Frame):
         Args:
             root (tk.Misc): Ventana raíz.
             theme (ThemeManager): Tema.
-            version (str): Versión de la app (por ejemplo ``"v1.3.0"``).
+            version (str): Versión de la app (por ejemplo ``"v1.3.1"``).
         """
         super().__init__(root, style="TFrame")
         self._theme = theme

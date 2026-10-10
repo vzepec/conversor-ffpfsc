@@ -5,6 +5,8 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.3.1] - 2026-10-10
+
 ### Corregido
 - Durante una subida (por ejemplo, desde «Subir a la PS5» en Convertir) la vista
   PS5 se veía como desconectada: unidades «Sin conexión», ruta vacía y botones
