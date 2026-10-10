@@ -1,0 +1,25 @@
+# Entorno y caches de Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Imágenes de juegos (nunca se versionan)
+*.ffpfsc
+*.ffpkg
+*.exfat
+*.pkg
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+
+# Configuración local de Claude Code
+.claude/settings.local.json
