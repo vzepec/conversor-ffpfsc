@@ -11,6 +11,13 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   el principio, y se pegaba detrás de lo ya descargado. Ahora se verifica la
   reanudación (si la consola empieza de cero, se reescribe el archivo), se descarta
   un `.part` que no coincide y nunca se escribe más allá del tamaño esperado.
+  La causa: ps5upload 6.x guarda la posición de `REST` en un entero de 32 bits, así
+  que solo retoma en los primeros 2 GiB; por encima, la app vuelve a transferir ese
+  archivo desde el principio (también en las subidas).
+
+### Documentado
+- ps5upload 7.0 eliminó el servidor FTP: la pestaña PS5 necesita la versión 6.x
+  (la incluida en `payload/`).
 
 ### Cambiado
 - Interfaz rediseñada: barra lateral con navegación, estado de la PS5 (IP, modo del

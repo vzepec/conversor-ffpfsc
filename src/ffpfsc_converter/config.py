@@ -69,6 +69,9 @@ PARTIAL_SUFFIX = ".part"
 #: Bytes ya descargados que se vuelven a pedir al reanudar, para comprobar que el
 #: servidor respeta la posición (el FTP de ps5upload acepta REST pero envía desde 0).
 RESUME_OVERLAP_BYTES = 64 * 1024
+#: Mayor posición que el FTP de ps5upload 6.x sabe retomar con REST: la guarda en
+#: un entero de 32 bits con signo y, por encima, envía desde 0 o desde otro lugar.
+FTP_MAX_RESUME_OFFSET = 2**31 - 1
 #: Carpetas de la PS5 que se ofrecen como accesos rápidos.
 PS5_FAVORITE_PATHS = (
     "/data/homebrew", "/mnt/usb0", "/mnt/usb1", "/mnt/ext0", "/mnt/ext1", "/data", "/",

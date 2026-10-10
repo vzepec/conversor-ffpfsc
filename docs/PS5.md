@@ -10,6 +10,8 @@ reemplazar** un juego directamente en la consola.
 - PS5 con jailbreak y el **payload de ps5upload** cargado (su helper escucha en el
   puerto **9120**). La carpeta [`payload/`](../payload/) incluye la versión probada
   (6.4.0) y explica cómo cargarla. No hace falta la app de escritorio de ps5upload.
+  **No uses ps5upload 7.0 o posterior:** esa versión eliminó el servidor FTP
+  (`ftp.start`) del que depende esta pestaña.
 - La PS5 y este equipo en la **misma red local** (mejor por cable).
 
 ## Primera conexión: emparejamiento
@@ -120,6 +122,12 @@ Si cancelas o falla, al volver a intentarlo con el mismo juego:
 - Si la conexión se corta durante una descarga o subida, la app **reintenta sola
   hasta 3 veces** (esperando 3, 10 y 20 s) y continúa donde quedó. La fila o la
   ventana muestran "Reintentando (1 de 3)…".
+- **Límite de ps5upload 6.x:** su FTP solo sabe retomar un archivo en los primeros
+  2 GiB (guarda la posición en un entero de 32 bits). Si un archivo más grande se
+  corta más allá de ese punto, ese archivo se vuelve a descargar o subir desde el
+  principio; los archivos ya completos no se repiten. Al reanudar, la app además
+  comprueba que la consola envíe desde la posición pedida y nunca escribe más
+  allá del tamaño del archivo.
 - Solo se reintentan los fallos transitorios (red, tiempo agotado, verificación);
   los definitivos (sin espacio, ruta protegida) se informan de inmediato.
 - Si sigue fallando:

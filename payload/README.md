@@ -45,9 +45,14 @@ vez la PS5 muestra un código de 6 dígitos para emparejar. Consulta
 ## Compatibilidad
 
 La app habla la versión 1 del protocolo AVA1, la que usan los helpers de
-ps5upload **6.x**. Las versiones 5.x no son compatibles. Para actualizar el
-payload, reemplaza el `.elf`, actualiza la tabla de arriba y prueba emparejar,
-navegar, descargar y subir.
+ps5upload **6.x**. Las versiones 5.x no son compatibles, y **la 7.0 tampoco**:
+eliminó el servidor FTP (`ftp.start`) que usa la app para transferir. Para
+actualizar dentro de 6.x, reemplaza el `.elf`, actualiza la tabla de arriba y
+prueba emparejar, navegar, descargar y subir.
+
+El FTP de 6.x guarda la posición de `REST` en un entero de 32 bits: solo puede
+retomar un archivo en sus primeros 2 GiB. La app lo tiene en cuenta (ver
+`docs/PS5.md`, «Cortes de conexión y reintentos»).
 
 ## Licencia
 

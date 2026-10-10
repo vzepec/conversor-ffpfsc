@@ -7,6 +7,7 @@ from typing import BinaryIO
 import pytest
 
 from ffpfsc_converter.domain.remote import DownloadJob, FileTransfer, RemoteEntry
+from ffpfsc_converter.services import file_download, remote_upload
 from ffpfsc_converter.services.file_download import download_file
 from ffpfsc_converter.services.progress_meter import ProgressMeter
 from ffpfsc_converter.services.resume_writer import OversizeDownloadError, ResumeMismatchError
@@ -93,3 +94,42 @@ def test_meter_rewind_keeps_progress_consistent() -> None:
     meter.rewind(60)
     meter.advance(100, "a")
     assert job.done_bytes == 100
+
+
+def test_large_offsets_restart_without_rest(tmp_path: Path,
+                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    """Por encima del límite de REST de la PS5 no pide continuar: descarga desde cero."""
+    monkeypatch.setattr(file_download, "FTP_MAX_RESUME_OFFSET", 1000)
+    server = _Server()
+    final, job = _download(tmp_path, server, DATA[:200_000])
+    assert server.offsets == [0]
+    assert final.read_bytes() == DATA
+    assert job.done_bytes == len(DATA)
+
+
+class _RemotePart:
+    """Cliente falso con un .part remoto del tamaño indicado."""
+
+    def __init__(self, size: int) -> None:
+        """Guarda el tamaño del .part remoto."""
+        self.part_size, self.downloads = size, 0
+
+    def size(self, remote_path: str) -> int:
+        """Informa el tamaño del .part remoto."""
+        return self.part_size
+
+    def download(self, *args: object) -> None:
+        """Cuenta las lecturas del final del .part (no deberían ocurrir)."""
+        self.downloads += 1
+
+
+def test_upload_does_not_resume_past_the_limit(tmp_path: Path,
+                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """Una subida con más de 2 GiB en la PS5 empieza de cero sin intentar reanudar."""
+    monkeypatch.setattr(remote_upload, "FTP_MAX_RESUME_OFFSET", 1000)
+    local = tmp_path / "juego.ffpfsc"
+    local.write_bytes(DATA)
+    client = _RemotePart(200_000)
+    assert remote_upload.resume_offset(client, local, "/data/juego.ffpfsc.part",  # type: ignore[arg-type]
+                                       len(DATA)) == 0
+    assert client.downloads == 0

@@ -12,7 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import BinaryIO, cast
 
-from ffpfsc_converter.config import RESUME_OVERLAP_BYTES
+from ffpfsc_converter.config import FTP_MAX_RESUME_OFFSET, RESUME_OVERLAP_BYTES
 from ffpfsc_converter.domain.remote import FileTransfer
 from ffpfsc_converter.errors import ConverterError, DownloadCancelledError, TransientError
 from ffpfsc_converter.services.download_planner import partial_path
@@ -80,8 +80,8 @@ def download_file(
         meter.skip(transfer.size)
         return
     offset = part.stat().st_size if part.is_file() else 0
-    if offset > transfer.size:
-        offset = 0
+    if offset > transfer.size or offset - RESUME_OVERLAP_BYTES > FTP_MAX_RESUME_OFFSET:
+        offset = 0  # la PS5 no puede retomar desde ahí: se descarga de nuevo
     meter.skip(offset)
     overlap = min(offset, RESUME_OVERLAP_BYTES)
 
