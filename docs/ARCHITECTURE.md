@@ -42,8 +42,9 @@ src/ffpfsc_converter/
 ├── domain/
 │   ├── models.py          # ConversionJob, GameInfo, ConversionOptions, JobState…
 │   ├── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
-│   ├── remote.py          # ConsoleTarget, RemoteEntry, DownloadJob… (pestaña PS5)
-│   └── remote_events.py   # RemoteListing, FtpReady, DownloadProgress…
+│   ├── remote.py          # ConsoleTarget, RemoteEntry, DownloadJob… (vista PS5)
+│   ├── remote_events.py   # RemoteListing, FtpReady, DownloadProgress…
+│   └── update.py          # ReleaseInfo y UpdateAvailable (aviso de versión nueva)
 ├── infrastructure/
 │   ├── mkpfs_adapter/     # Todo lo relativo a MkPFS (API pública en __init__.py)
 │   │   ├── command.py     #   línea de comandos de `mkpfs pack`
@@ -64,9 +65,10 @@ src/ffpfsc_converter/
 │   │   ├── console.py     #   fs.volumes, fs.freespace y job.run DELETE (borrado)
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
+│   ├── release_feed.py    # Última versión publicada (API pública de GitHub)
 │   ├── network.py         # ¿Puerto TCP abierto?
 │   ├── filesystem.py      # Listado de archivos, espacio libre, borrado seguro
-│   └── system.py          # Abrir carpeta (explorer/open/xdg-open) y localizar el Escritorio
+│   └── system.py          # Abrir carpeta o web, Escritorio, escala e identidad en Windows
 ├── services/
 │   ├── discovery.py       # Encontrar eboot.bin / imagen y crear el ConversionJob
 │   ├── metadata.py        # Nombre, Title ID y versión desde param.json
@@ -83,6 +85,7 @@ src/ffpfsc_converter/
 │   ├── file_download.py   #   un archivo: .part, REST, verificación de tamaño
 │   ├── resume_writer.py   #   escribe el .part verificando la reanudación y con tope
 │   ├── progress_meter.py  #   progreso y velocidad con frecuencia limitada
+│   ├── update_check.py    # ¿Hay versión nueva? (hilo, best effort)
 │   ├── remote_client.py   #   Protocol RemoteClient (para tests)
 │   ├── console_access.py  # Sesión AVA1 emparejada, ftp.start y escritura temporal
 │   ├── remote_storage.py  # StorageMonitor: espacio libre de interno, USB y ampliado
@@ -98,6 +101,7 @@ src/ffpfsc_converter/
 │   └── remote_errors.py, launch_errors.py  # errores → mensajes para el usuario
 └── ui/
     ├── app.py             # MainWindow: controlador (acciones del usuario → servicios)
+    ├── window.py          # Crea la ventana: escala, clase/ID del sistema, tema e icono
     ├── shell.py           # AppShell: barra lateral (navegación, estado de la PS5, tema)
     ├── main_view.py       # MainView + ViewCallbacks: vista Convertir
     ├── options_panel.py   # Modo, núcleos, verificación y destino
@@ -113,6 +117,7 @@ src/ffpfsc_converter/
     │   ├── fonts.py, metrics.py  # fuentes por sistema y escala para pantallas HiDPI
     │   ├── icons.py, icon_shapes.py  # iconos de línea dibujados con Pillow
     │   ├── shapes.py, rounded.py     # imágenes redondeadas estirables en 9 partes
+    │   ├── app_icon.py    #   icono de la app (ventana, barra lateral y accesos directos)
     │   ├── styles.py      #   superficies planas y textos
     │   ├── round_styles.py, widget_styles.py  # botones, tarjetas, píldoras, campos y barras
     │   └── manager.py     #   ThemeManager: aplica, guarda y cambia el tema en vivo
@@ -172,7 +177,7 @@ sequenceDiagram
   diccionario `tipo → método`.
 - La cancelación usa un `threading.Event`; el proceso de MkPFS se lanza con
   `start_new_session=True` para matar también sus procesos hijo con `killpg`.
-- La pestaña PS5 usa la misma cola: `ExplorerUpdater.handles(evento)` decide si
+- La vista PS5 usa la misma cola: `ExplorerUpdater.handles(evento)` decide si
   el evento es suyo; si no, va a `ViewUpdater`.
 - `RemoteBrowser` ejecuta sus órdenes de una en una en un único hilo (una sesión
   FTP no admite operaciones simultáneas). Cada descarga abre **su propia** sesión,
@@ -203,6 +208,8 @@ sequenceDiagram
 | Borrado con `job.run` DELETE del helper | Un borrado recursivo por FTP serían miles de órdenes; el helper lo hace en la consola y protege raíces y puntos de montaje. |
 | Reintentos automáticos solo ante fallos transitorios | Las transferencias son reanudables, así que reintentar es reconectar y seguir; un error definitivo se informa sin esperar. |
 | Escritura del FTP solo durante la operación | `writable_ftp` reinicia el FTP con escritura y siempre lo restaura a solo lectura al salir. |
+| Aviso de versión con la API pública de GitHub | Sin credenciales ni servidor propio; corre en un hilo y, sin red o sin *Releases*, no muestra nada. El botón abre la página de la versión en vez de actualizar solo: la instalación es una carpeta con `git`/ZIP y el usuario decide cuándo. |
+| Icono dibujado en código (`app_icon.py`) | Una sola fuente para la ventana y la barra lateral; `tools/make_icon.py` genera `assets/icon.png` y `assets/icon.ico` para los accesos directos. |
 | Cliente AVA1 verificado con los vectores oficiales | `tests/vectors/ava1` fija cada byte del protocolo; un cambio que lo rompa falla en `pytest`. |
 
 ## Cómo extender

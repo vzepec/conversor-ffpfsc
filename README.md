@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🎮 Conversor FFPFSC
+<img src="assets/icon.png" alt="" width="84"/>
+
+# Conversor FFPFSC
 
 ### Comprime tus juegos de PS5 a `.ffpfsc` arrastrando y soltando
 
@@ -16,7 +18,9 @@
 
 <br/>
 
-<img src="docs/assets/screenshot.png" alt="Ventana principal del Conversor FFPFSC" width="820"/>
+<img src="docs/assets/convertir.png" alt="Vista Convertir con dos juegos en la cola (tema oscuro)" width="820"/>
+<br/><br/>
+<img src="docs/assets/ps5.png" alt="Vista PS5 con las unidades, los archivos y las transferencias (tema claro)" width="820"/>
 
 <br/>
 
@@ -50,6 +54,9 @@ Title ID y versión, priorizando el idioma del juego y luego español.
 Calcula en segundos el **peso final** para cada modo comprimiendo una muestra
 aleatoria de bloques, y avisa si no hay espacio suficiente en destino.
 
+### 🎨 Tema claro y oscuro
+Sigue al tema del sistema (o el que elijas) y se ve nítida en pantallas HiDPI.
+
 </td>
 <td width="50%" valign="top">
 
@@ -65,19 +72,21 @@ completo de MkPFS.
 Verificación de estructura siempre (o completa, opcional), confirmación antes
 de sobrescribir y borrado automático de salidas incompletas al cancelar o fallar.
 
+### 🔔 Aviso de versiones nuevas
+Si hay una versión publicada más nueva, un botón verde te lleva a descargarla.
+
 </td>
 </tr>
 </table>
 
 ### 🎮 Explorador de la PS5
 
-Pestaña **PS5** para navegar por los archivos de una consola con el payload de
-[ps5upload](https://github.com/phantomptr/ps5upload): **descargar** archivos o carpetas,
-**subir**, **eliminar** y **♻ comprimir y reemplazar** un juego en un solo paso (descarga,
-compresión, subida verificada y reemplazo del original), con porcentaje, tiempo restante,
-reanudación y verificación. El payload necesario está en [`payload/`](payload/). La app inicia sola el
-FTP del helper (en solo lectura y con credenciales aleatorias) tras un emparejamiento
-de una única vez con el código que muestra la PS5. Guía: **[docs/PS5.md](docs/PS5.md)**.
+Sección **PS5** para una consola con el payload de [ps5upload](https://github.com/phantomptr/ps5upload)
+**6.x** (incluido en [`payload/`](payload/)): espacio libre de cada unidad, **descargar**,
+**subir**, **eliminar** y **comprimir y reemplazar** un juego en un solo paso (descarga,
+compresión, subida verificada y reemplazo del original). Desde **Convertir**, cada juego
+comprimido se sube con un clic. La app inicia sola el FTP del helper (en solo lectura y con
+credenciales aleatorias) tras emparejarse una vez. Guía: **[docs/PS5.md](docs/PS5.md)**.
 
 ### Modos de compresión
 
@@ -170,7 +179,7 @@ src/ffpfsc_converter/
 ├── domain/            # modelos y eventos — Python puro
 ├── infrastructure/    # adaptador MkPFS, sistema de archivos, escritorio
 ├── services/          # descubrir · metadatos · estimar · analizar · convertir
-└── ui/                # ventana, presentadores (textos), tema, arrastrar y soltar
+└── ui/                # vistas, presentadores (textos), tema y widgets propios
 ```
 
 Los servicios corren en hilos de fondo y publican **eventos tipados** en una
@@ -216,9 +225,9 @@ Más en **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 |:----------|:----------|
 | [📦 Instalación](docs/INSTALLATION.md) | Linux y Windows: requisitos, pasos y solución de problemas |
 | [📖 Guía de uso](docs/USER_GUIDE.md) | Formatos aceptados, opciones, preguntas frecuentes |
-| [🎮 Pestaña PS5](docs/PS5.md) | Emparejamiento, explorar y descargar desde la consola |
+| [🎮 Sección PS5](docs/PS5.md) | Emparejamiento, explorar, descargar, subir y reemplazar |
 | [🏗️ Arquitectura](docs/ARCHITECTURE.md) | Capas, flujo, modelo de hilos, decisiones, cómo extender |
-| [🧑‍💻 Desarrollo](docs/DEVELOPMENT.md) | Entorno, tests, flujo de Git, versiones |
+| [🧑‍💻 Desarrollo](docs/DEVELOPMENT.md) | Entorno, tests, flujo de Git, publicar versiones |
 | [📝 Changelog](CHANGELOG.md) | Historial de cambios |
 
 ---
@@ -228,7 +237,7 @@ Más en **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 - **[MkPFS](https://github.com/PSBrew/MkPFS)** de PSBrew: el motor que genera las imágenes PFS/PFSC.
 - **[zlib-ng](https://github.com/zlib-ng/zlib-ng)**: compresión rápida y compatible con la PS5.
 - **[ps5upload](https://github.com/phantomptr/ps5upload)** de PhantomPtr: el helper de la PS5, su
-  servidor FTP y la especificación del protocolo AVA1 que implementa la pestaña PS5.
+  servidor FTP y la especificación del protocolo AVA1 que implementa la vista PS5.
 - **[tkinterdnd2](https://github.com/Eliav2/tkinterdnd2)**: arrastrar y soltar en Tkinter.
 
 > [!IMPORTANT]

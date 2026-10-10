@@ -77,11 +77,21 @@ Para explorar, descargar, subir o reemplazar juegos directamente en la consola
 no hace falta instalar nada más en el equipo, ni en Linux ni en Windows: la PS5
 necesita el payload de ps5upload incluido en [`payload/`](../payload/) (cómo
 cargarlo, versión y SHA-256 en su README). El uso está en [PS5.md](PS5.md).
+Usa ps5upload **6.x**: la versión 7.0 eliminó el servidor FTP que usa la app.
 
 ## Actualizar
 
-Descarga la versión nueva (`git pull` o un ZIP nuevo en la misma carpeta) y
-vuelve a ejecutar el instalador. El entorno virtual se reutiliza.
+Al abrirse, la app consulta en GitHub la última versión publicada (en segundo
+plano; sin conexión no pasa nada). Si hay una más nueva, la barra lateral muestra
+el botón verde **Actualizar a vX.Y.Z**, que abre la página de esa versión con sus
+novedades. Para instalarla:
+
+- Con `git`: `git pull` en la carpeta del proyecto.
+- Sin `git`: descarga el ZIP de la versión y descomprímelo sobre la misma carpeta.
+
+Luego vuelve a ejecutar el instalador (`./instalar.sh` o `instalar.bat`): reutiliza
+el entorno virtual y actualiza dependencias e iconos. Tus ajustes y la
+vinculación con la PS5 se conservan (se guardan fuera de la carpeta del proyecto).
 
 ## Desinstalar
 

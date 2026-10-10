@@ -50,18 +50,23 @@ los tests.
 | `test_download_resume.py` | reanudación verificada: servidor que ignora `REST`, `.part` dañado, tope de tamaño |
 | `test_ftp_launcher.py` | inicio del FTP con una sesión AVA1 simulada (emparejamiento, reinicio, errores) |
 | `test_ava1_vectors.py` | cliente AVA1 contra los vectores oficiales de ps5upload |
-| `test_explorer_support.py` | textos de la pestaña PS5, ajustes, progreso y almacén de confianza |
+| `test_explorer_support.py` | textos de la vista PS5, ajustes, progreso y almacén de confianza |
 | `test_pipeline.py` | comprimir y reemplazar: orden seguro, poco espacio, cancelación |
 | `test_remote_changes.py` | eliminar y subir (reanudación), plan y estrategia de espacio |
+| `test_update_check.py` | aviso de versión nueva: comparación, respuesta de GitHub, errores de red |
+| `test_theme.py` | paletas, fuentes, escala, formas redondeadas, iconos y el icono de la app |
+| `test_job_presenters.py`, `test_view_presenters.py` | textos de las filas de la cola y de la vista PS5 |
+| `test_make_icon.py` | generación de `assets/icon.png` y `assets/icon.ico` |
 | `test_code_standards.py` | que el repositorio cumpla las rules y que el verificador detecte cada violación |
 
 La UI de Tkinter no tiene tests automáticos: por eso toda la lógica de texto
-vive en `ui/presenters.py` y toda la lógica de negocio en `services/`, ambos
-100 % testeables sin pantalla.
+vive en funciones puras (`ui/presenters.py`, `ui/job_presenters.py`,
+`ui/explorer/*presenters.py`) y toda la lógica de negocio en `services/`,
+testeables sin pantalla.
 
 `ConversionRunner` acepta un `process_factory`; los tests lo sustituyen por un
 `FakeProcess` para no depender de MkPFS ni de juegos reales. Del mismo modo, los
-servicios de la pestaña PS5 reciben un `client_factory` o `session_factory`: los
+servicios de la vista PS5 reciben un `client_factory` o `session_factory`: los
 tests usan un servidor FTP local con `pyftpdlib` (fixture `ftp_server` de
 `conftest.py`) y una sesión AVA1 simulada, así que no hace falta una PS5.
 
@@ -86,9 +91,22 @@ tests usan un servidor FTP local con `pyftpdlib` (fixture `ftp_server` de
 
 ## Publicar una versión
 
-1. Sube `__version__` en `src/ffpfsc_converter/__init__.py` (SemVer).
+1. Sube `__version__` en `src/ffpfsc_converter/__init__.py` (SemVer) y la insignia
+   de versión del `README.md`.
 2. Mueve las entradas de *Sin publicar* a la nueva versión en `CHANGELOG.md`.
-3. `git commit -m "chore: v1.x.y" && git tag v1.x.y && git push --follow-tags`.
+3. `git commit -m "chore(release): v1.x.y" && git tag v1.x.y && git push --follow-tags`.
+4. Publica la *Release* en GitHub con las notas de esa versión del CHANGELOG:
+
+   ```bash
+   gh release create v1.x.y --title "v1.x.y" --notes-file notas.md
+   ```
+
+   Es lo que activa el aviso **Actualizar a v1.x.y** en las apps instaladas: la app
+   consulta `releases/latest` de la API de GitHub (sin credenciales) y compara con
+   su `__version__`. Los borradores y las *pre-releases* no se anuncian.
+
+Si cambia el diseño del icono (`ui/theme/app_icon.py`), regenera los archivos de
+los accesos directos con `python tools/make_icon.py` y versiona `assets/`.
 
 ## Rules de Claude Code
 
