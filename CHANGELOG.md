@@ -5,6 +5,8 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.3.0] - 2026-10-10
+
 ### Corregido
 - Al reanudar una descarga de la PS5 el avance podía pasar del 100 % y el archivo
   crecer sin límite: el FTP de ps5upload acepta `REST` pero envía el archivo desde
