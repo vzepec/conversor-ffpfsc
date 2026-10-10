@@ -95,7 +95,7 @@ def test_codec_round_trips_canonical_messages() -> None:
 
 def test_status_vector_decodes() -> None:
     """El estado de una tarea se lee igual que el vector oficial Status."""
-    from ffpfsc_converter.infrastructure.ava1.console import _decode_status
+    from ffpfsc_converter.infrastructure.ava1.jobs import _decode_status
 
     canon = {row[0]: row[1] for row in _lines("messages.txt")}
     status = _decode_status(_x(canon["Status"]))

@@ -13,10 +13,12 @@ class PipelineStage(Enum):
     """Etapas del pipeline, en orden."""
 
     DOWNLOAD = "download"
+    VERIFY_DOWNLOAD = "verify_download"
     ANALYZE = "analyze"
     COMPRESS = "compress"
     CHECK_SPACE = "check_space"
     UPLOAD = "upload"
+    VERIFY_UPLOAD = "verify_upload"
     DELETE_ORIGINAL = "delete_original"
     RENAME = "rename"
     RESTORE_FTP = "restore_ftp"

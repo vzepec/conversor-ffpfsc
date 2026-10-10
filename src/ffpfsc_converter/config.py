@@ -83,6 +83,10 @@ RESUME_OVERLAP_BYTES = 64 * 1024
 #: Mayor posición que el FTP de ps5upload 6.x sabe retomar con REST: la guarda en
 #: un entero de 32 bits con signo y, por encima, envía desde 0 o desde otro lugar.
 FTP_MAX_RESUME_OFFSET = 2**31 - 1
+#: Bloque de lectura al calcular el CRC32 local (comparación con la PS5).
+CRC_CHUNK_BYTES = 8 * 1024 * 1024
+#: Cada cuánto se consulta el avance del CRC32 que calcula la PS5.
+CRC_POLL_SECONDS = 0.5
 #: Carpetas de la PS5 que se ofrecen como accesos rápidos.
 PS5_FAVORITE_PATHS = (
     "/data/homebrew", "/mnt/usb0", "/mnt/usb1", "/mnt/ext0", "/mnt/ext1", "/data", "/",

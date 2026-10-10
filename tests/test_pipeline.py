@@ -108,3 +108,41 @@ def test_cancel_in_options_dialog(writable_ftp: int, ftp_root: Path, tmp_path: P
     result = _run(console, writable_ftp, tmp_path, {PipelineOptionsRequired: None})[-1].result
     assert result.cancelled and console.modes == [] and console.deleted == []
     assert (tmp_path / "work" / "Juego" / "eboot.bin").exists()
+
+
+def test_verifies_download_and_upload_with_crc32(writable_ftp: int, ftp_root: Path,
+                                                 tmp_path: Path) -> None:
+    """Compara con CRC32 lo descargado y lo subido antes de borrar el original."""
+    console = FakeConsole(ftp_root, writable_ftp, usable=10**9)
+    events = _run(console, writable_ftp, tmp_path, {PipelineOptionsRequired: CHOICE})
+    assert events[-1].result.succeeded
+    assert "/data/homebrew/Juego/eboot.bin" in console.crc_paths
+    assert "/data/homebrew/Juego.ffpfsc.part" in console.crc_paths
+    stages = [e.stage for e in events if isinstance(e, PipelineStageChanged)]
+    assert stages.index(PipelineStage.VERIFY_DOWNLOAD) < stages.index(PipelineStage.COMPRESS)
+    assert stages.index(PipelineStage.VERIFY_UPLOAD) < stages.index(PipelineStage.DELETE_ORIGINAL)
+
+
+def test_corrupted_download_stops_before_compressing(writable_ftp: int, ftp_root: Path,
+                                                     tmp_path: Path) -> None:
+    """Si lo descargado no coincide, no se comprime, se borra la copia y la PS5 no cambia."""
+    console = FakeConsole(ftp_root, writable_ftp, usable=10**9)
+    console.crc_override["/data/homebrew/Juego/eboot.bin"] = 1
+    result = _run(console, writable_ftp, tmp_path, {PipelineOptionsRequired: CHOICE})[-1].result
+    assert not result.succeeded and "la descarga" in result.message
+    assert not (tmp_path / "work" / "Juego" / "eboot.bin").exists()
+    assert console.deleted == [] and console.modes == []
+
+
+def test_corrupted_upload_keeps_the_original(writable_ftp: int, ftp_root: Path,
+                                             tmp_path: Path) -> None:
+    """Si lo subido no coincide, se borra el .part y el original queda intacto."""
+    console = FakeConsole(ftp_root, writable_ftp, usable=10**9)
+    console.crc_override["/data/homebrew/Juego.ffpfsc.part"] = 1
+    result = _run(console, writable_ftp, tmp_path, {PipelineOptionsRequired: CHOICE})[-1].result
+    homebrew = ftp_root / "data" / "homebrew"
+    assert not result.succeeded and "la subida" in result.message
+    assert (homebrew / "Juego" / "eboot.bin").exists()
+    assert not (homebrew / "Juego.ffpfsc.part").exists()
+    assert console.deleted == ["/data/homebrew/Juego.ffpfsc.part"]
+    assert (tmp_path / "work" / "Juego.ffpfsc").exists()  # la copia local se conserva

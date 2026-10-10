@@ -62,7 +62,8 @@ src/ffpfsc_converter/
 │   │   ├── keys.py        #   claves de carril, compromiso y PAKE CPace (Elligator2)
 │   │   ├── handshake.py   #   pasos 1-4 del handshake y validación del Welcome
 │   │   ├── session.py     #   emparejamiento, RPC y respuesta a Ping
-│   │   ├── console.py     #   fs.volumes, fs.freespace y job.run DELETE (borrado)
+│   │   ├── console.py     #   fs.volumes y fs.freespace
+│   │   ├── jobs.py        #   job.run/status/cancel: borrado recursivo y CRC32
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
 │   ├── release_feed.py    # Última versión publicada (API pública de GitHub)
@@ -85,6 +86,7 @@ src/ffpfsc_converter/
 │   ├── file_download.py   #   un archivo: .part, REST, verificación de tamaño
 │   ├── resume_writer.py   #   escribe el .part verificando la reanudación y con tope
 │   ├── progress_meter.py  #   progreso y velocidad con frecuencia limitada
+│   ├── integrity.py       # CRC32 local y de la PS5 en paralelo (descarga y subida)
 │   ├── update_check.py    # ¿Hay versión nueva? (hilo, best effort)
 │   ├── remote_client.py   #   Protocol RemoteClient (para tests)
 │   ├── console_access.py  # Sesión AVA1 emparejada, ftp.start y escritura temporal
@@ -205,6 +207,7 @@ sequenceDiagram
 | `CWD` antes de `MLSD` | El servidor del helper ignora la ruta de `MLSD` y lista la carpeta actual. |
 | Descargas como `.part` + renombre al verificar el tamaño | Una descarga cortada nunca parece completa y se puede reanudar con `REST`. |
 | Al reanudar se vuelven a pedir 64 KiB ya descargados | El FTP de ps5upload acepta `REST` pero envía desde el principio: se comprueba el solapamiento y, si llega el comienzo del archivo, se reescribe desde cero en vez de pegarlo detrás. Nunca se escribe más allá del tamaño informado. Por encima de 2 GiB (`FTP_MAX_RESUME_OFFSET`) ni se intenta: el FTP de ps5upload 6.x guarda la posición de `REST` en un entero de 32 bits. |
+| CRC32 antes de comprimir y antes de borrar el original | El tamaño igual no garantiza el mismo contenido. El helper calcula el CRC32 en la consola (`job.run` CRC32) mientras la app calcula el local; si difieren, se descarta la copia y no se borra el original. |
 | Subir, verificar y luego borrar el original | Si la subida falla nunca se pierde el juego. Solo sin espacio se borra antes, con confirmación y la copia local como respaldo. |
 | Borrado con `job.run` DELETE del helper | Un borrado recursivo por FTP serían miles de órdenes; el helper lo hace en la consola y protege raíces y puntos de montaje. |
 | Reintentos automáticos solo ante fallos transitorios | Las transferencias son reanudables, así que reintentar es reconectar y seguir; un error definitivo se informa sin esperar. |

@@ -1,7 +1,7 @@
 """Reemplazo en la PS5: espacio, subida verificada, borrado del original y renombre.
 
-Orden seguro (acordado): se sube como ``.part``, se verifica y recién entonces se
-borra el original y se renombra. Solo si la PS5 no tiene espacio para ambos a
+Orden seguro (acordado): se sube como ``.part``, se verifica (tamaño y CRC32) y
+recién entonces se borra el original y se renombra. Solo si la PS5 no tiene espacio para ambos a
 la vez se borra antes, con confirmación explícita (la copia local sirve de respaldo).
 """
 from __future__ import annotations
@@ -17,6 +17,7 @@ from ffpfsc_converter.errors import ConverterError
 from ffpfsc_converter.formatting import format_size
 from ffpfsc_converter.infrastructure.ava1.console import JobStatus, delete_tree, free_space
 from ffpfsc_converter.services.console_access import ConsoleAccess, writable_ftp
+from ffpfsc_converter.services.integrity import FilePair, IntegrityError, verify_files
 from ffpfsc_converter.services.pipeline.plan import choose_strategy
 from ffpfsc_converter.services.remote_client import ClientFactory
 from ffpfsc_converter.services.remote_upload import (
@@ -110,6 +111,7 @@ def replace_on_console(ctx: ReplaceContext) -> int:
         ctx.stage(PipelineStage.UPLOAD, ctx.plan.remote_part)
         upload_with_retries(ctx.client_factory, target, ctx.local_file, ctx.plan.remote_part,
                             ctx.progress, ctx.should_cancel, ctx.on_retry)
+        _verify_upload(ctx, size)
         if not ctx.original_deleted:
             _delete_original(ctx)
         ctx.stage(PipelineStage.RENAME, ctx.plan.remote_final)
@@ -150,6 +152,35 @@ def _check_space(ctx: ReplaceContext, size: int) -> SpaceStrategy:
             "¿Borrar el original y continuar?"):
         raise ReplaceDeclinedError()
     return strategy
+
+
+def _verify_upload(ctx: ReplaceContext, size: int) -> None:
+    """Comprueba con CRC32 que el ``.part`` subido es idéntico al ``.ffpfsc`` local.
+
+    Si difiere, borra el ``.part`` para que el reintento suba desde cero; el
+    original no se toca.
+
+    Args:
+        ctx (ReplaceContext): Contexto del reemplazo.
+        size (int): Tamaño del ``.ffpfsc``.
+
+    Raises:
+        IntegrityError: Si el contenido no coincide.
+        DownloadCancelledError: Si se canceló.
+    """
+    ctx.stage(PipelineStage.VERIFY_UPLOAD, ctx.plan.remote_part)
+    pair = FilePair(ctx.local_file, ctx.plan.remote_part, size)
+    session = ctx.access.open_session(ctx.host)
+    try:
+        bad = verify_files(session, [pair],
+                           lambda done, total: ctx.progress(done, total, 0.0, None),
+                           ctx.should_cancel)
+        if bad:
+            delete_tree(session, ctx.plan.remote_part, lambda _status: None)
+    finally:
+        session.close()
+    if bad:
+        raise IntegrityError([ctx.local_file.name], "la subida")
 
 
 def _delete_original(ctx: ReplaceContext) -> None:

@@ -110,6 +110,7 @@ def transfer_job(
     """
     plan = plan_download(client, job.entry, job.destination)
     job.total_bytes, job.done_bytes = plan.total_bytes, 0
+    job.files = list(plan.files)
     _check_space(plan, job)
     for directory in plan.directories:
         try:

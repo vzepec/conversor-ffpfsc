@@ -1,4 +1,4 @@
-"""Etapas locales del pipeline: descargar, preparar, comprimir y limpiar."""
+"""Etapas locales del pipeline: descargar, comprobar, preparar, comprimir y limpiar."""
 from __future__ import annotations
 
 import contextlib
@@ -12,7 +12,9 @@ from ffpfsc_converter.domain.remote import ConsoleTarget, DownloadJob, RemoteEnt
 from ffpfsc_converter.errors import ConverterError, DownloadCancelledError
 from ffpfsc_converter.infrastructure.filesystem import free_space, remove_path
 from ffpfsc_converter.services.analysis import analyze_job
+from ffpfsc_converter.services.console_access import ConsoleAccess
 from ffpfsc_converter.services.discovery import create_job
+from ffpfsc_converter.services.integrity import FilePair, IntegrityError, verify_files
 from ffpfsc_converter.services.pipeline.compress import Compressor
 from ffpfsc_converter.services.pipeline.reporter import PipelineReporter
 from ffpfsc_converter.services.preflight import check_free_space
@@ -40,6 +42,41 @@ def download_stage(factory: ClientFactory, target: ConsoleTarget, entry: RemoteE
     job = DownloadJob(entry, work_dir)
     download_with_retries(factory, target, job, reporter.on_download, should_cancel)
     return job
+
+
+def verify_download_stage(access: ConsoleAccess, host: str, download: DownloadJob,
+                          reporter: PipelineReporter, should_cancel: Callable[[], bool]) -> None:
+    """Comprueba con CRC32 que cada archivo descargado es idéntico al de la PS5.
+
+    Si alguno difiere, se borra su copia local para que el reintento lo vuelva a
+    descargar.
+
+    Args:
+        access (ConsoleAccess): Acceso AVA1 a la consola.
+        host (str): Dirección de la PS5.
+        download (DownloadJob): Descarga terminada (con su lista de archivos).
+        reporter (PipelineReporter): Publica etapa y progreso.
+        should_cancel (Callable[[], bool]): Devuelve ``True`` si hay que cancelar.
+
+    Raises:
+        IntegrityError: Si algún archivo no coincide.
+        DownloadCancelledError: Si se canceló.
+    """
+    pairs = [FilePair(f.local_path, f.remote_path, f.size) for f in download.files if f.size]
+    reporter.stage(PipelineStage.VERIFY_DOWNLOAD, download.entry.name)
+    if not pairs:
+        return
+    session = access.open_session(host)
+    try:
+        bad = verify_files(session, pairs, lambda done, total: reporter.report(done, total, 0.0),
+                           should_cancel)
+    finally:
+        session.close()
+    for pair in bad:
+        with contextlib.suppress(OSError):
+            pair.local.unlink()
+    if bad:
+        raise IntegrityError([pair.local.name for pair in bad], "la descarga")
 
 
 def prepare_stage(local: Path, work_dir: Path, reporter: PipelineReporter) -> ConversionJob:

@@ -5,6 +5,11 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Añadido
+- «Comprimir y reemplazar» compara con CRC32 lo descargado y lo subido con lo que
+  hay en la PS5 (la consola lo calcula con el helper, en paralelo) antes de
+  comprimir y antes de borrar el original. Antes solo se comparaba el tamaño.
+
 ### Cambiado
 - «Comprimir y reemplazar» ya no abre una ventana de progreso: se sigue en una fila
   del panel de Transferencias con el paso, la barra, el tiempo restante y los
