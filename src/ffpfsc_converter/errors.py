@@ -68,3 +68,19 @@ class GameNotFoundError(ConverterError):
             "o un archivo .exfat / .ffpkg."
         )
         self.path = path
+
+
+class TransientError(ConverterError):
+    """Error que puede resolverse reintentando (por ejemplo, una transferencia incompleta)."""
+
+
+class RemoteConnectionError(ConverterError):
+    """Falló la comunicación con la PS5; el mensaje explica qué revisar."""
+
+
+class DownloadCancelledError(ConverterError):
+    """El usuario canceló la descarga en curso."""
+
+    def __init__(self) -> None:
+        """Crea el error con un mensaje para el usuario."""
+        super().__init__("Descarga cancelada")

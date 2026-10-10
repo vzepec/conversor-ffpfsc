@@ -5,6 +5,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from ffpfsc_converter import __version__
+from ffpfsc_converter.config import APP_TITLE
 from ffpfsc_converter.domain.models import (
     CompressionPreset,
     ConversionJob,
@@ -12,34 +14,35 @@ from ffpfsc_converter.domain.models import (
     GameInfo,
     ProgressUpdate,
 )
+from ffpfsc_converter.formatting import PHASE_NAMES, format_eta, format_size
 
 QUEUED_TEXT = "En cola"
 RUNNING_TEXT = "Convirtiendo…"
 PENDING_TEXT = "analizando…"
-_SIZE_UNITS = ("B", "KB", "MB", "GB")
-_LAST_SIZE_UNIT = "TB"
-_PHASE_NAMES = {
-    "compress": "Comprimiendo",
-    "write": "Escribiendo",
-    "scan": "Escaneando",
-    "verify": "Verificando",
-}
 
 
-def format_size(n: float) -> str:
-    """Convierte bytes en un tamaño legible en base 1024.
+def version_text(version: str = __version__) -> str:
+    """Formatea la versión de la aplicación para mostrarla en la interfaz.
 
     Args:
-        n (float): Cantidad de bytes.
+        version (str): Versión en formato SemVer; por defecto, la instalada.
 
     Returns:
-        str: Tamaño con un decimal y unidad, por ejemplo ``"1.5 KB"``.
+        str: Versión con prefijo, por ejemplo ``"v1.1.0"``.
     """
-    for unit in _SIZE_UNITS:
-        if n < 1024:
-            return f"{n:.1f} {unit}"
-        n /= 1024
-    return f"{n:.1f} {_LAST_SIZE_UNIT}"
+    return f"v{version}"
+
+
+def window_title(version: str = __version__) -> str:
+    """Genera el título de la ventana principal con la versión.
+
+    Args:
+        version (str): Versión en formato SemVer; por defecto, la instalada.
+
+    Returns:
+        str: Por ejemplo ``"Conversor FFPFSC (PS5) — v1.1.0"``.
+    """
+    return f"{APP_TITLE} — {version_text(version)}"
 
 
 def savings_percent(original: int, final: int) -> float:
@@ -137,18 +140,19 @@ def estimates_summary(job: ConversionJob, presets: Iterable[CompressionPreset]) 
     return f"Estimación {job.source.name} ({format_size(job.size)}): {detail}"
 
 
-def progress_text(progress: ProgressUpdate) -> str:
-    """Formatea el progreso de MkPFS con la fase en español.
+def progress_text(progress: ProgressUpdate, eta: float | None = None) -> str:
+    """Formatea el progreso de MkPFS con la fase en español y el tiempo restante.
 
     Args:
         progress (ProgressUpdate): Progreso informado por MkPFS.
+        eta (float | None): Segundos restantes estimados de la fase.
 
     Returns:
-        str: Por ejemplo ``"Comprimiendo: 37%  —  512.3 MB/s"``.
+        str: Por ejemplo ``"Comprimiendo: 37%  —  512.3 MB/s  —  quedan ≈ 2 min 10 s"``.
     """
-    phase = _PHASE_NAMES.get(progress.phase, progress.phase)
-    text = f"{phase}: {progress.percent}%"
-    return f"{text}  —  {progress.speed}" if progress.speed else text
+    phase = PHASE_NAMES.get(progress.phase, progress.phase)
+    parts = [f"{phase}: {progress.percent}%", progress.speed or "", format_eta(eta)]
+    return "  —  ".join(p for p in parts if p)
 
 
 def result_text(job: ConversionJob, result: ConversionResult) -> str:

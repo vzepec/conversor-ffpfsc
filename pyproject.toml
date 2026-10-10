@@ -11,12 +11,13 @@ requires-python = ">=3.10"
 authors = [{ name = "Victor Zepeda" }]
 dependencies = [
     "mkpfs>=1.1",
+    "cryptography>=41",  # AVA1: X25519 y ChaCha20-Poly1305 (pestaña PS5)
     "zlib-ng>=0.5",
     "tkinterdnd2>=0.4",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "pyftpdlib>=1.5"]
 
 [project.scripts]
 ffpfsc-converter = "ffpfsc_converter.__main__:main"

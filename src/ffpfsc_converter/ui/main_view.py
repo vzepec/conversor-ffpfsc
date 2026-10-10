@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from tkinter import ttk
 
-from ffpfsc_converter.ui import theme
+from ffpfsc_converter.ui import presenters, theme
 from ffpfsc_converter.ui.dnd import HAS_DND, register_drop_target
 from ffpfsc_converter.ui.job_table import JobTable
 from ffpfsc_converter.ui.options_panel import OptionsPanel
@@ -38,6 +38,7 @@ class ViewCallbacks:
         on_cancel (Callable[[], None]): Botón "Cancelar".
         on_remove (Callable[[], None]): Botón "Quitar seleccionado".
         on_open_output (Callable[[], None]): Botón "Abrir carpeta de salida".
+        on_upload_ps5 (Callable[[], None]): Botón "Subir a la PS5".
     """
 
     on_paths: Callable[[list[Path]], None]
@@ -49,6 +50,7 @@ class ViewCallbacks:
     on_cancel: Callable[[], None]
     on_remove: Callable[[], None]
     on_open_output: Callable[[], None]
+    on_upload_ps5: Callable[[], None]
 
 
 class MainView:
@@ -59,21 +61,21 @@ class MainView:
         table (JobTable): Tabla con los juegos de la cola.
     """
 
-    def __init__(self, root: tk.Tk, callbacks: ViewCallbacks) -> None:
-        """Construye todos los widgets dentro de la ventana raíz.
+    def __init__(self, parent: tk.Misc, callbacks: ViewCallbacks) -> None:
+        """Construye todos los widgets dentro de su contenedor (la pestaña "Convertir").
 
         Args:
-            root (tk.Tk): Ventana raíz.
+            parent (tk.Misc): Contenedor de la vista.
             callbacks (ViewCallbacks): Acciones a notificar al controlador.
         """
-        self._root = root
+        self._root = parent
         with contextlib.suppress(tk.TclError):
             ttk.Style().theme_use(theme.TTK_THEME)
         self._build_drop_zone(callbacks)
-        self.options = OptionsPanel(root, callbacks.on_preset_changed,
+        self.options = OptionsPanel(parent, callbacks.on_preset_changed,
                                     callbacks.on_pick_output_dir)
         self.options.pack(fill="x", **theme.PADDING)
-        self.table = JobTable(root)
+        self.table = JobTable(parent)
         self.table.pack(fill="both", expand=True, **theme.PADDING)
         self._build_progress()
         self._build_buttons(callbacks)
@@ -96,13 +98,17 @@ class MainView:
         register_drop_target(self._root, callbacks.on_paths)
 
     def _build_progress(self) -> None:
-        """Crea la barra de progreso y la línea de estado."""
+        """Crea la barra de progreso, la línea de estado y la versión de la app."""
         frame = ttk.Frame(self._root)
         frame.pack(fill="x", **theme.PADDING)
         self._pbar = ttk.Progressbar(frame, maximum=100)
         self._pbar.pack(fill="x")
-        self._status = ttk.Label(frame, text="Listo.")
-        self._status.pack(anchor="w", pady=(4, 0))
+        status_row = ttk.Frame(frame)
+        status_row.pack(fill="x", pady=(4, 0))
+        self._status = ttk.Label(status_row, text="Listo.")
+        self._status.pack(side="left")
+        ttk.Label(status_row, text=presenters.version_text(),
+                  foreground=theme.VERSION_FG).pack(side="right")
 
     def _build_buttons(self, callbacks: ViewCallbacks) -> None:
         """Crea la barra de botones de acción.
@@ -123,6 +129,9 @@ class MainView:
             side="left", padx=6)
         ttk.Button(bar, text="Abrir carpeta de salida", command=callbacks.on_open_output).pack(
             side="right")
+        self._upload_btn = ttk.Button(bar, text="⬆ Subir a la PS5", command=callbacks.on_upload_ps5,
+                                      state="disabled")
+        self._upload_btn.pack(side="right", padx=6)
 
     def _build_log(self) -> None:
         """Crea el recuadro de registro de solo lectura."""
@@ -156,6 +165,14 @@ class MainView:
             percent (int): Porcentaje entre ``0`` y ``100``.
         """
         self._pbar["value"] = percent
+
+    def set_upload_enabled(self, enabled: bool) -> None:
+        """Habilita "Subir a la PS5" si hay juegos comprimidos pendientes de subir.
+
+        Args:
+            enabled (bool): ``True`` para habilitar el botón.
+        """
+        self._upload_btn.configure(state="normal" if enabled else "disabled")
 
     def set_running(self, running: bool) -> None:
         """Habilita o deshabilita los botones según haya una conversión en curso.

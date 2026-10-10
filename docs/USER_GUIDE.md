@@ -1,5 +1,7 @@
 # Guía de uso
 
+> Instalación en Linux y Windows: [INSTALLATION.md](INSTALLATION.md).
+
 ## 1. Qué puedo convertir
 
 | Origen | Qué se espera |
@@ -14,7 +16,8 @@ de la carpeta o imagen original.
 
 ## 2. Pasos
 
-1. Abre **Conversor FFPFSC** desde el Escritorio o el menú de aplicaciones.
+1. Abre **Conversor FFPFSC** desde el Escritorio, el menú de aplicaciones (Linux)
+   o el menú Inicio (Windows).
 2. **Arrastra** una o varias carpetas/imágenes a la zona oscura superior
    (o haz clic en ella / usa **+ Archivo .exfat…**).
 3. Espera unos segundos: aparecen el **nombre oficial**, el **tamaño** y el
@@ -22,6 +25,23 @@ de la carpeta o imagen original.
 4. Elige el **Modo** de compresión (la estimación se actualiza al instante).
 5. Opcional: cambia la carpeta de destino con **Cambiar…**.
 6. Pulsa **▶ Convertir**. Los juegos se convierten uno detrás de otro.
+
+### Subir el juego comprimido a la PS5
+
+Cuando un juego termina de comprimirse, se habilita **⬆ Subir a la PS5**. Sube los
+juegos seleccionados (o, si no seleccionas ninguno, todos los comprimidos que aún
+no se subieron) a la carpeta que elijas, por defecto `/data/homebrew`, la que
+vigila ShadowMount+. El avance, la velocidad y el tiempo restante se ven en la
+misma fila.
+
+- Si la PS5 ya está vinculada pero no conectada, la app ofrece conectar y la
+  subida empieza sola.
+- Si nunca la vinculaste, muestra los pasos (cargar el payload, escribir la IP,
+  «Conectar» y el código de 6 dígitos) y te lleva a la pestaña **PS5**. La subida
+  queda en espera y empieza en cuanto te conectes.
+
+La subida es la misma de la pestaña PS5: se verifica, se reanuda y se reintenta
+sola ante cortes. Más detalles en [PS5.md](PS5.md).
 
 ## 3. Opciones
 

@@ -14,7 +14,8 @@ mensajes de error) se escribe en **español neutro**:
 - Sin anglicismos innecesarios cuando existe un término común en español:
   `registro` (no *log* en textos), `cola`, `tarea`. Se mantienen los nombres
   técnicos propios: *thread*/hilo, PFS, exFAT, MkPFS.
-- Ortografía completa: tildes, `¿?`, `¡!`.
+- Ortografía completa: tildes, `¿?`, `¡!`. Única excepción: los comentarios de
+  los `.bat`, que van sin tildes porque `cmd` no usa UTF-8.
 
 Los **identificadores** (variables, funciones, clases, módulos) van en inglés.
 

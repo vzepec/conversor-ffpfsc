@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ffpfsc_converter import __version__
 from ffpfsc_converter.config import PRESETS
 from ffpfsc_converter.domain.models import (
     ConversionJob,
@@ -10,6 +11,13 @@ from ffpfsc_converter.domain.models import (
     ProgressUpdate,
 )
 from ffpfsc_converter.ui import presenters
+
+
+def test_version_texts() -> None:
+    """Muestra la versión con prefijo en la etiqueta y en el título."""
+    assert presenters.version_text("2.3.4") == "v2.3.4"
+    assert presenters.window_title("2.3.4") == "Conversor FFPFSC (PS5) — v2.3.4"
+    assert presenters.version_text() == f"v{__version__}"
 
 
 def test_format_size() -> None:

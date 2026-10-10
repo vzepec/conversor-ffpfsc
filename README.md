@@ -9,6 +9,7 @@
 [![Versión](https://img.shields.io/badge/versión-1.1.0-6366f1?style=for-the-badge)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#-instalación)
+[![Windows](https://img.shields.io/badge/Windows-beta-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#-instalación)
 [![MkPFS](https://img.shields.io/badge/motor-MkPFS-0ea5e9?style=for-the-badge)](https://github.com/PSBrew/MkPFS)
 [![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
 [![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?style=for-the-badge&logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
@@ -68,6 +69,16 @@ de sobrescribir y borrado automático de salidas incompletas al cancelar o falla
 </tr>
 </table>
 
+### 🎮 Explorador de la PS5
+
+Pestaña **PS5** para navegar por los archivos de una consola con el payload de
+[ps5upload](https://github.com/phantomptr/ps5upload): **descargar** archivos o carpetas,
+**subir**, **eliminar** y **♻ comprimir y reemplazar** un juego en un solo paso (descarga,
+compresión, subida verificada y reemplazo del original), con porcentaje, tiempo restante,
+reanudación y verificación. El payload necesario está en [`payload/`](payload/). La app inicia sola el
+FTP del helper (en solo lectura y con credenciales aleatorias) tras un emparejamiento
+de una única vez con el código que muestra la PS5. Guía: **[docs/PS5.md](docs/PS5.md)**.
+
 ### Modos de compresión
 
 | Modo | Nivel zlib | Cuándo usarlo |
@@ -80,8 +91,10 @@ de sobrescribir y borrado automático de salidas incompletas al cancelar o falla
 
 ## 📦 Instalación
 
-> **Requisitos:** Linux (probado en Ubuntu), Python 3.10+.
-> El instalador añade `python3-tk` y `python3-venv` si faltan.
+Funciona en **Linux** y **Windows 10/11** (64 bits, **beta**) con **Python 3.10+**.
+
+<details open>
+<summary><b>🐧 Linux</b> (probado en Ubuntu)</summary>
 
 ```bash
 git clone git@github.com:vzepec/conversor-ffpfsc.git
@@ -89,11 +102,30 @@ cd conversor-ffpfsc
 ./instalar.sh
 ```
 
-El instalador:
+El instalador añade `python3-tk` y `python3-venv` si faltan, crea `.venv/`,
+instala [MkPFS](https://github.com/PSBrew/MkPFS), `zlib-ng` y `tkinterdnd2`, y crea
+el acceso directo en el Escritorio y en el menú de aplicaciones.
 
-1. Crea un entorno virtual en `.venv/`.
-2. Instala el conversor junto con [MkPFS](https://github.com/PSBrew/MkPFS), `zlib-ng` y `tkinterdnd2`.
-3. Crea el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú de aplicaciones.
+</details>
+
+<details open>
+<summary><b>🪟 Windows</b> (beta)</summary>
+
+> [!WARNING]
+> El soporte para Windows está en **beta**: aún no se ha validado en un equipo
+> Windows real. Si encuentras un problema, repórtalo en *Issues*.
+
+1. Instala [Python 3.10+](https://www.python.org/downloads/windows/) marcando
+   **Add python.exe to PATH** (tkinter viene incluido).
+2. Descarga el repositorio (`git clone` o **Code → Download ZIP**) y descomprímelo.
+3. Haz doble clic en **`instalar.bat`**.
+
+Se crea el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú
+Inicio. Puedes arrastrar un juego sobre el acceso directo para abrirlo ya en la cola.
+
+</details>
+
+📖 Requisitos detallados y solución de problemas: **[docs/INSTALLATION.md](docs/INSTALLATION.md)**
 
 ---
 
@@ -106,11 +138,11 @@ El instalador:
  └─────────────────────┘     └────────────────────┘     └────────────────────┘
 ```
 
-Abre la app desde el Escritorio, o desde la terminal:
+Abre la app desde el acceso directo, o desde la terminal:
 
-```bash
-./abrir.sh                                  # ventana vacía
-./abrir.sh "$HOME/Juegos/Mi Juego" otro.exfat   # con juegos ya en la cola
+```text
+./abrir.sh "$HOME/Juegos/Mi Juego" otro.exfat     # Linux
+abrir.bat "D:\Juegos\Mi Juego" otro.exfat         # Windows
 ```
 
 📖 Guía completa con opciones y preguntas frecuentes: **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**
@@ -150,8 +182,8 @@ secuencia y decisiones técnicas en **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.m
 ## 🧑‍💻 Desarrollo
 
 ```bash
-./instalar.sh --dev            # + pytest y ruff
-source .venv/bin/activate
+./instalar.sh --dev            # + pytest y ruff (Windows: instalar.ps1 -Dev)
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 
 pytest                         # tests
 ruff check src tests tools     # lint
@@ -182,7 +214,9 @@ Más en **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 
 | Documento | Contenido |
 |:----------|:----------|
+| [📦 Instalación](docs/INSTALLATION.md) | Linux y Windows: requisitos, pasos y solución de problemas |
 | [📖 Guía de uso](docs/USER_GUIDE.md) | Formatos aceptados, opciones, preguntas frecuentes |
+| [🎮 Pestaña PS5](docs/PS5.md) | Emparejamiento, explorar y descargar desde la consola |
 | [🏗️ Arquitectura](docs/ARCHITECTURE.md) | Capas, flujo, modelo de hilos, decisiones, cómo extender |
 | [🧑‍💻 Desarrollo](docs/DEVELOPMENT.md) | Entorno, tests, flujo de Git, versiones |
 | [📝 Changelog](CHANGELOG.md) | Historial de cambios |
@@ -193,6 +227,8 @@ Más en **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 
 - **[MkPFS](https://github.com/PSBrew/MkPFS)** de PSBrew: el motor que genera las imágenes PFS/PFSC.
 - **[zlib-ng](https://github.com/zlib-ng/zlib-ng)**: compresión rápida y compatible con la PS5.
+- **[ps5upload](https://github.com/phantomptr/ps5upload)** de PhantomPtr: el helper de la PS5, su
+  servidor FTP y la especificación del protocolo AVA1 que implementa la pestaña PS5.
 - **[tkinterdnd2](https://github.com/Eliav2/tkinterdnd2)**: arrastrar y soltar en Tkinter.
 
 > [!IMPORTANT]

@@ -102,7 +102,7 @@ class ViewUpdater:
         Args:
             event (JobProgress): Evento con el progreso de MkPFS.
         """
-        text = presenters.progress_text(event.progress)
+        text = presenters.progress_text(event.progress, event.eta_seconds)
         self._view.set_progress(event.progress.percent)
         self._view.table.set_cell(event.job.id, job_table.STATUS, text)
         self._view.set_status(f"{event.job.source.name}: {text}")

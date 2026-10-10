@@ -1,0 +1,8 @@
+# Finales de línea según la plataforma que ejecuta cada script.
+*.sh   text eol=lf
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+*.py   text eol=lf
+*.md   text eol=lf
+*.png  binary
+*.elf  binary
