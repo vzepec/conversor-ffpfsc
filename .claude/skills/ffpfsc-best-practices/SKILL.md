@@ -82,5 +82,6 @@ pytest                    # todo en verde
 - [ ] El código sigue `ffpfsc-clean-code` (tipos, nombres, sin números mágicos).
 - [ ] Hay tests para la lógica nueva.
 - [ ] Si cambió la UI, se probó a mano con `./abrir.sh` (agregar, estimar, convertir, cancelar).
+- [ ] Si cambió procesos, rutas o la instalación, se probó también en Windows (`instalar.bat`, `abrir.bat`).
 - [ ] Si cambió la conversión, se convirtió un juego real o de prueba con `--verify`.
 - [ ] `CHANGELOG.md` y `docs/` actualizados si aplica.

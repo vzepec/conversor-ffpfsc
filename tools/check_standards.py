@@ -18,7 +18,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 MAX_LINES = 250
-CHECKED_SUFFIXES = frozenset({".py", ".md", ".sh", ".toml"})
+CHECKED_SUFFIXES = frozenset({".py", ".md", ".sh", ".toml", ".ps1", ".bat"})
 EXCLUDED_DIRS = frozenset({
     ".git", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "build", "dist",
 })
@@ -59,7 +59,7 @@ def check_line_limit(path: Path, root: Path) -> list[str]:
     Returns:
         list[str]: Una violación si el archivo es demasiado largo; vacía si cumple.
     """
-    count = len(path.read_text(encoding="utf-8").splitlines())
+    count = len(path.read_text(encoding="utf-8-sig").splitlines())
     if count <= MAX_LINES:
         return []
     return [f"{path.relative_to(root)}: {count} líneas (máximo {MAX_LINES}); modularízalo"]

@@ -9,7 +9,8 @@ Interfaz gráfica (Tkinter) sobre MkPFS para convertir juegos de PS5 (carpeta,
 - Tests: `.venv/bin/python -m pytest`
 - Lint: `.venv/bin/ruff check src tests tools`
 - Estándares: `.venv/bin/python tools/check_standards.py`
-- Entorno de desarrollo: `./instalar.sh --dev`
+- Entorno de desarrollo: `./instalar.sh --dev` (Windows: `instalar.ps1 -Dev`)
+- Plataformas: Linux y Windows; lo específico de cada sistema solo en `infrastructure/`.
 
 ## Reglas
 

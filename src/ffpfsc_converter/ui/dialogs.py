@@ -9,6 +9,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 
 from ffpfsc_converter.config import APP_TITLE, FREE_SPACE_MARGIN
+from ffpfsc_converter.infrastructure.system import desktop_dir
 from ffpfsc_converter.services.preflight import SpaceCheck
 from ffpfsc_converter.ui.presenters import format_size
 
@@ -19,10 +20,9 @@ def _initial_dir() -> str:
     """Elige la carpeta inicial de los selectores de archivos.
 
     Returns:
-        str: ``~/Escritorio`` si existe; si no, la carpeta personal.
+        str: Carpeta Escritorio del usuario o, si no existe, su carpeta personal.
     """
-    desktop = Path.home() / "Escritorio"
-    return str(desktop if desktop.exists() else Path.home())
+    return str(desktop_dir())
 
 
 def ask_game_folder() -> Path | None:

@@ -8,6 +8,15 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Añadido
 - La versión de la aplicación se muestra en el título de la ventana y a la
   derecha de la línea de estado.
+- Soporte **beta** para Windows 10/11: `instalar.bat`/`instalar.ps1` (entorno virtual y
+  accesos directos en Escritorio y menú Inicio) y `abrir.bat`.
+- Guía de instalación para Linux y Windows (`docs/INSTALLATION.md`).
+
+### Cambiado
+- La cancelación termina el árbol de procesos con `taskkill /T` en Windows y
+  con `SIGTERM` al grupo en Linux/macOS.
+- "Abrir carpeta de salida" usa el Explorador en Windows y `open` en macOS.
+- Los diálogos abren en la carpeta Escritorio o Desktop (también en OneDrive).
 
 ## [1.1.0] - 2026-10-09
 

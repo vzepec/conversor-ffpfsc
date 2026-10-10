@@ -3,15 +3,20 @@
 ## Entorno
 
 ```bash
+# Linux
 ./instalar.sh --dev          # crea .venv e instala el paquete editable + pytest + ruff
 source .venv/bin/activate
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -File instalar.ps1 -Dev
+.venv\Scripts\activate
 ```
 
 ## Comandos
 
 | Tarea | Comando |
 |-------|---------|
-| Ejecutar la app | `./abrir.sh` o `python -m ffpfsc_converter [rutas…]` |
+| Ejecutar la app | `./abrir.sh` / `abrir.bat` o `python -m ffpfsc_converter [rutas…]` |
 | Tests | `pytest` |
 | Lint | `ruff check src tests tools` |
 | Lint con arreglos automáticos | `ruff check src tests tools --fix` |
@@ -38,6 +43,7 @@ los tests.
 | `test_conversion.py` | cola, fallo, cancelación y error al lanzar (con `FakeProcess`) |
 | `test_presenters.py` | todos los textos que ve el usuario |
 | `test_preflight.py` | comprobación de espacio libre |
+| `test_platform.py` | comandos y opciones por sistema operativo (Linux, macOS, Windows) |
 | `test_code_standards.py` | que el repositorio cumpla las rules y que el verificador detecte cada violación |
 
 La UI de Tkinter no tiene tests automáticos: por eso toda la lógica de texto
@@ -46,6 +52,17 @@ vive en `ui/presenters.py` y toda la lógica de negocio en `services/`, ambos
 
 `ConversionRunner` acepta un `process_factory`; los tests lo sustituyen por un
 `FakeProcess` para no depender de MkPFS ni de juegos reales.
+
+## Multiplataforma
+
+- Todo lo que depende del sistema operativo vive en `infrastructure/` y se
+  decide en funciones puras que reciben la plataforma como parámetro, para
+  testear las ramas de Windows desde Linux.
+- Los scripts `.bat` y `.ps1` se guardan con finales de línea CRLF
+  (`.gitattributes`); `instalar.ps1` lleva BOM UTF-8 para que PowerShell 5.1
+  muestre bien las tildes. Los `.bat` evitan tildes por la codificación de `cmd`.
+- Antes de publicar un cambio en la instalación o en procesos, pruébalo en
+  Windows real.
 
 ## Flujo de Git
 

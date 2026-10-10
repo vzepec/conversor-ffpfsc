@@ -23,6 +23,16 @@
   lee mal, MkPFS #132).
 - Cada flag nuevo se comprueba con `python -m mkpfs pack folder -h` y lleva test.
 
+## Multiplataforma (Linux y Windows)
+
+- Nada específico de un sistema operativo fuera de `infrastructure/`; la
+  decisión va en una función pura con la plataforma como parámetro y con test.
+- Prohibido usar directamente `os.killpg`, `signal.SIGTERM`, `xdg-open` u
+  otras APIs de un solo sistema fuera de esos módulos.
+- Rutas siempre con `pathlib.Path`; nunca concatenar con `/` o `\` como texto.
+- Todo cambio en `instalar.sh` tiene su equivalente en `instalar.ps1` (y
+  viceversa), igual que `abrir.sh` y `abrir.bat`.
+
 ## Datos del usuario
 
 - Nunca se modifica ni se borra el origen.
@@ -60,4 +70,4 @@ Un cambio está terminado solo cuando:
 ```
 
 pasan sin errores y, si tocó la interfaz o la conversión, se probó a mano con
-`./abrir.sh`.
+`./abrir.sh` (y con `abrir.bat` en Windows si tocó procesos o instalación).

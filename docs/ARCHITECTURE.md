@@ -44,10 +44,10 @@ src/ffpfsc_converter/
 │   ├── mkpfs_adapter/     # Todo lo relativo a MkPFS (API pública en __init__.py)
 │   │   ├── command.py     #   línea de comandos de `mkpfs pack`
 │   │   ├── output.py      #   corte de líneas y parseo del progreso
-│   │   ├── process.py     #   PackProcess: lanzar, leer y terminar el proceso
+│   │   ├── process.py     #   PackProcess: lanzar, leer y terminar (POSIX y Windows)
 │   │   └── metadata.py    #   metadatos y lectura de imágenes exFAT
 │   ├── filesystem.py      # Listado de archivos, espacio libre, borrado seguro
-│   └── system.py          # Abrir carpeta con xdg-open
+│   └── system.py          # Abrir carpeta (explorer/open/xdg-open) y localizar el Escritorio
 ├── services/
 │   ├── discovery.py       # Encontrar eboot.bin / imagen y crear el ConversionJob
 │   ├── metadata.py        # Nombre, Title ID y versión desde param.json
@@ -117,6 +117,7 @@ sequenceDiagram
 | Estimación por muestreo (1536 bloques de 64 KiB, semilla fija) | ~96 MB leídos por juego dan un error típico de pocos puntos porcentuales en segundos, y siempre la misma cifra para el mismo juego. |
 | Bloques que no reducen se cuentan en crudo | Replica el comportamiento de PFSC de MkPFS. |
 | `read_game_info` nunca lanza | El nombre del juego es informativo; no debe impedir convertir. |
+| Diferencias de sistema operativo aisladas en `infrastructure/` | Linux y Windows comparten todo el código salvo cómo se abre una carpeta y cómo se termina el árbol de procesos (`killpg` vs. `taskkill /T`). |
 | Salida parcial borrada ante error o cancelación | Nunca queda un `.ffpfsc` corrupto que parezca válido. |
 
 ## Cómo extender
@@ -128,7 +129,7 @@ sequenceDiagram
 | Soportar otro formato de origen | `IMAGE_EXTENSIONS` en `config.py`; si necesita lógica, `services/discovery.py`. |
 | Mostrar un dato nuevo en la tabla | Evento en `domain/events.py` → publicarlo en el servicio → manejador en `ViewUpdater` (`ui/event_handlers.py`) → texto en `presenters.py`. |
 | Crear una CLI sin interfaz | Nuevo paquete `cli/` que use `services/` con un `EventSink` que imprima. No requiere tocar servicios. |
-| Soportar Windows/macOS | `infrastructure/system.py` (abrir carpeta) y `PackProcess.terminate` (señales). |
+| Ajustar algo propio de un sistema operativo | Solo en `infrastructure/` (`system.py`, `mkpfs_adapter/process.py`), con la decisión en una función pura testeable (ver `file_manager_command`, `popen_options`). |
 
 Las normas obligatorias están en [`.claude/rules/`](../.claude/rules/) y las guías
 detalladas en las skills de [`.claude/skills/`](../.claude/skills/).

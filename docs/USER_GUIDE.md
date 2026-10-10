@@ -1,5 +1,7 @@
 # Guía de uso
 
+> Instalación en Linux y Windows: [INSTALLATION.md](INSTALLATION.md).
+
 ## 1. Qué puedo convertir
 
 | Origen | Qué se espera |
@@ -14,7 +16,8 @@ de la carpeta o imagen original.
 
 ## 2. Pasos
 
-1. Abre **Conversor FFPFSC** desde el Escritorio o el menú de aplicaciones.
+1. Abre **Conversor FFPFSC** desde el Escritorio, el menú de aplicaciones (Linux)
+   o el menú Inicio (Windows).
 2. **Arrastra** una o varias carpetas/imágenes a la zona oscura superior
    (o haz clic en ella / usa **+ Archivo .exfat…**).
 3. Espera unos segundos: aparecen el **nombre oficial**, el **tamaño** y el
