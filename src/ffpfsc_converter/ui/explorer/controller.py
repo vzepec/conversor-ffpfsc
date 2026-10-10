@@ -19,6 +19,7 @@ from ffpfsc_converter.infrastructure.system import open_in_file_manager
 from ffpfsc_converter.services.downloads import DownloadRunner
 from ffpfsc_converter.services.ftp_launcher import FtpLauncher
 from ffpfsc_converter.services.remote_browser import RemoteBrowser
+from ffpfsc_converter.services.remote_storage import StorageMonitor
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
 from ffpfsc_converter.ui.explorer.modify_actions import ModifyActions
@@ -43,6 +44,7 @@ class ExplorerController:
         ftp_restarted (bool): ``True`` si ya se reinició el FTP por credenciales rechazadas.
         browser (RemoteBrowser): Navegación por la PS5.
         downloads (DownloadRunner): Cola de descargas.
+        storage (StorageMonitor): Espacio libre de las unidades de la PS5.
     """
 
     def __init__(self, parent: tk.Misc, emit: EventSink) -> None:
@@ -67,6 +69,7 @@ class ExplorerController:
         self.launcher = FtpLauncher(emit, TrustStore(settings_path().parent))
         self.browser = RemoteBrowser(emit)
         self.downloads = DownloadRunner(emit)
+        self.storage = StorageMonitor(emit, self.launcher.access)
         self.modify = ModifyActions(self, emit, self.launcher.access)
         self.retry = RetryActions(self)
         self.target: ConsoleTarget | None = None
@@ -132,8 +135,14 @@ class ExplorerController:
         self.browser.open(join_remote("/", path.strip() or "/"))
 
     def refresh(self) -> None:
-        """Vuelve a listar la carpeta actual."""
+        """Vuelve a listar la carpeta actual y el espacio de las unidades."""
         self.browser.open(self.path)
+        self.refresh_storage()
+
+    def refresh_storage(self) -> None:
+        """Vuelve a consultar el espacio libre de las unidades, si hay conexión."""
+        if self.target is not None:
+            self.storage.refresh(self.target.host)
 
     def download(self) -> None:
         """Encola la descarga de los elementos seleccionados."""

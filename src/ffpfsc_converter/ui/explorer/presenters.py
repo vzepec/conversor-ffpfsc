@@ -2,9 +2,16 @@
 from __future__ import annotations
 
 import posixpath
+import re
+from collections.abc import Iterable
 
 from ffpfsc_converter.domain.pipeline import PipelineStage
-from ffpfsc_converter.domain.remote import DownloadJob, DownloadResult, RemoteEntry
+from ffpfsc_converter.domain.remote import (
+    DownloadJob,
+    DownloadResult,
+    RemoteEntry,
+    StorageVolume,
+)
 from ffpfsc_converter.formatting import format_size
 
 FOLDER_ICON = "📁"
@@ -183,3 +190,51 @@ def delete_summary(paths: list[str], limit: int = 8) -> str:
     """
     shown = "\n".join(paths[:limit])
     return shown + (f"\n… y {len(paths) - limit} más" if len(paths) > limit else "")
+
+
+_SLOT = re.compile(r"/mnt/(usb|ext)(\d+)")
+_INTERNAL_PATH = "/data"
+_NVME_PREFIX = "/dev/nvme"  # M.2; un USB ampliado se monta desde /dev/da*
+
+
+def volume_name(volume: StorageVolume) -> str:
+    """Nombra una unidad de la PS5 como la ve el usuario.
+
+    Args:
+        volume (StorageVolume): Unidad montada.
+
+    Returns:
+        str: ``"Interno"``, ``"USB 1"``, ``"M.2"``, ``"USB ampliado"``… (numerados desde 1
+        cuando hay más de una ranura del mismo tipo).
+    """
+    if volume.path == _INTERNAL_PATH:
+        return "Interno"
+    match = _SLOT.fullmatch(volume.path)
+    if match is None:
+        return volume.path
+    kind, index = match.group(1), int(match.group(2))
+    if kind == "usb":
+        return f"USB {index + 1}"
+    name = "M.2" if volume.device.startswith(_NVME_PREFIX) else "USB ampliado"
+    return name if index == 0 else f"{name} {index + 1}"
+
+
+def storage_text(volumes: Iterable[StorageVolume], error: str = "") -> str:
+    """Resume el espacio libre de cada unidad en una línea.
+
+    Args:
+        volumes (Iterable[StorageVolume]): Unidades montadas.
+        error (str): Motivo por el que no se pudo consultar, si falló.
+
+    Returns:
+        str: Por ejemplo ``"Espacio libre: Interno 412.3 GB de 825.0 GB · USB 1 58.1 GB
+        de 64.0 GB"``; con el interno primero y luego las ranuras en orden.
+    """
+    if error:
+        return f"Espacio libre: {error}."
+    ordered = sorted(volumes, key=lambda v: (v.path != _INTERNAL_PATH, v.path))
+    if not ordered:
+        return "Espacio libre: sin unidades."
+    parts = (f"{volume_name(v)} {format_size(v.free_bytes)} de {format_size(v.total_bytes)}"
+             for v in ordered)
+    return "Espacio libre: " + " · ".join(parts)

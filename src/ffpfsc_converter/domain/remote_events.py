@@ -12,6 +12,7 @@ from ffpfsc_converter.domain.remote import (
     DownloadJob,
     DownloadResult,
     RemoteEntry,
+    StorageVolume,
 )
 
 
@@ -64,6 +65,19 @@ class PairingCodeRequired:
     """
 
     console_name: str
+
+
+@dataclass(frozen=True)
+class StorageUpdated:
+    """Se consultó el espacio de las unidades de la PS5.
+
+    Attributes:
+        volumes (tuple[StorageVolume, ...]): Unidades montadas; vacío si falló la consulta.
+        error (str): Motivo por el que no se pudo consultar; vacío si funcionó.
+    """
+
+    volumes: tuple[StorageVolume, ...]
+    error: str = ""
 
 
 @dataclass(frozen=True)
@@ -165,6 +179,7 @@ RemoteEvent = (
     | RemoteListing
     | RemoteError
     | PairingCodeRequired
+    | StorageUpdated
     | FtpReady
     | FtpLoginRefused
     | DownloadStarted

@@ -55,6 +55,10 @@ sequenceDiagram
 - **Doble clic** abre una carpeta; **⬆ Subir** vuelve a la anterior.
 - El campo de ruta acepta cualquier ruta y ofrece accesos rápidos:
   `/data/homebrew` (la carpeta que vigila ShadowMount+), `/mnt/usb0`, `/mnt/ext0`…
+- Bajo la barra de conexión se muestra el **espacio libre** de cada unidad: el
+  almacenamiento interno, cada USB conectado y el almacenamiento ampliado (M.2 o
+  USB ampliado). Se consulta al helper (`fs.volumes`) al conectar, con
+  **↻ Actualizar** y tras borrar, subir o reemplazar.
 
 ## Descargar
 

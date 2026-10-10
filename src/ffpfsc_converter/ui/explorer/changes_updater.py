@@ -90,6 +90,8 @@ class ChangesUpdater:
         progress = "100%" if event.succeeded else ""
         self._ctl.view.transfers.update_row(event.upload_id, progress, "", status)
         self._ctl.retry.upload_finished(event.upload_id, event.succeeded)
+        if event.succeeded:
+            self._ctl.refresh_storage()
         self._notify(event.upload_id, event)
 
     def _notify(self, upload_id: str, event: object) -> None:
@@ -144,6 +146,7 @@ class ChangesUpdater:
         Args:
             event (PipelineFinished): Resultado.
         """
+        self._ctl.refresh_storage()
         window = self._ctl.modify.window
         if window is not None and window.winfo_exists():
             window.finish(event.result)

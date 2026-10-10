@@ -73,6 +73,8 @@ class ExplorerView(ttk.Frame):
         super().__init__(parent)
         self.connection = ConnectionBar(self, callbacks.on_connect, callbacks.on_disconnect)
         self.connection.pack(fill="x", **theme.PADDING)
+        self._storage = ttk.Label(self, text="", foreground=theme.HINT_FG)
+        self._storage.pack(anchor="w", padx=10)
         self._build_path_bar(callbacks)
         self.remote = RemoteList(self, callbacks.on_open_entry)
         self.remote.pack(fill="both", expand=True, **theme.PADDING)
@@ -121,6 +123,14 @@ class ExplorerView(ttk.Frame):
             path (str): Ruta absoluta.
         """
         self._path_var.set(path)
+
+    def set_storage_text(self, text: str) -> None:
+        """Muestra el espacio libre de las unidades de la PS5.
+
+        Args:
+            text (str): Resumen listo para mostrar; vacío lo oculta.
+        """
+        self._storage.configure(text=text)
 
     def set_browsing_enabled(self, enabled: bool) -> None:
         """Habilita la navegación y la descarga solo con conexión.

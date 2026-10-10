@@ -15,6 +15,7 @@ from ffpfsc_converter.domain.remote_events import (
     RemoteDisconnected,
     RemoteError,
     RemoteListing,
+    StorageUpdated,
     TransferRetrying,
 )
 from ffpfsc_converter.ui import dialogs
@@ -41,6 +42,7 @@ class ExplorerUpdater:
             RemoteConnected: self._on_connected,
             RemoteDisconnected: self._on_disconnected,
             RemoteListing: self._on_listing,
+            StorageUpdated: self._on_storage,
             RemoteError: self._on_error,
             DownloadStarted: self._on_download_started,
             DownloadProgress: self._on_download_progress,
@@ -113,6 +115,7 @@ class ExplorerUpdater:
         self._ctl.target = event.target
         self._ctl.ftp_restarted = False
         self._view.set_browsing_enabled(True)
+        self._ctl.refresh_storage()
         pending, self._ctl.pending_on_connect = self._ctl.pending_on_connect, []
         for action in pending:
             action()
@@ -125,6 +128,7 @@ class ExplorerUpdater:
         """
         self._ctl.target = None
         self._view.remote.clear()
+        self._view.set_storage_text("")
         self._view.set_browsing_enabled(False)
         self._view.connection.set_state(False, "Sin conexión.")
 
@@ -141,6 +145,15 @@ class ExplorerUpdater:
         if target is not None:
             text = presenters.connection_text(target.host, target.port, event.path)
             self._view.connection.set_state(True, text)
+
+    def _on_storage(self, event: StorageUpdated) -> None:
+        """Muestra el espacio libre de las unidades (si sigue habiendo conexión).
+
+        Args:
+            event (StorageUpdated): Resultado de la consulta.
+        """
+        if self._ctl.target is not None:
+            self._view.set_storage_text(presenters.storage_text(event.volumes, event.error))
 
     def _on_error(self, event: RemoteError) -> None:
         """Muestra el error y restablece el estado de la barra de conexión.

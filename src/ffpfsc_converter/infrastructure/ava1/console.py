@@ -1,4 +1,7 @@
-"""Operaciones tipadas del helper: espacio libre y borrado recursivo (SPEC §7.1.1, §7.3).
+"""Operaciones tipadas del helper: unidades, espacio libre y borrado recursivo (SPEC §7).
+
+``fs.volumes`` lista solo almacenamiento real: ``/data`` (interno), ``/mnt/usbN``
+(USB) y ``/mnt/extN`` (M.2 o USB ampliado); el helper ya descarta ranuras vacías.
 
 El borrado usa ``job.run`` con la operación DELETE: corre en la consola, recorre
 el árbol sin entrar en otros montajes y se niega a borrar raíces, carpetas de
@@ -12,10 +15,12 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from ffpfsc_converter.domain.remote import StorageVolume
 from ffpfsc_converter.infrastructure.ava1.codec import Decoder, Encoder
 from ffpfsc_converter.infrastructure.ava1.handshake import Ava1Refused
 from ffpfsc_converter.infrastructure.ava1.session import Ava1Session
 
+METHOD_FS_VOLUMES = 32
 METHOD_JOB_STATUS = 17
 METHOD_JOB_RUN = 20
 METHOD_FS_FREESPACE = 44
@@ -24,6 +29,7 @@ _STATE_RUNNING, _STATE_DONE = 0, 1
 _EXT_CURRENT, _EXT_STATE, _EXT_RESULT, _EXT_CODE = 1, 2, 3, 4
 _ERR_IO = 12
 _POLL_SECONDS = 0.5
+_IMAGE_MOUNT_PREFIX = "/mnt/ps5upload/"  # imágenes .exfat/.ffpkg montadas por el helper
 
 
 @dataclass(frozen=True)
@@ -56,6 +62,51 @@ class JobStatus:
     files_total: int
     current: str
     code: int
+
+
+def list_volumes(session: Ava1Session) -> tuple[StorageVolume, ...]:
+    """Lista las unidades de almacenamiento montadas en la PS5.
+
+    Se omiten las imágenes que montó el helper (``source_image``): no son discos.
+
+    Args:
+        session (Ava1Session): Sesión emparejada.
+
+    Returns:
+        tuple[StorageVolume, ...]: Unidades en el orden que informa la consola.
+
+    Raises:
+        Ava1Refused: Si la consola rechaza la consulta.
+        ConnectionError: Si se pierde la conexión.
+        ValueError: Si la respuesta no es JSON válido.
+    """
+    reply = session.call_text(METHOD_FS_VOLUMES, {})
+    volumes = []
+    for item in reply.get("volumes", []):
+        volume = _parse_volume(item)
+        if volume is not None:
+            volumes.append(volume)
+    return tuple(volumes)
+
+
+def _parse_volume(item: object) -> StorageVolume | None:
+    """Convierte una entrada de ``fs.volumes`` en una unidad.
+
+    Args:
+        item (object): Entrada JSON de la lista ``volumes``.
+
+    Returns:
+        StorageVolume | None: La unidad, o ``None`` si es una imagen montada o está
+        mal formada.
+    """
+    if not isinstance(item, dict) or item.get("source_image"):
+        return None
+    path, total, free = item.get("path"), item.get("total_bytes"), item.get("free_bytes")
+    if not isinstance(path, str) or not isinstance(total, int) or not isinstance(free, int):
+        return None
+    if path.startswith(_IMAGE_MOUNT_PREFIX) or total <= 0:
+        return None
+    return StorageVolume(path, str(item.get("mount_from", "")), total, max(free, 0))
 
 
 def free_space(session: Ava1Session, path: str) -> FreeSpace:

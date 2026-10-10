@@ -115,3 +115,20 @@ class DownloadResult:
     elapsed_seconds: float
     files: int = 0
     message: str = ""
+
+
+@dataclass(frozen=True)
+class StorageVolume:
+    """Unidad de almacenamiento montada en la PS5.
+
+    Attributes:
+        path (str): Punto de montaje (``/data``, ``/mnt/usb0``, ``/mnt/ext0``…).
+        device (str): Dispositivo que la respalda (``/dev/nvme…`` = M.2, ``/dev/da…`` = USB).
+        total_bytes (int): Capacidad de la unidad.
+        free_bytes (int): Espacio libre que puede usar una escritura normal.
+    """
+
+    path: str
+    device: str
+    total_bytes: int
+    free_bytes: int

@@ -61,7 +61,7 @@ src/ffpfsc_converter/
 │   │   ├── keys.py        #   claves de carril, compromiso y PAKE CPace (Elligator2)
 │   │   ├── handshake.py   #   pasos 1-4 del handshake y validación del Welcome
 │   │   ├── session.py     #   emparejamiento, RPC y respuesta a Ping
-│   │   ├── console.py     #   fs.freespace y job.run DELETE (borrado en la consola)
+│   │   ├── console.py     #   fs.volumes, fs.freespace y job.run DELETE (borrado)
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
 │   ├── network.py         # ¿Puerto TCP abierto?
@@ -84,6 +84,7 @@ src/ffpfsc_converter/
 │   ├── progress_meter.py  #   progreso y velocidad con frecuencia limitada
 │   ├── remote_client.py   #   Protocol RemoteClient (para tests)
 │   ├── console_access.py  # Sesión AVA1 emparejada, ftp.start y escritura temporal
+│   ├── remote_storage.py  # StorageMonitor: espacio libre de interno, USB y ampliado
 │   ├── remote_upload.py   #   subida a .part con REST, verificación y renombre
 │   ├── remote_changes.py  # RemoteChanges: eliminar y subir desde el explorador
 │   ├── pipeline/          # "Comprimir y reemplazar en la PS5"

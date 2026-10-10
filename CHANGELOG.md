@@ -35,6 +35,8 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - ETA más estable: velocidad promedio de 30 s y cuenta regresiva entre recálculos.
 - Botón **Subir a la PS5** en la pestaña Convertir para los juegos ya comprimidos;
   conecta si hace falta (o explica cómo vincular la PS5) y sube cuando se conecta.
+- La pestaña **PS5** muestra el espacio libre del almacenamiento interno, de cada USB
+  conectado y del almacenamiento ampliado, y lo actualiza tras borrar, subir o reemplazar.
 
 ### Cambiado
 - La cancelación termina el árbol de procesos con `taskkill /T` en Windows y
