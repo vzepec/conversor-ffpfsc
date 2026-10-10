@@ -53,7 +53,7 @@ class PathBar(ttk.Frame):
             self._menu.add_command(label=path, command=lambda p=path: self._on_go_to(p))
         self._paint(theme.palette)
         theme.on_change(self._paint)
-        self._enabled = True
+        self._connected, self._enabled = False, False
         self.set_path("/")
 
     def set_path(self, path: str) -> None:
@@ -65,15 +65,24 @@ class PathBar(ttk.Frame):
         self._path = path
         self._show_crumbs()
 
-    def set_enabled(self, enabled: bool) -> None:
-        """Habilita la navegación solo con conexión.
+    def set_connected(self, connected: bool) -> None:
+        """Muestra la ruta si hay conexión, o el aviso para conectar.
 
         Args:
-            enabled (bool): ``True`` si hay sesión con la PS5.
+            connected (bool): ``True`` si hay sesión con la PS5.
         """
-        self._enabled = enabled
+        self._connected = connected
+        self.set_enabled(connected)
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Habilita o pausa la navegación (la ruta se sigue viendo).
+
+        Args:
+            enabled (bool): ``True`` para permitir navegar.
+        """
+        self._enabled = enabled and self._connected
         for button in (self._up, self._refresh, self._quick):
-            button.state(["!disabled"] if enabled else ["disabled"])
+            button.state(["!disabled"] if self._enabled else ["disabled"])
         self._show_crumbs()
 
     def _show_crumbs(self) -> None:
@@ -82,7 +91,7 @@ class PathBar(ttk.Frame):
         for child in self._box.winfo_children():
             if child is not self._entry:
                 child.destroy()
-        if not self._enabled:
+        if not self._connected:
             ttk.Label(self._box, text="Conecta la PS5 para explorar sus carpetas",
                       style="CardMuted.TLabel").pack(side="left")
             return
@@ -103,7 +112,7 @@ class PathBar(ttk.Frame):
         label = ttk.Label(self._box, text=text,
                           style="CardMonoMuted.TLabel" if muted else "CardMono.TLabel")
         label.pack(side="left", padx=(0, self._theme.metrics.px(4)))
-        if path:
+        if path and self._enabled:
             label.configure(cursor="hand2")
             label.bind("<Button-1>", lambda _e: self._on_go_to(path))
 

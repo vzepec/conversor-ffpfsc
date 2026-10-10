@@ -60,11 +60,18 @@ def test_selection_and_actions() -> None:
     assert vp.selection_text(1) == "1 seleccionado"
     assert vp.selection_text(3) == "3 seleccionados"
     game, text = _entry("Juego", True), _entry("notas.txt")
-    assert vp.action_states(True, [game]) == vp.ActionStates(True, True, True, True)
-    assert vp.action_states(True, [text]).convert is False
-    assert vp.action_states(True, [game, game]).convert is False
-    assert vp.action_states(True, []) == vp.ActionStates(False, False, True, False)
-    assert vp.action_states(False, [game]) == vp.ActionStates(False, False, False, False)
+    assert vp.action_states(True, False, [game]) == vp.ActionStates(True, True, True, True)
+    assert vp.action_states(True, False, [text]).convert is False
+    assert vp.action_states(True, False, [game, game]).convert is False
+    assert vp.action_states(True, False, []) == vp.ActionStates(False, False, True, False)
+    assert vp.action_states(False, False, [game]) == vp.ActionStates(False, False, False, False)
+
+
+def test_writing_pauses_actions_but_keeps_connection() -> None:
+    """Mientras se escribe en la PS5 se pausan las acciones y se explica por qué."""
+    game = _entry("Juego", True)
+    assert vp.action_states(True, True, [game]) == vp.ActionStates(False, False, False, False)
+    assert "Escribiendo en la PS5" in vp.selection_text(1, writing=True)
 
 
 def test_transfer_texts() -> None:
