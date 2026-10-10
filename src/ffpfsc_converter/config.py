@@ -72,6 +72,8 @@ PS5_FAVORITE_PATHS = (
 )
 #: Carpeta inicial al conectar (la que vigila ShadowMount+).
 PS5_START_PATH = "/data/homebrew"
+#: Porcentaje de uso a partir del cual la barra de una unidad de la PS5 se pinta en ámbar.
+STORAGE_WARN_PERCENT = 85
 #: Puerto del helper de ps5upload (protocolo AVA1), usado para iniciar el FTP.
 AVA1_PORT = 9120
 #: Nombre con el que la app se presenta ante la PS5 al emparejarse.

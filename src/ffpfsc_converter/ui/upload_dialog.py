@@ -4,46 +4,58 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
-from ffpfsc_converter.config import APP_TITLE, PS5_FAVORITE_PATHS, PS5_START_PATH
+from ffpfsc_converter.config import PS5_FAVORITE_PATHS, PS5_START_PATH
 from ffpfsc_converter.infrastructure.ftp.listing import join_remote
-from ffpfsc_converter.ui import theme
+from ffpfsc_converter.ui.theme import ThemeManager
+from ffpfsc_converter.ui.widgets.modal import Modal
+
+_SHOWN_NAMES = 6
 
 
-class UploadDestinationDialog(tk.Toplevel):
+class UploadDestinationDialog(Modal):
     """Pide la carpeta de destino en la PS5 (por defecto, la que vigila ShadowMount+)."""
 
-    def __init__(self, parent: tk.Misc, names: list[str]) -> None:
+    def __init__(self, parent: tk.Misc, theme: ThemeManager, names: list[str]) -> None:
         """Construye la ventana modal.
 
         Args:
             parent (tk.Misc): Ventana principal.
+            theme (ThemeManager): Tema.
             names (list[str]): Archivos que se subirán, para mostrarlos.
         """
-        super().__init__(parent)
-        self.title(f"{APP_TITLE} — Subir a la PS5")
-        self.transient(parent.winfo_toplevel())
-        self.resizable(False, False)
+        count = f"{len(names)} juego" + ("s" if len(names) != 1 else "")
+        super().__init__(parent, theme, "Subir a la PS5", count)
+        m = theme.metrics
         self.result: str | None = None
-        body = ttk.Frame(self, padding=14)
-        body.pack(fill="both", expand=True)
-        shown = "\n".join(f"• {n}" for n in names[:6])
-        more = f"\n… y {len(names) - 6} más" if len(names) > 6 else ""
-        ttk.Label(body, text=f"Se subirá a la PS5:\n{shown}{more}", justify="left").pack(
+        shown = "\n".join(names[:_SHOWN_NAMES])
+        more = f"\n… y {len(names) - _SHOWN_NAMES} más" if len(names) > _SHOWN_NAMES else ""
+        ttk.Label(self.body, text=shown + more, style="Card.TLabel", justify="left").pack(
             anchor="w")
-        ttk.Label(body, text="Carpeta de destino:").pack(anchor="w", pady=(10, 2))
+        ttk.Label(self.body, text="CARPETA DE DESTINO", style="CardCaption.TLabel").pack(
+            anchor="w", pady=(m.px(14), m.px(4)))
+        row = ttk.Frame(self.body, style="Surface.TFrame")
+        row.pack(fill="x")
         self._path = tk.StringVar(value=PS5_START_PATH)
-        combo = ttk.Combobox(body, textvariable=self._path, values=list(PS5_FAVORITE_PATHS),
-                             width=40)
-        combo.pack(anchor="w")
-        ttk.Label(body, text="/data/homebrew es la carpeta que vigila ShadowMount+. Si ya existe "
-                  "un archivo con el mismo nombre, se reemplazará.", foreground=theme.HINT_FG,
-                  wraplength=420, justify="left").pack(anchor="w", pady=(6, 0))
-        bar = ttk.Frame(body)
-        bar.pack(fill="x", pady=(14, 0))
-        ttk.Button(bar, text="Cancelar", command=self.destroy).pack(side="right")
-        ttk.Button(bar, text="⬆ Subir", command=self._accept).pack(side="right", padx=6)
-        combo.bind("<Return>", lambda _e: self._accept())
-        self.grab_set()
+        entry = ttk.Entry(row, textvariable=self._path, width=34, style="Card.TEntry",
+                          font=theme.fonts.mono)
+        entry.pack(side="left", fill="x", expand=True)
+        entry.bind("<Return>", lambda _e: self._accept())
+        self._quick = ttk.Button(row, text="Accesos rápidos ▾", style="Card.Small.TButton",
+                                 command=self._show_menu)
+        self._quick.pack(side="left", padx=(m.px(8), 0))
+        self._menu = tk.Menu(self, tearoff=False, background=theme.palette.surface,
+                             foreground=theme.palette.text, font=theme.fonts.mono,
+                             activebackground=theme.palette.accent_soft,
+                             activeforeground=theme.palette.text)
+        for path in PS5_FAVORITE_PATHS:
+            self._menu.add_command(label=path, command=lambda p=path: self._path.set(p))
+        ttk.Label(self.body, text="/data/homebrew es la carpeta que vigila ShadowMount+. Si ya "
+                  "existe un archivo con el mismo nombre, se reemplazará.",
+                  style="CardMuted.TLabel", wraplength=m.px(440), justify="left").pack(
+            anchor="w", pady=(m.px(8), 0))
+        self.add_button("Subir", self._accept, "Card.Accent.TButton")
+        self.add_button("Cancelar", self.destroy)
+        self.show_modal()
 
     def ask(self) -> str | None:
         """Muestra la ventana y espera la elección.
@@ -53,6 +65,11 @@ class UploadDestinationDialog(tk.Toplevel):
         """
         self.wait_window()
         return self.result
+
+    def _show_menu(self) -> None:
+        """Despliega los accesos rápidos bajo su botón."""
+        self._menu.tk_popup(self._quick.winfo_rootx(),
+                            self._quick.winfo_rooty() + self._quick.winfo_height())
 
     def _accept(self) -> None:
         """Normaliza la ruta elegida y cierra."""

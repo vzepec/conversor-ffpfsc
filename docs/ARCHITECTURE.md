@@ -97,24 +97,40 @@ src/ffpfsc_converter/
 │   └── remote_errors.py, launch_errors.py  # errores → mensajes para el usuario
 └── ui/
     ├── app.py             # MainWindow: controlador (acciones del usuario → servicios)
-    ├── main_view.py       # MainView + ViewCallbacks: construye los widgets
-    ├── options_panel.py   # Modo, núcleos, destino y verificación
-    ├── job_table.py       # Tabla de la cola
-    ├── dialogs.py         # Selectores de archivos y mensajes
+    ├── shell.py           # AppShell: barra lateral (navegación, estado de la PS5, tema)
+    ├── main_view.py       # MainView + ViewCallbacks: vista Convertir
+    ├── options_panel.py   # Modo, núcleos, verificación y destino
+    ├── job_list.py        # Filas de la cola (ficha, tamaños, estado, «Subir a la PS5»)
+    ├── job_presenters.py  # Textos puros de las filas y del resumen de la cola
+    ├── convert_upload.py  # Subida a la PS5 de los juegos convertidos
+    ├── dialogs.py, upload_dialog.py  # Selectores de archivos y mensajes
     ├── event_handlers.py  # ViewUpdater: eventos → cambios en la vista
     ├── presenters.py      # Funciones puras que generan los textos mostrados
-    ├── theme.py           # Colores, fuentes y medidas
     ├── dnd.py             # Arrastrar y soltar opcional (tkinterdnd2)
-    └── explorer/          # Pestaña PS5
-        ├── view.py        #   ExplorerView: compone barra, explorador y descargas
-        ├── connection_bar.py, remote_list.py, transfer_panel.py
+    ├── theme/             # Tema claro/oscuro (sigue al sistema con darkdetect)
+    │   ├── palette.py     #   paletas DARK y LIGHT
+    │   ├── fonts.py, metrics.py  # fuentes por sistema y escala para pantallas HiDPI
+    │   ├── icons.py, icon_shapes.py  # iconos de línea dibujados con Pillow
+    │   ├── shapes.py, rounded.py     # imágenes redondeadas estirables en 9 partes
+    │   ├── styles.py      #   superficies planas y textos
+    │   ├── round_styles.py, widget_styles.py  # botones, tarjetas, píldoras, campos y barras
+    │   └── manager.py     #   ThemeManager: aplica, guarda y cambia el tema en vivo
+    ├── widgets/           # Segmented, Stepper, Tile, StatusDot, DropZone, ScrollFrame,
+    │                      # Steps, Modal (base de los diálogos) y ajuste de textos
+    └── explorer/          # Vista PS5
+        ├── view.py        #   ExplorerView: compone las piezas de la vista
+        ├── connection_bar.py  # tarjeta de conexión (IP, puerto, modo del FTP)
+        ├── drives.py      #   tarjetas de unidades con barra de uso
+        ├── path_bar.py    #   ruta con tramos clicables y accesos rápidos
+        ├── file_list.py   #   lista de archivos dibujada en un lienzo
+        ├── action_bar.py  #   acciones sobre la selección
+        ├── transfer_panel.py, transfer_row.py  # descargas y subidas
         ├── controller.py  #   ExplorerController: acciones → servicios
         ├── updater.py     #   ExplorerUpdater: eventos remotos → vista
         ├── modify_actions.py, changes_updater.py  # eliminar, subir, reemplazar
         ├── retry_actions.py    # "Reintentar fallidas"
-        ├── compress_dialog.py  # ventana modal de compresión
-        ├── pipeline_window.py  # progreso por etapas del pipeline
-        └── presenters.py  #   textos de la pestaña
+        ├── compress_dialog.py, pipeline_window.py, pairing_dialog.py  # diálogos
+        └── presenters.py, view_presenters.py, transfer_presenters.py  # textos puros
 ```
 
 ## Flujo de una conversión

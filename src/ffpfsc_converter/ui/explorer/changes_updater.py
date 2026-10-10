@@ -74,10 +74,9 @@ class ChangesUpdater:
         Args:
             event (UploadProgress): Avance.
         """
-        self._ctl.view.transfers.update_row(
-            event.upload_id, presenters.upload_progress_text(event.done, event.total),
-            presenters.speed_text(event.bytes_per_second), f"Subiendo {event.name}",
-            format_eta(event.eta_seconds))
+        self._ctl.view.transfers.set_progress(
+            event.upload_id, event.done, event.total,
+            presenters.speed_text(event.bytes_per_second), format_eta(event.eta_seconds))
         self._notify(event.upload_id, event)
 
     def _on_upload_finished(self, event: UploadFinished) -> None:
@@ -86,9 +85,10 @@ class ChangesUpdater:
         Args:
             event (UploadFinished): Resultado.
         """
-        status = f"✔ Subido a {event.message}" if event.succeeded else f"✖ {event.message}"
-        progress = "100%" if event.succeeded else ""
-        self._ctl.view.transfers.update_row(event.upload_id, progress, "", status)
+        if event.succeeded:
+            self._ctl.view.transfers.set_state(event.upload_id, "ok", "✓ Subido", event.message)
+        else:
+            self._ctl.view.transfers.set_state(event.upload_id, "bad", "Error", event.message)
         self._ctl.retry.upload_finished(event.upload_id, event.succeeded)
         if event.succeeded:
             self._ctl.refresh_storage()
@@ -129,7 +129,7 @@ class ChangesUpdater:
         Args:
             event (PipelineOptionsRequired): Juego analizado y plan de reemplazo.
         """
-        choice = CompressDialog(self._ctl.view, event.job, event.plan).ask()
+        choice = CompressDialog(self._ctl.view, self._ctl.theme, event.job, event.plan).ask()
         self._ctl.modify.pipeline.answer(choice)
 
     def _on_confirm(self, event: PipelineConfirmRequired) -> None:

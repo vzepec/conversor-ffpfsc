@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from ffpfsc_converter.domain.remote import DownloadJob, DownloadResult, RemoteEntry
+from ffpfsc_converter.domain.remote import DownloadJob, RemoteEntry
 from ffpfsc_converter.domain.remote_events import DownloadProgress
 from ffpfsc_converter.infrastructure import settings_store
 from ffpfsc_converter.infrastructure.ava1.trust import TrustStore
@@ -15,9 +15,7 @@ FOLDER = RemoteEntry("homebrew", "/data/homebrew", True)
 
 
 def test_entry_texts() -> None:
-    """Muestra icono, tamaño y fecha legibles."""
-    assert presenters.entry_label(FOLDER) == "📁 homebrew"
-    assert presenters.entry_label(FILE) == "📄 juego.ffpfsc"
+    """Muestra tamaño y fecha legibles."""
     assert presenters.entry_size_text(FILE) == "2.0 KB"
     assert presenters.entry_size_text(FOLDER) == ""
     assert presenters.modified_text(FILE.modified) == "2026-10-09 15:30"
@@ -31,17 +29,10 @@ def test_parent_path() -> None:
     assert presenters.parent_path("/") == "/"
 
 
-def test_progress_and_results() -> None:
-    """Formatea porcentaje, velocidad y resultados."""
-    job = DownloadJob(FILE, Path("/tmp"), total_bytes=4096, done_bytes=1024)
-    assert presenters.progress_text(job) == "25%  (1.0 KB de 4.0 KB)"
+def test_speed_text() -> None:
+    """Formatea la velocidad y la oculta si es cero."""
     assert presenters.speed_text(0) == ""
     assert presenters.speed_text(2 * 1024 * 1024) == "2.0 MB/s"
-    assert presenters.download_result_text(DownloadResult(True, False, 12, files=3)) == \
-        "✔ 3 archivo(s) en 12 s"
-    assert "reanudar" in presenters.download_result_text(DownloadResult(False, True, 1))
-    failed = DownloadResult(False, False, 1, message="Sin espacio\n\ndetalle")
-    assert presenters.download_result_text(failed) == "✖ Error: Sin espacio"
 
 
 def test_progress_meter_throttles() -> None:
@@ -91,10 +82,8 @@ def test_trust_store(tmp_path: Path) -> None:
     assert TrustStore(tmp_path).known_key("10.0.0.5") == b"\x01" * 32
 
 
-def test_upload_and_delete_texts() -> None:
-    """Formatea el avance de subida y recorta listas largas de borrado."""
-    assert presenters.upload_progress_text(512, 2048) == "25%  (512.0 B de 2.0 KB)"
-    assert presenters.upload_progress_text(0, 0) == "100%  (0.0 B de 0.0 B)"
+def test_delete_texts() -> None:
+    """Recorta listas largas de borrado."""
     paths = [f"/data/homebrew/j{i}" for i in range(10)]
     summary = presenters.delete_summary(paths, limit=3)
     assert summary.splitlines() == ["/data/homebrew/j0", "/data/homebrew/j1",

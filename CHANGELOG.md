@@ -5,6 +5,22 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Cambiado
+- Interfaz rediseñada: barra lateral con navegación, estado de la PS5 (IP, modo del
+  FTP y espacio libre) y selector de tema; tema claro y oscuro que sigue al del
+  sistema; botones, tarjetas, campos y barras con esquinas redondeadas; filas por
+  juego con ficha, estimación, estado y barra de progreso; escala para pantallas HiDPI.
+- Vista PS5 rediseñada: tarjeta de conexión, tarjetas de cada unidad con su espacio
+  libre, ruta con tramos clicables y accesos rápidos, lista de archivos con etiquetas
+  (Juego, Comprimido, Imagen), barra de acciones según la selección y panel de
+  transferencias; contador de transferencias activas en la barra lateral.
+- Diálogos de «Comprimir y reemplazar», subida y emparejamiento con el estilo de la app.
+
+### Añadido
+- Botón «Subir a la PS5» en cada juego convertido y «Subir completados a la PS5»
+  para enviar todos los que aún no están en la consola.
+- La subida omite los archivos que ya están en la PS5 con el mismo tamaño.
+
 ## [1.2.0] - 2026-10-10
 
 ### Añadido

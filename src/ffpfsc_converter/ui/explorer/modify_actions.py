@@ -87,7 +87,7 @@ class ModifyActions:
         target = self._ctl.target
         ids = self.changes.upload(target.host, target.port, files, remote_dir)
         for upload_id, local in zip(ids, files, strict=True):
-            self._ctl.view.transfers.add_row(upload_id, f"{presenters.UPLOAD_ICON} {local.name}")
+            self._ctl.view.transfers.add_row(upload_id, local.name, "upload")
             self._ctl.retry.register_upload(upload_id, local, remote_dir)
         self._ctl.view.set_browsing_enabled(False)
         self._ctl.view.connection.set_state(True, f"Subiendo a {remote_dir}…", busy=True)
@@ -105,8 +105,8 @@ class ModifyActions:
         assert self._ctl.target is not None and self._ctl.download_dir is not None
         entry = entries[0]
         siblings = [e.name for e in self._ctl.entries]
-        self.window = PipelineWindow(self._ctl.view, entry.name, self.pipeline.cancel,
-                                     self.retry_pipeline)
+        self.window = PipelineWindow(self._ctl.view, self._ctl.theme, entry.path,
+                                     (self.pipeline.cancel, self.retry_pipeline))
         self.pipeline.start(entry, self._ctl.target, siblings,
                             self._ctl.download_dir / PIPELINE_WORK_DIR_NAME)
 

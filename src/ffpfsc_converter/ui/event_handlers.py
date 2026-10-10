@@ -19,7 +19,8 @@ from ffpfsc_converter.domain.events import (
     LogMessage,
     QueueFinished,
 )
-from ffpfsc_converter.ui import job_table, presenters
+from ffpfsc_converter.ui import job_presenters as jp
+from ffpfsc_converter.ui import presenters
 from ffpfsc_converter.ui.main_view import MainView
 
 
@@ -55,14 +56,23 @@ class ViewUpdater:
         """
         self._handlers[type(event)](event)
 
+    def _level(self) -> int:
+        """Obtiene el nivel de compresión elegido en la vista.
+
+        Returns:
+            int: Nivel de compresión.
+        """
+        return self._view.options.selected_preset().level
+
     def _on_job_info(self, event: JobInfoReady) -> None:
-        """Muestra el nombre del juego.
+        """Muestra el nombre del juego y su Title ID y versión.
 
         Args:
             event (JobInfoReady): Evento con el trabajo actualizado.
         """
-        text = presenters.game_info_text(event.job.info)
-        self._view.table.set_cell(event.job.id, job_table.TITLE, text)
+        job = event.job
+        meta = jp.game_meta(job.info, presenters.source_display_name(job))
+        self._view.table.set_info(job.id, jp.game_title(job.info), meta)
 
     def _on_job_size(self, event: JobSizeReady) -> None:
         """Muestra el tamaño original del juego.
@@ -70,8 +80,7 @@ class ViewUpdater:
         Args:
             event (JobSizeReady): Evento con el trabajo actualizado.
         """
-        text = presenters.format_size(event.job.size)
-        self._view.table.set_cell(event.job.id, job_table.SIZE, text)
+        self._view.table.set_sizes(event.job.id, jp.size_lines(event.job, self._level()))
 
     def _on_job_estimate(self, event: JobEstimateReady) -> None:
         """Muestra el peso estimado del modo actual y registra todos los modos.
@@ -80,8 +89,7 @@ class ViewUpdater:
             event (JobEstimateReady): Evento con el trabajo actualizado.
         """
         job = event.job
-        level = self._view.options.selected_preset().level
-        self._view.table.set_cell(job.id, job_table.ESTIMATE, presenters.estimate_text(job, level))
+        self._view.table.set_sizes(job.id, jp.size_lines(job, self._level()))
         self._view.write_log(presenters.estimates_summary(job, PRESETS))
 
     def _on_job_started(self, event: JobStarted) -> None:
@@ -91,21 +99,19 @@ class ViewUpdater:
             event (JobStarted): Evento con el trabajo y el comando.
         """
         name = event.job.source.name
-        self._view.table.set_cell(event.job.id, job_table.STATUS, presenters.RUNNING_TEXT)
-        self._view.set_progress(0)
+        self._view.table.set_status(event.job.id, "run", presenters.RUNNING_TEXT, "", 0)
         self._view.write_log(f"\n=== {name} ===\n$ {event.command}")
         self._view.set_status(f"Convirtiendo {name}…")
 
     def _on_job_progress(self, event: JobProgress) -> None:
-        """Actualiza la barra, el estado del trabajo y la línea de estado.
+        """Actualiza la píldora, la barra y el tiempo restante de la fila.
 
         Args:
             event (JobProgress): Evento con el progreso de MkPFS.
         """
-        text = presenters.progress_text(event.progress, event.eta_seconds)
-        self._view.set_progress(event.progress.percent)
-        self._view.table.set_cell(event.job.id, job_table.STATUS, text)
-        self._view.set_status(f"{event.job.source.name}: {text}")
+        kind, label, detail = jp.progress_status(event.progress, event.eta_seconds)
+        self._view.table.set_status(event.job.id, kind, label, detail, event.progress.percent)
+        self._view.set_status(f"{event.job.source.name}: {label}")
 
     def _on_log_message(self, event: LogMessage) -> None:
         """Agrega una línea al registro.
@@ -121,10 +127,8 @@ class ViewUpdater:
         Args:
             event (JobFinished): Evento con el trabajo y su resultado.
         """
-        text = presenters.result_text(event.job, event.result)
-        self._view.table.set_cell(event.job.id, job_table.STATUS, text)
-        if event.result.succeeded:
-            self._view.set_progress(100)
+        kind, label, detail = jp.result_status(event.job, event.result)
+        self._view.table.set_status(event.job.id, kind, label, detail)
 
     def _on_queue_finished(self, event: QueueFinished) -> None:
         """Rehabilita los botones y muestra cómo terminó la cola.

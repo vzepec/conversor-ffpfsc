@@ -25,12 +25,14 @@ from ffpfsc_converter.ui.explorer import presenters
 from ffpfsc_converter.ui.explorer.modify_actions import ModifyActions
 from ffpfsc_converter.ui.explorer.retry_actions import RetryActions
 from ffpfsc_converter.ui.explorer.view import ExplorerCallbacks, ExplorerView
+from ffpfsc_converter.ui.theme import ThemeManager
 
 
 class ExplorerController:
     """Coordina la pestaña PS5 con el explorador, el lanzador del FTP y las descargas.
 
     Attributes:
+        theme (ThemeManager): Tema (para los diálogos).
         view (ExplorerView): Vista de la pestaña.
         launcher (FtpLauncher): Inicia el FTP mediante el helper de ps5upload.
         target (ConsoleTarget | None): Consola conectada, o ``None``.
@@ -47,14 +49,16 @@ class ExplorerController:
         storage (StorageMonitor): Espacio libre de las unidades de la PS5.
     """
 
-    def __init__(self, parent: tk.Misc, emit: EventSink) -> None:
+    def __init__(self, parent: tk.Misc, theme: ThemeManager, emit: EventSink) -> None:
         """Crea la vista y los servicios, y restaura los últimos ajustes.
 
         Args:
-            parent (tk.Misc): Pestaña donde se construye la vista.
+            parent (tk.Misc): Contenedor donde se construye la vista.
+            theme (ThemeManager): Tema.
             emit (EventSink): Cola de eventos de la ventana principal.
         """
-        self.view = ExplorerView(parent, ExplorerCallbacks(
+        self.theme = theme
+        self.view = ExplorerView(parent, theme, ExplorerCallbacks(
             on_connect=self.connect, on_disconnect=self.disconnect,
             on_open_entry=self.open_entry, on_go_up=self.go_up, on_go_to=self.go_to,
             on_refresh=self.refresh, on_download=self.download,

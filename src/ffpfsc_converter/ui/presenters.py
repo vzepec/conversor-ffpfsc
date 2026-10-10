@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
 from urllib.parse import unquote, urlparse
 
 from ffpfsc_converter import __version__
@@ -10,13 +12,10 @@ from ffpfsc_converter.config import APP_TITLE
 from ffpfsc_converter.domain.models import (
     CompressionPreset,
     ConversionJob,
-    ConversionResult,
     GameInfo,
-    ProgressUpdate,
 )
-from ffpfsc_converter.formatting import PHASE_NAMES, format_eta, format_size
+from ffpfsc_converter.formatting import format_size
 
-QUEUED_TEXT = "En cola"
 RUNNING_TEXT = "Convirtiendo…"
 PENDING_TEXT = "analizando…"
 
@@ -140,40 +139,6 @@ def estimates_summary(job: ConversionJob, presets: Iterable[CompressionPreset]) 
     return f"Estimación {job.source.name} ({format_size(job.size)}): {detail}"
 
 
-def progress_text(progress: ProgressUpdate, eta: float | None = None) -> str:
-    """Formatea el progreso de MkPFS con la fase en español y el tiempo restante.
-
-    Args:
-        progress (ProgressUpdate): Progreso informado por MkPFS.
-        eta (float | None): Segundos restantes estimados de la fase.
-
-    Returns:
-        str: Por ejemplo ``"Comprimiendo: 37%  —  512.3 MB/s  —  quedan ≈ 2 min 10 s"``.
-    """
-    phase = PHASE_NAMES.get(progress.phase, progress.phase)
-    parts = [f"{phase}: {progress.percent}%", progress.speed or "", format_eta(eta)]
-    return "  —  ".join(p for p in parts if p)
-
-
-def result_text(job: ConversionJob, result: ConversionResult) -> str:
-    """Formatea el resultado final de una conversión.
-
-    Args:
-        job (ConversionJob): Trabajo terminado.
-        result (ConversionResult): Resultado de la conversión.
-
-    Returns:
-        str: Tamaño, ahorro y duración si tuvo éxito; motivo si no.
-    """
-    if result.succeeded:
-        saved = savings_text(job.size, result.output_size)
-        minutes = result.elapsed_seconds / 60
-        return f"✔ {format_size(result.output_size)} ({saved}) en {minutes:.1f} min"
-    if result.cancelled:
-        return "✖ Cancelado"
-    return f"✖ Error ({result.message})"
-
-
 def parse_dropped_item(item: str) -> Path:
     """Convierte un elemento soltado en la ventana en una ruta.
 
@@ -186,3 +151,85 @@ def parse_dropped_item(item: str) -> Path:
     if item.startswith("file://"):
         return Path(unquote(urlparse(item).path))
     return Path(item)
+
+
+@dataclass(frozen=True)
+class ConnectionCard:
+    """Contenido de la tarjeta de estado de la PS5 en la barra lateral.
+
+    Attributes:
+        state (str): ``"on"``, ``"busy"`` u ``"off"`` (color del punto).
+        title (str): Texto principal.
+        lines (tuple[str, ...]): Líneas de detalle.
+    """
+
+    state: str
+    title: str
+    lines: tuple[str, ...]
+
+
+def connection_card(status: ConsoleStatus) -> ConnectionCard:
+    """Resume el estado de la conexión con la PS5 para la barra lateral.
+
+    Args:
+        status (ConsoleStatus): Estado de la conexión.
+
+    Returns:
+        ConnectionCard: Estado, título y detalle.
+    """
+    if status.connected:
+        first = status.text if status.busy else f"{status.host} · solo lectura"
+        lines = tuple(x for x in (first, status.free_text) if x)
+        return ConnectionCard("busy" if status.busy else "on", "PS5 conectada", lines)
+    if status.busy:
+        return ConnectionCard("busy", "Conectando…", (status.host,))
+    return ConnectionCard("off", "Sin conexión", ("Vincúlala en la sección PS5",))
+
+
+@dataclass(frozen=True)
+class ConsoleStatus:
+    """Estado de la conexión con la PS5 que muestran la barra lateral y la vista PS5.
+
+    Attributes:
+        connected (bool): ``True`` si hay sesión abierta.
+        text (str): Último mensaje de estado (``"Subiendo a /data/homebrew…"``).
+        busy (bool): ``True`` mientras se conecta o hay una operación que escribe.
+        host (str): IP de la PS5.
+        free_text (str): Espacio libre del disco interno (vacío si no se conoce).
+    """
+
+    connected: bool
+    text: str
+    busy: bool
+    host: str
+    free_text: str = ""
+
+
+class Pill(NamedTuple):
+    """Píldora de estado.
+
+    Attributes:
+        kind (str): ``"wait"``, ``"run"``, ``"ok"``, ``"warn"`` o ``"bad"``.
+        label (str): Texto.
+    """
+
+    kind: str
+    label: str
+
+
+def connection_pill(status: ConsoleStatus) -> Pill | None:
+    """Elige la píldora de la tarjeta de conexión de la vista PS5.
+
+    Args:
+        status (ConsoleStatus): Estado de la conexión.
+
+    Returns:
+        Pill | None: Solo lectura o la operación en curso; ``None`` si no hay nada que decir.
+    """
+    if status.busy:
+        return Pill("run", status.text.rstrip("."))
+    if status.connected:
+        return Pill("wait", "FTP en solo lectura")
+    if not status.host:
+        return Pill("wait", "Escribe la IP de la PS5")
+    return None

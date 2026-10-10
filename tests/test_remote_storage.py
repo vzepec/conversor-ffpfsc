@@ -116,13 +116,3 @@ def test_volume_names() -> None:
     assert presenters.volume_name(volume("/mnt/usb1")) == "USB 2"
     assert presenters.volume_name(volume("/mnt/ext0", "/dev/nvme0")) == "M.2"
     assert presenters.volume_name(volume("/mnt/ext1")) == "USB ampliado 2"
-
-
-def test_storage_text_puts_internal_first() -> None:
-    """Resume cada unidad con el interno primero; sin datos explica el motivo."""
-    usb = StorageVolume("/mnt/usb0", "/dev/da0", 64 * GB, 58 * GB)
-    internal = StorageVolume("/data", "/dev/ssd0", 825 * GB, 412 * GB)
-    assert presenters.storage_text([usb, internal]) == (
-        "Espacio libre: Interno 412.0 GB de 825.0 GB · USB 1 58.0 GB de 64.0 GB")
-    assert presenters.storage_text([], "no se pudo consultar") == (
-        "Espacio libre: no se pudo consultar.")
