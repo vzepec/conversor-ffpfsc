@@ -1,4 +1,4 @@
-"""Textos de la pestaña PS5. Funciones puras, sin tkinter (testeables)."""
+"""Textos de la vista PS5. Funciones puras, sin tkinter (testeables)."""
 from __future__ import annotations
 
 import posixpath

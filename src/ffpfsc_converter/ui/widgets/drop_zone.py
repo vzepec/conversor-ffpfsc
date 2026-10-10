@@ -6,11 +6,15 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from tkinter import ttk
 
+from PIL import ImageTk
+
 from ffpfsc_converter.ui.dnd import register_drop_target
 from ffpfsc_converter.ui.theme import Palette, ThemeManager
+from ffpfsc_converter.ui.theme.shapes import render_dashed_card
 
 _HEIGHT = 92
 _RADIUS = 12
+_REDRAW_DELAY_MS = 40
 
 
 class DropZone(tk.Canvas):
@@ -45,9 +49,12 @@ class DropZone(tk.Canvas):
         texts.pack(side="left", padx=m.px(14))
         ttk.Label(texts, text=title, style="CardHeading.TLabel").pack(anchor="w")
         ttk.Label(texts, text=subtitle, style="CardMuted.TLabel").pack(anchor="w")
+        self._frame = self.create_image(0, 0, anchor="nw")
+        self._image: ImageTk.PhotoImage | None = None  # Tk no guarda referencia a la imagen
         self._body = self.create_window(0, 0, window=body, anchor="nw")
         self._frame_body = body
-        self.bind("<Configure>", lambda _e: self._draw())
+        self._pending: str | None = None
+        self.bind("<Configure>", lambda _e: self._schedule())
         theme.on_change(lambda _p: self._draw())
         for widget in (self, body, texts, badge, *texts.winfo_children()):
             register_drop_target(widget, on_paths)
@@ -55,31 +62,25 @@ class DropZone(tk.Canvas):
                 widget.bind("<Button-1>", lambda _e: buttons[0][1]())
                 widget.configure(cursor="hand2")
 
+    def _schedule(self) -> None:
+        """Agrupa los redibujos mientras cambia el tamaño (dibujar el borde cuesta unos ms)."""
+        if self._pending is not None:
+            self.after_cancel(self._pending)
+        self._pending = self.after(_REDRAW_DELAY_MS, self._draw)
+
     def _draw(self) -> None:
-        """Dibuja el fondo y el borde punteado al tamaño actual."""
+        """Dibuja el fondo con borde punteado suavizado al tamaño actual."""
+        self._pending = None
         p: Palette = self._theme.palette
         m = self._theme.metrics
         w, h = self.winfo_width(), self.winfo_height()
         self.configure(background=p.bg)
-        self.delete("frame")
-        r = m.px(_RADIUS)
-        self._rounded(2, 2, w - 2, h - 2, r, fill=p.surface, outline=p.line, dash=(5, 4))
+        if w > 1 and h > 1:
+            image = render_dashed_card((w, h), m.px(_RADIUS), p.surface, (p.line, m.px(1.5)),
+                                       (m.px(6), m.px(4)))
+            self._image = ImageTk.PhotoImage(image, master=self)
+            self.itemconfigure(self._frame, image=self._image)
         pad = m.px(16)
         self.coords(self._body, pad, (h - self._frame_body.winfo_reqheight()) // 2)
         self.itemconfigure(self._body, width=max(1, w - 2 * pad))
         self.tag_raise(self._body)
-
-    def _rounded(self, x0: int, y0: int, x1: int, y1: int, r: int, **opts: object) -> None:
-        """Dibuja un rectángulo de esquinas redondeadas (polígono suavizado).
-
-        Args:
-            x0 (int): Borde izquierdo.
-            y0 (int): Borde superior.
-            x1 (int): Borde derecho.
-            y1 (int): Borde inferior.
-            r (int): Radio de las esquinas.
-            **opts (object): Opciones del polígono (relleno, borde, punteado).
-        """
-        points = [x0 + r, y0, x1 - r, y0, x1, y0, x1, y0 + r, x1, y1 - r, x1, y1,
-                  x1 - r, y1, x0 + r, y1, x0, y1, x0, y1 - r, x0, y0 + r, x0, y0]
-        self.create_polygon(points, smooth=True, tags="frame", width=1.5, **opts)

@@ -5,9 +5,14 @@ import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
 
+from PIL import ImageTk
+
+from ffpfsc_converter.domain.update import ReleaseInfo
+from ffpfsc_converter.infrastructure.system import open_url
 from ffpfsc_converter.ui.presenters import ConnectionCard, ConsoleStatus, connection_card
-from ffpfsc_converter.ui.theme import SIDEBAR_WIDTH, Palette, ThemeManager
-from ffpfsc_converter.ui.widgets.basics import Segmented, StatusDot
+from ffpfsc_converter.ui.theme import SIDEBAR_WIDTH, ThemeManager
+from ffpfsc_converter.ui.theme.app_icon import render_app_icon
+from ffpfsc_converter.ui.widgets.basics import Segmented, StatusDot, icon_button
 
 _THEME_OPTIONS = (("system", "Sistema"), ("light", "Claro"), ("dark", "Oscuro"))
 
@@ -90,6 +95,7 @@ class AppShell(ttk.Frame):
         self._brand(version)
         self._nav = ttk.Frame(self._side, style="Side.TFrame")
         self._nav.pack(fill="x", pady=(m.px(22), 0))
+        self._update: ttk.Button | None = None
         self._theme_selector()
         self._connection_card()
 
@@ -145,7 +151,7 @@ class AppShell(ttk.Frame):
             label.configure(text=text)
 
     def _brand(self, version: str) -> None:
-        """Dibuja el logo, el nombre y la versión.
+        """Muestra el icono, el nombre y la versión.
 
         Args:
             version (str): Versión de la app.
@@ -153,31 +159,25 @@ class AppShell(ttk.Frame):
         m = self._theme.metrics
         row = ttk.Frame(self._side, style="Side.TFrame")
         row.pack(fill="x")
-        size = m.px(30)
-        self._mark = tk.Canvas(row, width=size, height=size, highlightthickness=0, bd=0)
-        self._mark.pack(side="left")
+        self._mark = ImageTk.PhotoImage(render_app_icon(m.px(30)), master=self)
+        ttk.Label(row, image=self._mark, style="Side.TLabel").pack(side="left")
         texts = ttk.Frame(row, style="Side.TFrame")
         texts.pack(side="left", padx=(m.px(10), 0))
         ttk.Label(texts, text="Conversor FFPFSC", style="SideBold.TLabel").pack(anchor="w")
         ttk.Label(texts, text=version, style="SideSmall.TLabel").pack(anchor="w")
-        self._paint_mark(self._theme.palette)
-        self._theme.on_change(self._paint_mark)
 
-    def _paint_mark(self, p: Palette) -> None:
-        """Pinta el logo: un cuadrado de acento con tres barras (datos comprimidos).
+    def show_update(self, release: ReleaseInfo) -> None:
+        """Muestra el botón verde para descargar una versión nueva.
 
         Args:
-            p (Palette): Paleta actual.
+            release (ReleaseInfo): Versión disponible (el botón abre su página).
         """
-        c, s = self._mark, int(self._mark.cget("width"))
-        c.delete("all")
-        c.configure(background=p.side)
-        c.create_rectangle(0, 0, s, s, fill=p.accent, width=0)
-        bar = max(2, s // 10)
-        for i, (width, color) in enumerate(((0.5, "#ffffff"), (0.36, "#ffffff"),
-                                            (0.22, "#c9dbff"))):
-            y = s * 0.3 + i * bar * 2.1
-            c.create_rectangle(s * 0.24, y, s * 0.24 + s * width, y + bar, fill=color, width=0)
+        if self._update is None:
+            self._update = icon_button(self._side, self._theme, "", "download",
+                                       lambda: None, style="Side.Success.TButton", role="ok")
+            self._update.pack(side="bottom", fill="x", pady=(0, self._theme.metrics.px(10)))
+        self._update.configure(text=f" Actualizar a v{release.version}",
+                               command=lambda: open_url(release.url))
 
     def _theme_selector(self) -> None:
         """Crea el selector Sistema / Claro / Oscuro al pie de la barra lateral."""

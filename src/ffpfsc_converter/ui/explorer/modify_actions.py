@@ -19,7 +19,7 @@ if TYPE_CHECKING:  # evita la importación circular con el controlador
 
 
 class ModifyActions:
-    """Coordina las operaciones de escritura en la PS5 desde la pestaña.
+    """Coordina las operaciones de escritura en la PS5 desde la vista.
 
     Attributes:
         changes (RemoteChanges): Eliminar y subir archivos.
@@ -32,7 +32,7 @@ class ModifyActions:
         """Crea los servicios de escritura.
 
         Args:
-            controller (ExplorerController): Controlador de la pestaña.
+            controller (ExplorerController): Controlador de la vista.
             emit (EventSink): Cola de eventos de la ventana principal.
             access (ConsoleAccess): Acceso AVA1 a la consola.
         """

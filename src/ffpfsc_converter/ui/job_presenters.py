@@ -1,4 +1,4 @@
-"""Textos de las filas de la pestaña Convertir. Funciones puras (testeables)."""
+"""Textos de las filas de la vista Convertir. Funciones puras (testeables)."""
 from __future__ import annotations
 
 from collections.abc import Iterable

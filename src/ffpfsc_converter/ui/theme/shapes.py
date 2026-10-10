@@ -8,11 +8,14 @@ rápido se redibuja la ventana al cambiar de tema.
 """
 from __future__ import annotations
 
+import itertools
+import math
 from dataclasses import dataclass
 
 from PIL import Image, ImageDraw
 
 _SUPERSAMPLE = 4
+_ARC_STEPS = 16
 
 
 @dataclass(frozen=True)
@@ -94,3 +97,87 @@ def render_circle(diameter: int, fill: str, outline: str | None = None, border: 
     box = (ring * k, ring * k, (ring + diameter) * k - 1, (ring + diameter) * k - 1)
     draw.ellipse(box, fill=fill, outline=outline, width=round(border * k) if outline else 0)
     return image.resize((side, side), Image.Resampling.LANCZOS)
+
+
+def render_dashed_card(size: tuple[int, int], radius: float, fill: str,
+                       outline: tuple[str, float], dash: tuple[float, float]) -> Image.Image:
+    """Dibuja una tarjeta redondeada con borde punteado y suavizado.
+
+    Args:
+        size (tuple[int, int]): Ancho y alto en píxeles reales.
+        radius (float): Radio de las esquinas.
+        fill (str): Color del relleno.
+        outline (tuple[str, float]): Color y grosor del borde.
+        dash (tuple[float, float]): Largo de cada trazo y de cada hueco.
+
+    Returns:
+        Image.Image: Imagen RGBA con las esquinas transparentes.
+    """
+    k = _SUPERSAMPLE
+    color, width = outline
+    image = Image.new("RGBA", (size[0] * k, size[1] * k), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    inset = width * k / 2
+    box = (inset, inset, size[0] * k - 1 - inset, size[1] * k - 1 - inset)
+    draw.rounded_rectangle(box, radius=radius * k, fill=fill)
+    path = _rounded_path(box, radius * k)
+    for segment in _dash_segments(path, dash[0] * k, dash[1] * k):
+        draw.line(segment, fill=color, width=max(1, round(width * k)), joint="curve")
+    return image.resize(size, Image.Resampling.LANCZOS)
+
+
+def _rounded_path(box: tuple[float, float, float, float],
+                  radius: float) -> list[tuple[float, float]]:
+    """Calcula el contorno de un rectángulo redondeado como lista de puntos (horario).
+
+    Args:
+        box (tuple[float, float, float, float]): Bordes izquierdo, superior, derecho e inferior.
+        radius (float): Radio de las esquinas.
+
+    Returns:
+        list[tuple[float, float]]: Puntos del contorno; el último repite el primero.
+    """
+    x0, y0, x1, y1 = box
+    corners = ((x0 + radius, y0 + radius, 180), (x1 - radius, y0 + radius, 270),
+               (x1 - radius, y1 - radius, 0), (x0 + radius, y1 - radius, 90))
+    points = []
+    for cx, cy, start in corners:
+        for step in range(_ARC_STEPS + 1):
+            angle = math.radians(start + 90 * step / _ARC_STEPS)
+            points.append((cx + radius * math.cos(angle), cy + radius * math.sin(angle)))
+    return [*points, points[0]]
+
+
+def _dash_segments(path: list[tuple[float, float]], dash: float,
+                   gap: float) -> list[list[tuple[float, float]]]:
+    """Corta un contorno en trazos y huecos de largo fijo.
+
+    Args:
+        path (list[tuple[float, float]]): Puntos del contorno.
+        dash (float): Largo de cada trazo.
+        gap (float): Largo de cada hueco.
+
+    Returns:
+        list[list[tuple[float, float]]]: Puntos de cada trazo visible.
+    """
+    segments: list[list[tuple[float, float]]] = []
+    current: list[tuple[float, float]] = [path[0]]
+    drawing, left = True, dash
+    for (ax, ay), (bx, by) in itertools.pairwise(path):
+        length = math.hypot(bx - ax, by - ay)
+        done = 0.0
+        while length - done > left:
+            done += left
+            point = (ax + (bx - ax) * done / length, ay + (by - ay) * done / length)
+            if drawing:
+                segments.append([*current, point])
+            current = [point]
+            drawing, left = not drawing, gap if drawing else dash
+        left -= length - done
+        if drawing:
+            current.append((bx, by))
+        else:
+            current = [(bx, by)]
+    if drawing and len(current) > 1:
+        segments.append(current)
+    return segments

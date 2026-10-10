@@ -1,4 +1,4 @@
-"""Aplica en la pestaña PS5 los eventos de borrado, subida y del pipeline."""
+"""Aplica en la vista PS5 los eventos de borrado, subida y del pipeline."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -35,7 +35,7 @@ class ChangesUpdater:
         """Registra los manejadores.
 
         Args:
-            controller (ExplorerController): Controlador de la pestaña.
+            controller (ExplorerController): Controlador de la vista.
         """
         self._ctl = controller
         self.handlers: dict[type, Callable] = {
@@ -95,7 +95,7 @@ class ChangesUpdater:
         self._notify(event.upload_id, event)
 
     def _notify(self, upload_id: str, event: object) -> None:
-        """Reenvía el evento a quien siga esa subida (por ejemplo, la pestaña Convertir).
+        """Reenvía el evento a quien siga esa subida (por ejemplo, la vista Convertir).
 
         Args:
             upload_id (str): Fila de la subida.

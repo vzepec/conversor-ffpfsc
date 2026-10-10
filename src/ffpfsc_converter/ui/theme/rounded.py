@@ -23,6 +23,8 @@ _BUTTON_COLORS: dict[str, tuple[tuple[str | None, str | None], ...]] = {
     "danger": (("surface", "line"), ("bad_soft", "line"), ("bad_soft", "bad"),
                ("surface", "line")),
     "flat": ((None, None), ("surface2", None), ("line", None), (None, None)),
+    "success": (("ok_soft", "ok_soft"), ("ok_soft", "ok"), ("ok_soft", "ok"),
+                ("ok_soft", "ok_soft")),
 }
 _BUTTON_WIDTH, _BUTTON_HEIGHT, _BUTTON_RADIUS = 96, 24, 8
 

@@ -1,4 +1,4 @@
-"""Aplica los eventos del explorador de la PS5 sobre la pestaña."""
+"""Aplica los eventos del explorador de la PS5 sobre la vista."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -32,7 +32,7 @@ class ExplorerUpdater:
         """Registra los manejadores.
 
         Args:
-            controller (ExplorerController): Controlador de la pestaña.
+            controller (ExplorerController): Controlador de la vista.
         """
         self._ctl = controller
         self._view = controller.view
@@ -54,7 +54,7 @@ class ExplorerUpdater:
         }
 
     def handles(self, event: object) -> bool:
-        """Indica si el evento pertenece a la pestaña PS5.
+        """Indica si el evento pertenece a la vista PS5.
 
         Args:
             event (object): Evento recibido.
@@ -68,7 +68,7 @@ class ExplorerUpdater:
         """Ejecuta el manejador del evento.
 
         Args:
-            event (object): Evento de la pestaña PS5.
+            event (object): Evento de la vista PS5.
         """
         self._handlers[type(event)](event)
 

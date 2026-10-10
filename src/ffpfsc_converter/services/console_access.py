@@ -32,7 +32,7 @@ class NotPairedError(ConverterError):
     def __init__(self) -> None:
         """Crea el error con un mensaje para el usuario."""
         super().__init__("La app no está emparejada con esta PS5. "
-                         "Pulsa «Conectar» en la pestaña PS5 para emparejarla.")
+                         "Pulsa «Conectar» en la vista PS5 para emparejarla.")
 
 
 class ConsoleAccess:

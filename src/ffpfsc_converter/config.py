@@ -8,6 +8,17 @@ from __future__ import annotations
 from ffpfsc_converter.domain.models import CompressionPreset
 
 APP_TITLE = "Conversor FFPFSC (PS5)"
+#: Nombre de la clase de la ventana en Linux; Tk lo publica como ``Conversor-ffpfsc``
+#: (con mayúscula), que es el ``StartupWMClass`` del acceso directo ``.desktop``.
+WINDOW_CLASS = "conversor-ffpfsc"
+#: Identificador de la app en Windows: agrupa la ventana con su icono en la barra de tareas.
+WINDOWS_APP_ID = "vzepec.ConversorFFPFSC"
+#: Repositorio de GitHub donde se publican las versiones.
+GITHUB_REPOSITORY = "vzepec/conversor-ffpfsc"
+#: Consulta de la última versión publicada (API pública de GitHub, sin credenciales).
+LATEST_RELEASE_URL = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/latest"
+#: Segundos de espera de la consulta de versión antes de darla por fallida.
+UPDATE_CHECK_TIMEOUT_SECONDS = 6
 
 # --------------------------------------------------------------- compresión
 #: zlib-ng es el backend seguro para el descompresor de la PS5 (isal genera

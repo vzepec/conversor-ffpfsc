@@ -53,7 +53,7 @@ foreach ($Folder in $Folders) {
     $Link.TargetPath = $VenvPythonw
     $Link.Arguments = "-m ffpfsc_converter"
     $Link.WorkingDirectory = $AppDir
-    $Link.IconLocation = "$env:SystemRoot\System32\shell32.dll,8"
+    $Link.IconLocation = "$(Join-Path $AppDir 'assets\icon.ico'),0"
     $Link.Description = "Convierte juegos de PS5 a .ffpfsc"
     $Link.Save()
 }

@@ -1,4 +1,4 @@
-"""Controlador de la pestaña PS5: traduce acciones del usuario en llamadas a servicios."""
+"""Controlador de la vista PS5: traduce acciones del usuario en llamadas a servicios."""
 from __future__ import annotations
 
 import tkinter as tk
@@ -29,11 +29,11 @@ from ffpfsc_converter.ui.theme import ThemeManager
 
 
 class ExplorerController:
-    """Coordina la pestaña PS5 con el explorador, el lanzador del FTP y las descargas.
+    """Coordina la vista PS5 con el explorador, el lanzador del FTP y las descargas.
 
     Attributes:
         theme (ThemeManager): Tema (para los diálogos).
-        view (ExplorerView): Vista de la pestaña.
+        view (ExplorerView): Vista de la vista.
         launcher (FtpLauncher): Inicia el FTP mediante el helper de ps5upload.
         target (ConsoleTarget | None): Consola conectada, o ``None``.
         path (str): Carpeta remota abierta.
@@ -41,7 +41,7 @@ class ExplorerController:
         modify (ModifyActions): Eliminar, subir y comprimir y reemplazar.
         retry (RetryActions): Reintento manual de transferencias fallidas.
         upload_listeners (dict[str, Callable[[object], None]]): Fila de subida → función
-            que también recibe sus eventos (la pestaña Convertir sigue así sus subidas).
+            que también recibe sus eventos (la vista Convertir sigue así sus subidas).
         pending_on_connect (list[Callable[[], None]]): Acciones a ejecutar al conectar.
         ftp_restarted (bool): ``True`` si ya se reinició el FTP por credenciales rechazadas.
         browser (RemoteBrowser): Navegación por la PS5.

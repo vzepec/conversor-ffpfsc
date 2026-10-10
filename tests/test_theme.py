@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from ffpfsc_converter.ui.theme import DARK, LIGHT, TILE_COLORS, resolve_palette
+from ffpfsc_converter.ui.theme.app_icon import WINDOW_ICON_SIZES, render_app_icon
 from ffpfsc_converter.ui.theme.fonts import pick_family
 from ffpfsc_converter.ui.theme.icon_shapes import SHAPES
 from ffpfsc_converter.ui.theme.icons import render_icon, render_switch
 from ffpfsc_converter.ui.theme.metrics import Metrics
 from ffpfsc_converter.ui.theme.rounded import SPECS
-from ffpfsc_converter.ui.theme.shapes import RoundSpec, render_circle, render_rounded
+from ffpfsc_converter.ui.theme.shapes import (
+    RoundSpec,
+    render_circle,
+    render_dashed_card,
+    render_rounded,
+)
 from ffpfsc_converter.ui.widgets.basics import initials, tile_color
 
 
@@ -85,3 +91,19 @@ def test_render_circle_is_antialiased() -> None:
     assert (low, high) == (0, 255) and any(alphas[1:255])  # borde con transparencia parcial
     assert image.getpixel((10, 10)) == (255, 0, 0, 255)
     assert render_circle(20, "#ff0000", halo=(4, "#00ff00")).size == (28, 28)
+
+
+def test_dashed_card_alternates_dashes_and_gaps() -> None:
+    """El borde punteado deja huecos y las esquinas quedan transparentes."""
+    image = render_dashed_card((200, 60), 12, "#000000", ("#ffffff", 1.5), (6, 4))
+    assert image.size == (200, 60)
+    assert image.getpixel((0, 0))[3] == 0
+    top_edge = [image.getpixel((x, 0))[:3] for x in range(20, 180)]
+    assert (255, 255, 255) in top_edge and any(c[0] < 128 for c in top_edge)
+
+
+def test_app_icon_sizes() -> None:
+    """Dibuja el icono a cada tamaño con las esquinas transparentes."""
+    for size in WINDOW_ICON_SIZES:
+        icon = render_app_icon(size)
+        assert icon.size == (size, size) and icon.getpixel((0, 0))[3] < 8  # resto del suavizado

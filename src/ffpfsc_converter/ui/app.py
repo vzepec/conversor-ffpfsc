@@ -15,21 +15,23 @@ from ffpfsc_converter.config import PRESETS
 from ffpfsc_converter.domain.events import Event
 from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
 from ffpfsc_converter.domain.remote_events import RemoteEvent
+from ffpfsc_converter.domain.update import UpdateAvailable
 from ffpfsc_converter.errors import ConverterError
-from ffpfsc_converter.infrastructure.system import enable_dpi_awareness, open_in_file_manager
+from ffpfsc_converter.infrastructure.system import open_in_file_manager
 from ffpfsc_converter.services.analysis import start_analysis
 from ffpfsc_converter.services.conversion import ConversionRunner
 from ffpfsc_converter.services.discovery import create_job, output_path_for
 from ffpfsc_converter.services.preflight import check_free_space
+from ffpfsc_converter.services.update_check import start_update_check
 from ffpfsc_converter.ui import dialogs, presenters, theme
 from ffpfsc_converter.ui import job_presenters as jp
 from ffpfsc_converter.ui.convert_upload import ConvertedUploader
-from ffpfsc_converter.ui.dnd import create_root
 from ffpfsc_converter.ui.event_handlers import ViewUpdater
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
 from ffpfsc_converter.ui.explorer.updater import ExplorerUpdater
 from ffpfsc_converter.ui.main_view import MainView, ViewCallbacks
 from ffpfsc_converter.ui.shell import AppShell
+from ffpfsc_converter.ui.window import create_window
 
 _ESTIMATE_LEVELS = sorted({p.level for p in PRESETS})
 
@@ -43,13 +45,8 @@ class MainWindow:
         Args:
             initial_paths (Iterable[Path]): Rutas recibidas por línea de comandos.
         """
-        enable_dpi_awareness()
-        self.root = create_root()
-        self.root.title(presenters.window_title())
-        self.theme = theme.ThemeManager(self.root)
-        px = self.theme.metrics.px
-        self.root.geometry("{}x{}".format(*map(px, theme.WINDOW_SIZE)))
-        self.root.minsize(*map(px, theme.WINDOW_MIN_SIZE))
+        self._window = create_window()
+        self.root, self.theme = self._window.root, self._window.theme
 
         self._jobs: list[ConversionJob] = []
         self._events: queue.Queue[Event | RemoteEvent] = queue.Queue()
@@ -73,6 +70,7 @@ class MainWindow:
         self.root.after(theme.EVENT_POLL_MS, self._poll_events)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.add_paths(initial_paths)
+        start_update_check(self._events.put)
 
     def _callbacks(self) -> ViewCallbacks:
         """Reúne las acciones de la vista Convertir.
@@ -205,6 +203,8 @@ class MainWindow:
                 event = self._events.get_nowait()
                 if self._explorer_updater.handles(event):
                     self._explorer_updater.handle(event)
+                elif isinstance(event, UpdateAvailable):
+                    self._shell.show_update(event.release)
                 else:
                     self._updater.handle(event)
                     self._refresh_queue()

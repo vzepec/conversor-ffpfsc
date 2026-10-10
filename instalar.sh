@@ -29,7 +29,8 @@ Type=Application
 Name=Conversor FFPFSC
 Comment=Convierte juegos de PS5 a .ffpfsc
 Exec=\"$APP_DIR/abrir.sh\" %F
-Icon=drive-harddisk
+Icon=$APP_DIR/assets/icon.png
+StartupWMClass=Conversor-ffpfsc
 Terminal=false
 Categories=Utility;"
 

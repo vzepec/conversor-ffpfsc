@@ -24,6 +24,7 @@ BUTTONS = {
     "Ghost.TButton": ("ghost", "text", "body", False),
     "Danger.TButton": ("danger", "bad", "body", False),
     "Flat.TButton": ("flat", "muted", "body", False),
+    "Success.TButton": ("success", "ok", "body_bold", False),
     "Small.TButton": ("btn", "text", "small", True),
     "SmallAccent.TButton": ("accent", "accent_ink", "small_bold", True),
     "SmallGhost.TButton": ("ghost", "text", "small", True),

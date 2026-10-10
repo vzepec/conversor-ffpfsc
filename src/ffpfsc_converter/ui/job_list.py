@@ -1,4 +1,4 @@
-"""Lista de juegos de la pestaña Convertir: una fila por juego.
+"""Lista de juegos de la vista Convertir: una fila por juego.
 
 Cada fila muestra la ficha con iniciales, nombre y datos del juego, tamaño y
 estimación, una píldora de estado con barra de progreso y, cuando corresponde,
