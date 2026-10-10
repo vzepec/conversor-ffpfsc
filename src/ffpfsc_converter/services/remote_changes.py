@@ -190,6 +190,9 @@ class RemoteChanges:
             remote_dir (str): Carpeta remota.
         """
         final = join_remote(remote_dir, local.name)
+        if self._is_already_uploaded(target, local, final):
+            self._emit(UploadFinished(upload_id, True, f"{final} (ya estaba en la PS5)"))
+            return
 
         def on_retry(attempt: int, max_attempts: int, exc: BaseException) -> None:
             """Avisa que se reintentará la subida.
@@ -209,3 +212,24 @@ class RemoteChanges:
         publish_with_retries(self._factory, target, part_path(final), final, size,
                              self._cancel.is_set, on_retry)
         self._emit(UploadFinished(upload_id, True, final))
+
+    def _is_already_uploaded(self, target: ConsoleTarget, local: Path, final: str) -> bool:
+        """Comprueba si el archivo definitivo ya está en la PS5 con el mismo tamaño.
+
+        Evita volver a enviar decenas de GB cuando el juego ya se subió antes
+        (por ejemplo, al pulsar «Subir completados a la PS5» dos veces).
+
+        Args:
+            target (ConsoleTarget): FTP con escritura.
+            local (Path): Archivo local.
+            final (str): Ruta definitiva en la PS5.
+
+        Returns:
+            bool: ``True`` si ya existe un archivo del mismo tamaño.
+        """
+        client = self._factory(target)
+        try:
+            client.connect()
+            return client.size(final) == local.stat().st_size
+        finally:
+            client.close()

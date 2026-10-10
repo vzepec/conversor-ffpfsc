@@ -52,6 +52,23 @@ def test_upload_is_verified_and_restores_readonly(writable_ftp: int, ftp_root: P
     assert isinstance(events[-1], FtpReady) and console.modes == [True, False]
 
 
+def test_upload_skips_file_already_on_console(writable_ftp: int, ftp_root: Path,
+                                             tmp_path: Path) -> None:
+    """No vuelve a subir un archivo que ya está en la PS5 con el mismo tamaño."""
+    local = tmp_path / "listo.ffpfsc"
+    local.write_bytes(b"L" * 5_000)
+    (ftp_root / "data" / "homebrew" / "listo.ffpfsc").write_bytes(b"L" * 5_000)
+    console = FakeConsole(ftp_root, writable_ftp, usable=10**9)
+    events: list[object] = []
+    changes = RemoteChanges(events.append, console)  # type: ignore[arg-type]
+    ids = changes.upload("ps5", writable_ftp, [local], "/data/homebrew")
+    while changes.busy:
+        pass
+    message = "/data/homebrew/listo.ffpfsc (ya estaba en la PS5)"
+    assert UploadFinished(ids[0], True, message) in events
+    assert not any(isinstance(e, UploadProgress) for e in events)
+
+
 def test_upload_resumes_existing_part(writable_ftp: int, ftp_root: Path, tmp_path: Path) -> None:
     """Una subida cortada continúa desde la parte que ya está en la PS5."""
     local = tmp_path / "grande.ffpfsc"
