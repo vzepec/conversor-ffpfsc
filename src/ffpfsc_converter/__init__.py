@@ -4,4 +4,4 @@ Interfaz gráfica sobre MkPFS (https://github.com/PSBrew/MkPFS), configurada
 para máxima velocidad usando todos los núcleos de la CPU.
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"

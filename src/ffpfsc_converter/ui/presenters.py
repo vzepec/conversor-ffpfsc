@@ -28,7 +28,7 @@ def version_text(version: str = __version__) -> str:
         version (str): Versión en formato SemVer; por defecto, la instalada.
 
     Returns:
-        str: Versión con prefijo, por ejemplo ``"v1.1.0"``.
+        str: Versión con prefijo, por ejemplo ``"v1.2.0"``.
     """
     return f"v{version}"
 
@@ -40,7 +40,7 @@ def window_title(version: str = __version__) -> str:
         version (str): Versión en formato SemVer; por defecto, la instalada.
 
     Returns:
-        str: Por ejemplo ``"Conversor FFPFSC (PS5) — v1.1.0"``.
+        str: Por ejemplo ``"Conversor FFPFSC (PS5) — v1.2.0"``.
     """
     return f"{APP_TITLE} — {version_text(version)}"
 
