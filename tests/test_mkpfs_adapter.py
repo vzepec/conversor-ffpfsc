@@ -25,19 +25,21 @@ def test_split_lines_handles_carriage_returns_across_chunks() -> None:
     assert list(split_lines(chunks)) == ["[1] 1% scan", "[1] 2% scan", "hola", "fin"]
 
 
-def test_build_command_for_folder(game_folder: Path) -> None:
+def test_build_command_for_folder(game_folder: Path, tmp_path: Path) -> None:
     """Arma el comando de carpeta con todas las opciones."""
     root = game_folder / "PPSA00000-app"
-    job = ConversionJob(game_folder, root, Path("/out/x.ffpfsc"))
+    output = tmp_path / "out" / "x.ffpfsc"
+    job = ConversionJob(game_folder, root, output)
     cmd = build_pack_command(job, ConversionOptions(6, 4, False), python_executable="py")
     assert cmd[:6] == ["py", "-u", "-m", "mkpfs", "pack", "folder"]
     assert cmd[cmd.index("--compression-level") + 1] == "6"
     assert cmd[cmd.index("--cpu-count") + 1] == "4"
     assert cmd[cmd.index("--compression-backend") + 1] == "zlib-ng"
-    assert cmd[cmd.index("--temp-folder") + 1] == "/out"
+    # Las rutas se comparan con str() del Path: en Windows llevan "\", en Linux "/".
+    assert cmd[cmd.index("--temp-folder") + 1] == str(output.parent)
     assert "--require-game-files" in cmd
     assert "--verify-structure" in cmd
-    assert cmd[-2:] == [str(root), "/out/x.ffpfsc"]
+    assert cmd[-2:] == [str(root), str(output)]
 
 
 def test_build_command_for_image_with_full_verify(tmp_path: Path) -> None:
