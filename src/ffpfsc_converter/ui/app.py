@@ -10,10 +10,12 @@ from __future__ import annotations
 import queue
 from collections.abc import Iterable
 from pathlib import Path
+from tkinter import ttk
 
 from ffpfsc_converter.config import APP_TITLE, PRESETS
 from ffpfsc_converter.domain.events import Event
 from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
+from ffpfsc_converter.domain.remote_events import RemoteEvent
 from ffpfsc_converter.errors import ConverterError
 from ffpfsc_converter.infrastructure.system import open_in_file_manager
 from ffpfsc_converter.services.analysis import start_analysis
@@ -23,6 +25,8 @@ from ffpfsc_converter.services.preflight import check_free_space
 from ffpfsc_converter.ui import dialogs, job_table, presenters, theme
 from ffpfsc_converter.ui.dnd import create_root
 from ffpfsc_converter.ui.event_handlers import ViewUpdater
+from ffpfsc_converter.ui.explorer.controller import ExplorerController
+from ffpfsc_converter.ui.explorer.updater import ExplorerUpdater
 from ffpfsc_converter.ui.main_view import MainView, ViewCallbacks
 
 _ESTIMATE_LEVELS = sorted({p.level for p in PRESETS})
@@ -43,10 +47,18 @@ class MainWindow:
         self.root.minsize(*theme.WINDOW_MIN_SIZE)
 
         self._jobs: list[ConversionJob] = []
-        self._events: queue.Queue[Event] = queue.Queue()
+        self._events: queue.Queue[Event | RemoteEvent] = queue.Queue()
         self._runner = ConversionRunner(self._events.put)
         self._output_dir: Path | None = None  # None = junto a cada juego
-        self._view = MainView(self.root, ViewCallbacks(
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill="both", expand=True)
+        convert_tab, ps5_tab = ttk.Frame(notebook), ttk.Frame(notebook)
+        notebook.add(convert_tab, text="  Convertir  ")
+        notebook.add(ps5_tab, text="  PS5  ")
+        self._explorer = ExplorerController(ps5_tab, self._events.put)
+        self._explorer.view.pack(fill="both", expand=True)
+        self._explorer_updater = ExplorerUpdater(self._explorer)
+        self._view = MainView(convert_tab, ViewCallbacks(
             on_paths=self.add_paths, on_pick_folder=self.pick_folder,
             on_pick_file=self.pick_file, on_pick_output_dir=self.pick_output_dir,
             on_preset_changed=self._refresh_estimates, on_start=self.start,
@@ -164,6 +176,9 @@ class MainWindow:
         """Cierra la ventana, cancelando antes la conversión si el usuario acepta."""
         if self._runner.is_running and not dialogs.confirm_quit_while_running():
             return
+        if self._explorer.downloads.is_running and not dialogs.confirm_quit_while_downloading():
+            return
+        self._explorer.downloads.cancel()
         self._runner.cancel()
         self.root.destroy()
 
@@ -171,7 +186,11 @@ class MainWindow:
         """Entrega a la vista los eventos pendientes y se vuelve a programar."""
         try:
             while True:
-                self._updater.handle(self._events.get_nowait())
+                event = self._events.get_nowait()
+                if self._explorer_updater.handles(event):
+                    self._explorer_updater.handle(event)
+                else:
+                    self._updater.handle(event)
         except queue.Empty:
             pass
         self.root.after(theme.EVENT_POLL_MS, self._poll_events)

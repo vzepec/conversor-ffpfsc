@@ -12,34 +12,17 @@ from ffpfsc_converter.domain.models import (
     GameInfo,
     ProgressUpdate,
 )
+from ffpfsc_converter.formatting import format_size
 
 QUEUED_TEXT = "En cola"
 RUNNING_TEXT = "Convirtiendo…"
 PENDING_TEXT = "analizando…"
-_SIZE_UNITS = ("B", "KB", "MB", "GB")
-_LAST_SIZE_UNIT = "TB"
 _PHASE_NAMES = {
     "compress": "Comprimiendo",
     "write": "Escribiendo",
     "scan": "Escaneando",
     "verify": "Verificando",
 }
-
-
-def format_size(n: float) -> str:
-    """Convierte bytes en un tamaño legible en base 1024.
-
-    Args:
-        n (float): Cantidad de bytes.
-
-    Returns:
-        str: Tamaño con un decimal y unidad, por ejemplo ``"1.5 KB"``.
-    """
-    for unit in _SIZE_UNITS:
-        if n < 1024:
-            return f"{n:.1f} {unit}"
-        n /= 1024
-    return f"{n:.1f} {_LAST_SIZE_UNIT}"
 
 
 def savings_percent(original: int, final: int) -> float:

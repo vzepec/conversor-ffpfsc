@@ -23,6 +23,16 @@
   lee mal, MkPFS #132).
 - Cada flag nuevo se comprueba con `python -m mkpfs pack folder -h` y lleva test.
 
+## Operaciones en la PS5
+
+- Toda operación que **modifique** la consola (borrar, subir, renombrar) pide
+  confirmación explícita mostrando la ruta remota exacta.
+- Nunca renombrar entre unidades distintas (cuelga el kernel de la PS5): mover
+  entre discos es copiar y luego borrar.
+- El FTP se inicia con los permisos mínimos que necesite la operación (solo
+  lectura salvo que haga falta escribir) y con credenciales aleatorias.
+- Todo cambio en `infrastructure/ava1/` debe seguir pasando `test_ava1_vectors.py`.
+
 ## Datos del usuario
 
 - Nunca se modifica ni se borra el origen.

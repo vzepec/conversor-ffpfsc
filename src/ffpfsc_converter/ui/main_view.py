@@ -59,21 +59,21 @@ class MainView:
         table (JobTable): Tabla con los juegos de la cola.
     """
 
-    def __init__(self, root: tk.Tk, callbacks: ViewCallbacks) -> None:
-        """Construye todos los widgets dentro de la ventana raíz.
+    def __init__(self, parent: tk.Misc, callbacks: ViewCallbacks) -> None:
+        """Construye todos los widgets dentro de su contenedor (la pestaña "Convertir").
 
         Args:
-            root (tk.Tk): Ventana raíz.
+            parent (tk.Misc): Contenedor de la vista.
             callbacks (ViewCallbacks): Acciones a notificar al controlador.
         """
-        self._root = root
+        self._root = parent
         with contextlib.suppress(tk.TclError):
             ttk.Style().theme_use(theme.TTK_THEME)
         self._build_drop_zone(callbacks)
-        self.options = OptionsPanel(root, callbacks.on_preset_changed,
+        self.options = OptionsPanel(parent, callbacks.on_preset_changed,
                                     callbacks.on_pick_output_dir)
         self.options.pack(fill="x", **theme.PADDING)
-        self.table = JobTable(root)
+        self.table = JobTable(parent)
         self.table.pack(fill="both", expand=True, **theme.PADDING)
         self._build_progress()
         self._build_buttons(callbacks)

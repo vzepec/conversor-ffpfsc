@@ -23,4 +23,4 @@ código limpio y buenas prácticas). Para el detalle, sigue las skills:
 
 Un cambio no está terminado hasta que `ruff check src tests tools`,
 `python tools/check_standards.py` y `pytest` pasan.
-Documentación de fondo: `docs/ARCHITECTURE.md`.
+Documentación de fondo: `docs/ARCHITECTURE.md`. Pestaña PS5 (FTP + AVA1): `docs/PS5.md`.

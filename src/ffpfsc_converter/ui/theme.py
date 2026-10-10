@@ -1,7 +1,7 @@
 """Colores, fuentes y medidas de la interfaz."""
 from __future__ import annotations
 
-WINDOW_SIZE = "1120x620"
+WINDOW_SIZE = "1120x700"
 WINDOW_MIN_SIZE = (700, 500)
 TTK_THEME = "clam"
 PADDING = {"padx": 10, "pady": 6}
@@ -16,3 +16,6 @@ LOG_FONT = ("Monospace", 9)
 
 #: Intervalo (ms) con el que la UI vacía la cola de eventos.
 EVENT_POLL_MS = 100
+
+#: Color atenuado de los textos de ayuda.
+HINT_FG = "#6b7280"

@@ -53,3 +53,28 @@ IMAGE_SEARCH_DEPTH = 2
 
 #: Extensión del archivo generado.
 OUTPUT_EXTENSION = ".ffpfsc"
+
+# ------------------------------------------------------------- PS5 (FTP)
+#: Puerto del servidor FTP del helper de ps5upload (se inicia desde su app,
+#: pantalla "FTP Server"). ftpsrv usa 2121.
+DEFAULT_FTP_PORT = 2122
+#: Segundos de espera de red antes de dar la conexión por perdida.
+FTP_TIMEOUT_SECONDS = 15
+#: Tamaño de bloque al descargar (1 MiB: menos llamadas, misma memoria).
+FTP_BLOCK_SIZE = 1024 * 1024
+#: Cada cuánto se publica el progreso de una descarga.
+PROGRESS_INTERVAL_SECONDS = 0.25
+#: Sufijo de los archivos a medio descargar; permite reanudar.
+PARTIAL_SUFFIX = ".part"
+#: Carpetas de la PS5 que se ofrecen como accesos rápidos.
+PS5_FAVORITE_PATHS = (
+    "/data/homebrew", "/mnt/usb0", "/mnt/usb1", "/mnt/ext0", "/mnt/ext1", "/data", "/",
+)
+#: Carpeta inicial al conectar (la que vigila ShadowMount+).
+PS5_START_PATH = "/data/homebrew"
+#: Puerto del helper de ps5upload (protocolo AVA1), usado para iniciar el FTP.
+AVA1_PORT = 9120
+#: Nombre con el que la app se presenta ante la PS5 al emparejarse.
+AVA1_CLIENT_NAME = "Conversor FFPFSC"
+#: Segundos que se espera el código de emparejamiento (la PS5 corta a los 60 s).
+PAIRING_CODE_TIMEOUT_SECONDS = 55

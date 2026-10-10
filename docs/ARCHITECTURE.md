@@ -37,15 +37,32 @@ src/ffpfsc_converter/
 ├── __main__.py            # python -m ffpfsc_converter [rutas...]
 ├── config.py              # TODAS las constantes (presets, backend, márgenes…)
 ├── errors.py              # ConverterError y subclases con mensajes para el usuario
+├── formatting.py          # format_size, compartido por todas las capas
 ├── domain/
 │   ├── models.py          # ConversionJob, GameInfo, ConversionOptions, JobState…
-│   └── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
+│   ├── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
+│   ├── remote.py          # ConsoleTarget, RemoteEntry, DownloadJob… (pestaña PS5)
+│   └── remote_events.py   # RemoteListing, FtpReady, DownloadProgress…
 ├── infrastructure/
 │   ├── mkpfs_adapter/     # Todo lo relativo a MkPFS (API pública en __init__.py)
 │   │   ├── command.py     #   línea de comandos de `mkpfs pack`
 │   │   ├── output.py      #   corte de líneas y parseo del progreso
 │   │   ├── process.py     #   PackProcess: lanzar, leer y terminar el proceso
 │   │   └── metadata.py    #   metadatos y lectura de imágenes exFAT
+│   ├── ftp/               # Cliente FTP (ftplib) para el FTP del helper de ps5upload
+│   │   ├── client.py      #   FtpClient: conectar, listar (CWD + MLSD), recorrer, descargar
+│   │   ├── listing.py     #   MLSD/LIST → RemoteEntry; valida nombres (sin ../)
+│   │   └── errors.py      #   clasificación de errores de ftplib y de red
+│   ├── ava1/              # Cliente mínimo del protocolo AVA1 (puerto 9120)
+│   │   ├── frames.py      #   cabecera CRC32C y sellado ChaCha20-Poly1305
+│   │   ├── codec.py       #   codificación de mensajes del esquema
+│   │   ├── noise.py       #   handshake Noise_XX_25519_ChaChaPoly_BLAKE2b
+│   │   ├── keys.py        #   claves de carril, compromiso y PAKE CPace (Elligator2)
+│   │   ├── handshake.py   #   pasos 1-4 del handshake y validación del Welcome
+│   │   ├── session.py     #   emparejamiento, RPC (ftp.start) y respuesta a Ping
+│   │   └── trust.py       #   identidad de la app y consolas emparejadas
+│   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
+│   ├── network.py         # ¿Puerto TCP abierto?
 │   ├── filesystem.py      # Listado de archivos, espacio libre, borrado seguro
 │   └── system.py          # Abrir carpeta con xdg-open
 ├── services/
@@ -54,7 +71,15 @@ src/ffpfsc_converter/
 │   ├── estimator.py       # Estimación del tamaño final por muestreo
 │   ├── analysis.py        # Hilo que completa info + tamaño + estimación
 │   ├── preflight.py       # Comprobación de espacio libre
-│   └── conversion.py      # ConversionRunner: cola secuencial con cancelación
+│   ├── conversion.py      # ConversionRunner: cola secuencial con cancelación
+│   ├── ftp_launcher.py    # FtpLauncher: FTP activo → listo; si no, AVA1 + ftp.start
+│   ├── remote_browser.py  # RemoteBrowser: navegar en un hilo propio
+│   ├── downloads.py       # DownloadRunner: cola de descargas con su propia sesión
+│   ├── download_planner.py#   carpeta remota → lista de archivos y rutas locales
+│   ├── file_download.py   #   un archivo: .part, REST, verificación de tamaño
+│   ├── progress_meter.py  #   progreso y velocidad con frecuencia limitada
+│   ├── remote_client.py   #   Protocol RemoteClient (para tests)
+│   └── remote_errors.py, launch_errors.py  # errores → mensajes para el usuario
 └── ui/
     ├── app.py             # MainWindow: controlador (acciones del usuario → servicios)
     ├── main_view.py       # MainView + ViewCallbacks: construye los widgets
@@ -64,7 +89,13 @@ src/ffpfsc_converter/
     ├── event_handlers.py  # ViewUpdater: eventos → cambios en la vista
     ├── presenters.py      # Funciones puras que generan los textos mostrados
     ├── theme.py           # Colores, fuentes y medidas
-    └── dnd.py             # Arrastrar y soltar opcional (tkinterdnd2)
+    ├── dnd.py             # Arrastrar y soltar opcional (tkinterdnd2)
+    └── explorer/          # Pestaña PS5
+        ├── view.py        #   ExplorerView: compone barra, explorador y descargas
+        ├── connection_bar.py, remote_list.py, transfer_panel.py
+        ├── controller.py  #   ExplorerController: acciones → servicios
+        ├── updater.py     #   ExplorerUpdater: eventos remotos → vista
+        └── presenters.py  #   textos de la pestaña
 ```
 
 ## Flujo de una conversión
@@ -105,6 +136,14 @@ sequenceDiagram
   diccionario `tipo → método`.
 - La cancelación usa un `threading.Event`; el proceso de MkPFS se lanza con
   `start_new_session=True` para matar también sus procesos hijo con `killpg`.
+- La pestaña PS5 usa la misma cola: `ExplorerUpdater.handles(evento)` decide si
+  el evento es suyo; si no, va a `ViewUpdater`.
+- `RemoteBrowser` ejecuta sus órdenes de una en una en un único hilo (una sesión
+  FTP no admite operaciones simultáneas). Cada descarga abre **su propia** sesión,
+  así se puede seguir navegando mientras descarga.
+- `FtpLauncher` espera el código de emparejamiento en una `queue.Queue` que la
+  interfaz llena tras mostrar el diálogo. Mientras tanto, el hilo lector de
+  AVA1 responde los `Ping` de la consola para que no corte la conexión.
 
 ## Decisiones técnicas
 
@@ -118,6 +157,11 @@ sequenceDiagram
 | Bloques que no reducen se cuentan en crudo | Replica el comportamiento de PFSC de MkPFS. |
 | `read_game_info` nunca lanza | El nombre del juego es informativo; no debe impedir convertir. |
 | Salida parcial borrada ante error o cancelación | Nunca queda un `.ffpfsc` corrupto que parezca válido. |
+| FTP del helper en vez de AVA1 para transferir | `fs.read` de AVA1 entrega como máximo ~256 KiB por petición; FTP transmite a velocidad de red y admite `REST`. AVA1 solo se usa para `ftp.start`. |
+| FTP iniciado en solo lectura con credenciales aleatorias | Mientras corre, cualquier equipo de la red podría usarlo; así nadie más puede modificar la consola. |
+| `CWD` antes de `MLSD` | El servidor del helper ignora la ruta de `MLSD` y lista la carpeta actual. |
+| Descargas como `.part` + renombre al verificar el tamaño | Una descarga cortada nunca parece completa y se puede reanudar con `REST`. |
+| Cliente AVA1 verificado con los vectores oficiales | `tests/vectors/ava1` fija cada byte del protocolo; un cambio que lo rompa falla en `pytest`. |
 
 ## Cómo extender
 

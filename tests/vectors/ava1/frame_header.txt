@@ -1,0 +1,3 @@
+# type flags channel body_len -> 16 header bytes (hex). Values computed independently in Python.
+09 01 7 300 41310901070000002c0100005ca69f73
+01 00 0 0 413101000000000000000000fe4a20c4

@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "pyftpdlib>=1.5"]
 
 [project.scripts]
 ffpfsc-converter = "ffpfsc_converter.__main__:main"

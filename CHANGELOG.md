@@ -5,6 +5,15 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Añadido
+- Pestaña **PS5**: explorador de archivos de la consola con el payload de ps5upload
+  y descarga de archivos y carpetas completas (progreso, velocidad, cancelación,
+  reanudación con `.part` y `REST`, verificación de tamaño y de espacio libre).
+- Cliente mínimo del protocolo AVA1 de ps5upload (Noise XX, emparejamiento CPace
+  con el código de la consola, `ftp.start`), verificado con sus vectores oficiales.
+- El FTP de la PS5 se inicia en solo lectura y con credenciales aleatorias.
+- Ajustes persistentes (IP, puerto, carpeta de descargas) y guía `docs/PS5.md`.
+
 ## [1.1.0] - 2026-10-09
 
 ### Añadido
