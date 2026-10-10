@@ -5,6 +5,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from ffpfsc_converter import __version__
+from ffpfsc_converter.config import APP_TITLE
 from ffpfsc_converter.domain.models import (
     CompressionPreset,
     ConversionJob,
@@ -24,6 +26,30 @@ _PHASE_NAMES = {
     "scan": "Escaneando",
     "verify": "Verificando",
 }
+
+
+def version_text(version: str = __version__) -> str:
+    """Formatea la versión de la aplicación para mostrarla en la interfaz.
+
+    Args:
+        version (str): Versión en formato SemVer; por defecto, la instalada.
+
+    Returns:
+        str: Versión con prefijo, por ejemplo ``"v1.1.0"``.
+    """
+    return f"v{version}"
+
+
+def window_title(version: str = __version__) -> str:
+    """Genera el título de la ventana principal con la versión.
+
+    Args:
+        version (str): Versión en formato SemVer; por defecto, la instalada.
+
+    Returns:
+        str: Por ejemplo ``"Conversor FFPFSC (PS5) — v1.1.0"``.
+    """
+    return f"{APP_TITLE} — {version_text(version)}"
 
 
 def format_size(n: float) -> str:

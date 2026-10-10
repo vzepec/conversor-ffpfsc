@@ -11,7 +11,7 @@ import queue
 from collections.abc import Iterable
 from pathlib import Path
 
-from ffpfsc_converter.config import APP_TITLE, PRESETS
+from ffpfsc_converter.config import PRESETS
 from ffpfsc_converter.domain.events import Event
 from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
 from ffpfsc_converter.errors import ConverterError
@@ -38,7 +38,7 @@ class MainWindow:
             initial_paths (Iterable[Path]): Rutas recibidas por línea de comandos.
         """
         self.root = create_root()
-        self.root.title(APP_TITLE)
+        self.root.title(presenters.window_title())
         self.root.geometry(theme.WINDOW_SIZE)
         self.root.minsize(*theme.WINDOW_MIN_SIZE)
 

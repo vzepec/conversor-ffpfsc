@@ -5,6 +5,10 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Añadido
+- La versión de la aplicación se muestra en el título de la ventana y a la
+  derecha de la línea de estado.
+
 ## [1.1.0] - 2026-10-09
 
 ### Añadido

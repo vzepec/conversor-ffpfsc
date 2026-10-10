@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from tkinter import ttk
 
-from ffpfsc_converter.ui import theme
+from ffpfsc_converter.ui import presenters, theme
 from ffpfsc_converter.ui.dnd import HAS_DND, register_drop_target
 from ffpfsc_converter.ui.job_table import JobTable
 from ffpfsc_converter.ui.options_panel import OptionsPanel
@@ -96,13 +96,17 @@ class MainView:
         register_drop_target(self._root, callbacks.on_paths)
 
     def _build_progress(self) -> None:
-        """Crea la barra de progreso y la línea de estado."""
+        """Crea la barra de progreso, la línea de estado y la versión de la app."""
         frame = ttk.Frame(self._root)
         frame.pack(fill="x", **theme.PADDING)
         self._pbar = ttk.Progressbar(frame, maximum=100)
         self._pbar.pack(fill="x")
-        self._status = ttk.Label(frame, text="Listo.")
-        self._status.pack(anchor="w", pady=(4, 0))
+        status_row = ttk.Frame(frame)
+        status_row.pack(fill="x", pady=(4, 0))
+        self._status = ttk.Label(status_row, text="Listo.")
+        self._status.pack(side="left")
+        ttk.Label(status_row, text=presenters.version_text(),
+                  foreground=theme.VERSION_FG).pack(side="right")
 
     def _build_buttons(self, callbacks: ViewCallbacks) -> None:
         """Crea la barra de botones de acción.

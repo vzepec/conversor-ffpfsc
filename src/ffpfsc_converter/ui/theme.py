@@ -14,5 +14,8 @@ LOG_BG = "#111827"
 LOG_FG = "#d1d5db"
 LOG_FONT = ("Monospace", 9)
 
+#: Color atenuado de la etiqueta de versión.
+VERSION_FG = "#6b7280"
+
 #: Intervalo (ms) con el que la UI vacía la cola de eventos.
 EVENT_POLL_MS = 100
