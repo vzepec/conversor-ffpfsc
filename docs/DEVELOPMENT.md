@@ -54,6 +54,7 @@ los tests.
 | `test_pipeline.py` | comprimir y reemplazar: orden seguro, poco espacio, cancelación |
 | `test_remote_changes.py` | eliminar y subir (reanudación), plan y estrategia de espacio |
 | `test_desktop_integration.py` | comandos de bloqueo de suspensión y de avisos, y qué evento avisa |
+| `test_app_log.py` | archivo de registro y qué eventos se registran |
 | `test_preferences.py` | validación de las opciones y del tamaño de ventana guardados |
 | `test_integrity.py` | CRC32 local, comparación con la PS5 (`FakeConsole`) y mensajes |
 | `test_update_check.py` | aviso de versión nueva: comparación, respuesta de GitHub, errores de red |

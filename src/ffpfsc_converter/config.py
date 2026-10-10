@@ -87,6 +87,9 @@ FTP_MAX_RESUME_OFFSET = 2**31 - 1
 CRC_CHUNK_BYTES = 8 * 1024 * 1024
 #: Cada cuánto se consulta el avance del CRC32 que calcula la PS5.
 CRC_POLL_SECONDS = 0.5
+#: Tamaño máximo de cada archivo de registro y cuántos anteriores se conservan.
+LOG_MAX_BYTES = 2 * 1024 * 1024
+LOG_BACKUPS = 3
 #: Carpetas de la PS5 que se ofrecen como accesos rápidos.
 PS5_FAVORITE_PATHS = (
     "/data/homebrew", "/mnt/usb0", "/mnt/usb1", "/mnt/ext0", "/mnt/ext1", "/data", "/",

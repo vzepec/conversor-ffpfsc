@@ -91,5 +91,7 @@ comprimidos o cifrados); el resultado ocuparía algo más por las tablas PFS.
 ninguna imagen `.exfat`/`.ffpkg` cerca. Arrastra la carpeta correcta.
 
 **¿Dónde veo los detalles?** Despliega **Registro técnico** (abajo a la
-izquierda): muestra el comando exacto de MkPFS y toda su salida, útil para
-reportar errores.
+izquierda): muestra el comando exacto de MkPFS y toda su salida. Todo eso, más
+los eventos de la PS5 y cualquier error inesperado, queda también en un archivo
+(`conversor.log`) que se abre con el enlace **Registros** de la barra lateral.
+Adjúntalo al reportar un problema.

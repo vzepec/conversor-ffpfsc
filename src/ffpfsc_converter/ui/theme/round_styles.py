@@ -64,9 +64,10 @@ def apply_round_styles(style: ttk.Style, images: RoundedImages, p: Palette, f: F
         _with_variants(style, f"{name}.TLabel", p)
     style.configure("Badge.TLabel", padding=m.px(10))
     _with_variants(style, "Badge.TLabel", p)
-    style.configure("Link.TButton", foreground=p.accent, font=f.body_bold, padding=0, width=0)
-    style.map("Link.TButton", foreground=[("disabled", p.muted), ("active", p.accent_hover)])
-    _with_variants(style, "Link.TButton", p)
+    for name, font in (("Link.TButton", f.body_bold), ("SmallLink.TButton", f.small_bold)):
+        style.configure(name, foreground=p.accent, font=font, padding=0, width=0)
+        style.map(name, foreground=[("disabled", p.muted), ("active", p.accent_hover)])
+        _with_variants(style, name, p)
 
 
 def _with_variants(style: ttk.Style, name: str, p: Palette) -> None:
@@ -142,8 +143,9 @@ def _create_layouts(style: ttk.Style) -> None:
         style.layout(name, [(f"Round.{image}", {"sticky": "nswe", "children": [
             ("Button.padding", {"sticky": "nswe", "children": [
                 ("Button.label", {"sticky": "nswe"})]})]})])
-    style.layout("Link.TButton", [("Button.padding", {"sticky": "nswe", "children": [
-        ("Button.label", {"sticky": "nswe"})]})])
+    for name in ("Link.TButton", "SmallLink.TButton"):
+        style.layout(name, [("Button.padding", {"sticky": "nswe", "children": [
+            ("Button.label", {"sticky": "nswe"})]})])
     for name, image in FRAMES.items():
         style.layout(name, [(f"Round.{image}", {"sticky": "nswe"})])
     labels = {f"{name}.TLabel": image for name, (image, _fg) in PILLS.items()}

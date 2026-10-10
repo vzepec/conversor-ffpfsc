@@ -67,6 +67,7 @@ src/ffpfsc_converter/
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
 │   ├── release_feed.py    # Última versión publicada (API pública de GitHub)
+│   ├── app_log.py         # Registro en archivo rotativo (carpeta «registros»)
 │   ├── power.py           # Bloquear la suspensión (systemd-inhibit / SetThreadExecutionState)
 │   ├── notify.py          # Avisos del escritorio (notify-send / notificación de Windows)
 │   ├── network.py         # ¿Puerto TCP abierto?
@@ -108,6 +109,7 @@ src/ffpfsc_converter/
     ├── convert_controller.py  # Vista Convertir: cola, opciones, conversión y subida
     ├── preferences.py     # Opciones y estado de la ventana recordados entre sesiones
     ├── activity.py, notifications.py  # Sin suspensión durante tareas largas y avisos
+    ├── event_journal.py   # Eventos → líneas del archivo de registro
     ├── window.py          # Crea la ventana: escala, clase/ID del sistema, tema e icono
     ├── shell.py           # AppShell: barra lateral (navegación, estado de la PS5, tema)
     ├── main_view.py       # MainView + ViewCallbacks: vista Convertir

@@ -7,16 +7,20 @@ entrega a quien corresponda: la vista PS5, la vista Convertir o la barra lateral
 from __future__ import annotations
 
 import queue
+import threading
 from collections.abc import Iterable
 from pathlib import Path
+from types import TracebackType
 
 from ffpfsc_converter.domain.events import Event
 from ffpfsc_converter.domain.remote_events import RemoteEvent
 from ffpfsc_converter.domain.update import UpdateAvailable
+from ffpfsc_converter.infrastructure.app_log import log_dir, setup_file_log
 from ffpfsc_converter.services.update_check import start_update_check
 from ffpfsc_converter.ui import dialogs, presenters, theme
 from ffpfsc_converter.ui.activity import ActivityWatch
 from ffpfsc_converter.ui.convert_controller import ConvertController, ConvertLinks
+from ffpfsc_converter.ui.event_journal import journal_line
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
 from ffpfsc_converter.ui.explorer.updater import ExplorerUpdater
 from ffpfsc_converter.ui.notifications import Notifier
@@ -33,6 +37,7 @@ class MainWindow:
         Args:
             initial_paths (Iterable[Path]): Rutas recibidas por línea de comandos.
         """
+        self._log = setup_file_log(log_dir())
         self._window = create_window()
         self.root, self.theme = self._window.root, self._window.theme
         self._events: queue.Queue[Event | RemoteEvent] = queue.Queue()
@@ -52,6 +57,10 @@ class MainWindow:
             lambda count: self._shell.set_badge("convert", str(count) if count else ""),
             lambda: self._shell.show("ps5")))
         self._shell.show(self._window.saved.view)
+        self.root.report_callback_exception = self._on_unexpected
+        threading.excepthook = lambda args: self._log.error(
+            "Error inesperado en un hilo", exc_info=(args.exc_type, args.exc_value,
+                                                     args.exc_traceback))
         self._notifier = Notifier(self.root)
         self._activity = ActivityWatch(self.root, self._is_busy)
         self.root.after(theme.EVENT_POLL_MS, self._poll_events)
@@ -91,6 +100,9 @@ class MainWindow:
             event (Event | RemoteEvent): Evento publicado por un servicio.
         """
         self._notifier.handle(event)
+        entry = journal_line(event)
+        if entry is not None:
+            self._log.log(entry.level, entry.text)
         if self._explorer_updater.handles(event):
             self._explorer_updater.handle(event)
         elif isinstance(event, UpdateAvailable):
@@ -106,3 +118,16 @@ class MainWindow:
         """
         return (self._convert.runner.is_running or self._explorer.downloads.is_running
                 or self._explorer.modify.busy)
+
+    def _on_unexpected(self, kind: type[BaseException], error: BaseException,
+                       trace: TracebackType | None) -> None:
+        """Guarda en el registro un error no previsto de la interfaz y lo informa.
+
+        Args:
+            kind (type[BaseException]): Tipo de la excepción.
+            error (BaseException): Excepción.
+            trace (TracebackType | None): Traza.
+        """
+        self._log.error("Error inesperado en la interfaz", exc_info=(kind, error, trace))
+        dialogs.show_error(f"Ocurrió un error inesperado ({error}).\n\nEl detalle quedó en "
+                           f"el registro:\n{log_dir()}")

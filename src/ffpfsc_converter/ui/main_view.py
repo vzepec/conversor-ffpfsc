@@ -5,12 +5,14 @@ los callbacks de :class:`ViewCallbacks` y el controlador decide qué hacer.
 """
 from __future__ import annotations
 
+import logging
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import ttk
 
+from ffpfsc_converter.infrastructure.app_log import LOGGER_NAME
 from ffpfsc_converter.ui.dnd import HAS_DND
 from ffpfsc_converter.ui.job_list import JobList
 from ffpfsc_converter.ui.options_panel import OptionsPanel
@@ -169,11 +171,12 @@ class MainView:
             self._log.pack_forget()
 
     def write_log(self, text: str) -> None:
-        """Agrega una línea al registro y desplaza la vista al final.
+        """Agrega una línea al registro técnico (y al archivo de registro) y baja al final.
 
         Args:
             text (str): Texto a agregar (se recortan los saltos finales).
         """
+        logging.getLogger(LOGGER_NAME).info(text.rstrip())
         self._log.configure(state="normal")
         self._log.insert("end", text.rstrip() + "\n")
         self._log.see("end")

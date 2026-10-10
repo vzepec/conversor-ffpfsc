@@ -13,6 +13,9 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   PS5 en curso (Linux: `systemd-inhibit`; Windows: `SetThreadExecutionState`).
 - Aviso del escritorio al terminar la cola de conversión, las descargas, una subida
   o «Comprimir y reemplazar», si la ventana no está en primer plano.
+- Registro en archivo (`conversor.log`, rotativo) con la salida de MkPFS, los
+  eventos de la PS5 y cualquier error inesperado con su traza; el enlace
+  «Registros» de la barra lateral abre su carpeta.
 - La app recuerda entre sesiones el modo, los núcleos, la verificación, la carpeta de
   destino (con un enlace para volver a «junto a cada juego»), el tamaño de la
   ventana y la última vista abierta.

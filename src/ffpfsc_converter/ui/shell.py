@@ -8,7 +8,8 @@ from tkinter import ttk
 from PIL import ImageTk
 
 from ffpfsc_converter.domain.update import ReleaseInfo
-from ffpfsc_converter.infrastructure.system import open_url
+from ffpfsc_converter.infrastructure.app_log import log_dir
+from ffpfsc_converter.infrastructure.system import open_in_file_manager, open_url
 from ffpfsc_converter.ui.presenters import ConnectionCard, ConsoleStatus, connection_card
 from ffpfsc_converter.ui.theme import SIDEBAR_WIDTH, ThemeManager
 from ffpfsc_converter.ui.theme.app_icon import render_app_icon
@@ -170,7 +171,12 @@ class AppShell(ttk.Frame):
         texts = ttk.Frame(row, style="Side.TFrame")
         texts.pack(side="left", padx=(m.px(10), 0))
         ttk.Label(texts, text="Conversor FFPFSC", style="SideBold.TLabel").pack(anchor="w")
-        ttk.Label(texts, text=version, style="SideSmall.TLabel").pack(anchor="w")
+        line = ttk.Frame(texts, style="Side.TFrame")
+        line.pack(anchor="w")
+        ttk.Label(line, text=version, style="SideSmall.TLabel").pack(side="left")
+        ttk.Button(line, text="Registros", style="Side.SmallLink.TButton", cursor="hand2",
+                   command=lambda: open_in_file_manager(log_dir())).pack(
+            side="left", padx=(m.px(8), 0))
 
     def show_update(self, release: ReleaseInfo) -> None:
         """Muestra el botón verde para descargar una versión nueva.
