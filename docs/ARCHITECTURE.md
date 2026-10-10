@@ -102,7 +102,9 @@ src/ffpfsc_converter/
 │   │   └── reporter.py    #   etapas y progreso → eventos
 │   └── remote_errors.py, launch_errors.py  # errores → mensajes para el usuario
 └── ui/
-    ├── app.py             # MainWindow: controlador (acciones del usuario → servicios)
+    ├── app.py             # MainWindow: compone la ventana y reparte los eventos
+    ├── convert_controller.py  # Vista Convertir: cola, opciones, conversión y subida
+    ├── preferences.py     # Opciones y estado de la ventana recordados entre sesiones
     ├── window.py          # Crea la ventana: escala, clase/ID del sistema, tema e icono
     ├── shell.py           # AppShell: barra lateral (navegación, estado de la PS5, tema)
     ├── main_view.py       # MainView + ViewCallbacks: vista Convertir

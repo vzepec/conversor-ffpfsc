@@ -71,7 +71,11 @@ class _NavItem(ttk.Frame):
 
 
 class AppShell(ttk.Frame):
-    """Barra lateral más el área donde se muestra la vista elegida."""
+    """Barra lateral más el área donde se muestra la vista elegida.
+
+    Attributes:
+        current (str): Vista visible.
+    """
 
     def __init__(self, root: tk.Misc, theme: ThemeManager, version: str) -> None:
         """Crea la barra lateral y el área de contenido.
@@ -90,6 +94,7 @@ class AppShell(ttk.Frame):
         self._side.pack_propagate(False)
         self._content = ttk.Frame(self, style="TFrame")
         self._content.pack(side="left", fill="both", expand=True)
+        self.current = ""
         self._views: dict[str, ttk.Frame] = {}
         self._items: dict[str, _NavItem] = {}
         self._brand(version)
@@ -129,6 +134,7 @@ class AppShell(ttk.Frame):
             frame.pack_forget()
             self._items[name].set_active(name == key)
         self._views[key].pack(fill="both", expand=True)
+        self.current = key
 
     def set_badge(self, key: str, text: str) -> None:
         """Muestra un contador junto al nombre de una vista.

@@ -31,7 +31,8 @@ class ViewCallbacks:
         on_paths (Callable[[list[Path]], None]): Se soltaron rutas en la ventana.
         on_pick_folder (Callable[[], None]): Botón "Elegir carpeta" o clic en la zona.
         on_pick_file (Callable[[], None]): Botón "Elegir imagen".
-        on_pick_output_dir (Callable[[], None]): Enlace "Cambiar" de la carpeta de destino.
+        on_output_changed (Callable[[Path | None], None]): Se eligió otra carpeta de destino
+            (``None`` = junto a cada juego).
         on_preset_changed (Callable[[], None]): Cambió el modo de compresión.
         on_start (Callable[[], None]): Botón "Convertir".
         on_cancel (Callable[[], None]): Botón "Cancelar".
@@ -44,7 +45,7 @@ class ViewCallbacks:
     on_paths: Callable[[list[Path]], None]
     on_pick_folder: Callable[[], None]
     on_pick_file: Callable[[], None]
-    on_pick_output_dir: Callable[[], None]
+    on_output_changed: Callable[[Path | None], None]
     on_preset_changed: Callable[[], None]
     on_start: Callable[[], None]
     on_cancel: Callable[[], None]
@@ -80,7 +81,7 @@ class MainView:
                   ("Elegir imagen…", callbacks.on_pick_file)),
                  callbacks.on_paths).pack(fill="x", pady=(m.px(16), 0))
         self.options = OptionsPanel(self._root, theme, callbacks.on_preset_changed,
-                                    callbacks.on_pick_output_dir)
+                                    callbacks.on_output_changed)
         self.options.pack(fill="x", pady=(m.px(14), 0))
         head = ttk.Frame(self._root, style="TFrame")
         head.pack(fill="x", pady=(m.px(18), m.px(8)))
