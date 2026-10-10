@@ -160,32 +160,39 @@ def internal_free_text(volumes: Iterable[StorageVolume]) -> str:
     return ""
 
 
-def selection_text(count: int) -> str:
-    """Describe cuántos elementos hay seleccionados.
+def selection_text(count: int, writing: bool = False) -> str:
+    """Describe cuántos elementos hay seleccionados (o que la PS5 está ocupada).
 
     Args:
         count (int): Elementos seleccionados.
+        writing (bool): ``True`` mientras se escribe en la PS5 (la navegación se pausa).
 
     Returns:
-        str: ``"Nada seleccionado"``, ``"1 seleccionado"`` o ``"N seleccionados"``.
+        str: ``"Nada seleccionado"``, ``"1 seleccionado"``, ``"N seleccionados"`` o el
+        aviso de operación en curso.
     """
+    if writing:
+        return "Escribiendo en la PS5…"
     if count == 0:
         return "Nada seleccionado"
     return "1 seleccionado" if count == 1 else f"{count} seleccionados"
 
 
-def action_states(connected: bool, selected: Sequence[RemoteEntry]) -> ActionStates:
+def action_states(connected: bool, writing: bool,
+                  selected: Sequence[RemoteEntry]) -> ActionStates:
     """Decide qué acciones tienen sentido con la selección actual.
 
     Args:
         connected (bool): ``True`` si hay conexión.
+        writing (bool): ``True`` mientras se escribe en la PS5 (todo queda en pausa).
         selected (Sequence[RemoteEntry]): Elementos seleccionados.
 
     Returns:
         ActionStates: Botones habilitados.
     """
+    usable = connected and not writing
     one = len(selected) == 1
     convertible = one and (selected[0].is_dir
                            or PurePosixPath(selected[0].name).suffix.lower() in IMAGE_EXTENSIONS)
-    return ActionStates(download=connected and bool(selected), convert=connected and convertible,
-                        upload=connected, delete=connected and bool(selected))
+    return ActionStates(download=usable and bool(selected), convert=usable and convertible,
+                        upload=usable, delete=usable and bool(selected))

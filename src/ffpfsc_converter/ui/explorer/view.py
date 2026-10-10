@@ -80,7 +80,7 @@ class ExplorerView(ttk.Frame):
         """
         m = theme.metrics
         super().__init__(parent, style="TFrame", padding=(m.px(26), m.px(22)))
-        self._connected = False
+        self._connected, self._writing = False, False
         self._volumes: tuple[StorageVolume, ...] = ()
         self._listeners: list[Callable[[ConsoleStatus], None]] = []
         head = ttk.Frame(self, style="TFrame")
@@ -106,8 +106,7 @@ class ExplorerView(ttk.Frame):
         self._path.pack(fill="x", pady=(m.px(12), m.px(10)))
         self.remote = FileList(self, theme, callbacks.on_open_entry, self._on_selection)
         self.remote.pack(fill="both", expand=True)
-        self.set_storage((), "")
-        self.set_browsing_enabled(False)
+        self.set_connected(False)
 
     def add_status_listener(self, listener: Callable[[ConsoleStatus], None]) -> None:
         """Registra una función que recibe el estado de la conexión y el espacio libre.
@@ -136,23 +135,48 @@ class ExplorerView(ttk.Frame):
         self._drives.show(drive_cards(self._volumes, self._connected and not error))
         self._notify()
 
-    def set_browsing_enabled(self, enabled: bool) -> None:
-        """Habilita la navegación y las acciones solo con conexión.
+    def set_connected(self, connected: bool) -> None:
+        """Muestra la vista como conectada (ruta, unidades) o sin conexión.
 
         Args:
-            enabled (bool): ``True`` si hay sesión con la PS5.
+            connected (bool): ``True`` si hay sesión con la PS5.
         """
-        self._connected = enabled
-        self._path.set_enabled(enabled)
-        if not enabled:
-            self._drives.show(drive_cards((), False))
+        self._connected = connected
+        if not connected:
+            self._volumes, self._writing = (), False
+        self._path.set_connected(connected)
+        self._drives.show(drive_cards(self._volumes, connected))
         self._on_selection()
+        self._notify()
+
+    def set_browsing_enabled(self, enabled: bool) -> None:
+        """Pausa la navegación y las acciones mientras se escribe en la PS5.
+
+        La conexión sigue activa (las unidades y el estado se siguen mostrando);
+        solo se bloquean los botones hasta que el FTP vuelve a solo lectura.
+
+        Args:
+            enabled (bool): ``False`` mientras dura una subida o un reemplazo.
+        """
+        self._writing = not enabled
+        self._path.set_enabled(enabled)
+        self._on_selection()
+
+    @property
+    def is_browsing_enabled(self) -> bool:
+        """Indica si se puede navegar (conectado y sin escritura en curso).
+
+        Returns:
+            bool: ``True`` si la navegación no está en pausa.
+        """
+        return self._connected and not self._writing
 
     def _on_selection(self) -> None:
         """Actualiza la barra de acciones según la selección."""
         selected = self.remote.selected_entries()
-        self._actions.show(selection_text(len(selected)),
-                           action_states(self._connected, selected))
+        writing = self._connected and self._writing
+        self._actions.show(selection_text(len(selected), writing),
+                           action_states(self._connected, self._writing, selected))
 
     def _notify(self) -> None:
         """Avisa el estado de la conexión junto con el espacio libre del disco interno."""

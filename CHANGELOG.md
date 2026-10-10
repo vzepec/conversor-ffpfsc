@@ -5,6 +5,12 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Corregido
+- Durante una subida (por ejemplo, desde «Subir a la PS5» en Convertir) la vista
+  PS5 se veía como desconectada: unidades «Sin conexión», ruta vacía y botones
+  bloqueados. Ahora sigue conectada y muestra la operación en curso; solo se
+  pausan la navegación y las acciones hasta que el FTP vuelve a solo lectura.
+
 ## [1.3.0] - 2026-10-10
 
 ### Corregido

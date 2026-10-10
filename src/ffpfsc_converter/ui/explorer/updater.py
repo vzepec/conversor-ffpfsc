@@ -78,8 +78,11 @@ class ExplorerUpdater:
         Args:
             event (FtpReady): FTP listo.
         """
-        verb = "FTP iniciado" if event.started else "FTP activo"
-        self._view.connection.set_state(False, f"{verb}; abriendo…", busy=True)
+        if self._ctl.target is not None:  # vuelve a solo lectura tras escribir: sigue conectada
+            self._view.connection.set_state(True, "Volviendo el FTP a solo lectura…", busy=True)
+        else:
+            verb = "FTP iniciado" if event.started else "FTP activo"
+            self._view.connection.set_state(False, f"{verb}; abriendo…", busy=True)
         start = self._ctl.path if self._ctl.target is not None else None
         self._ctl.browser.connect(event.target, start_path=start)
 
@@ -116,6 +119,7 @@ class ExplorerUpdater:
         """
         self._ctl.target = event.target
         self._ctl.ftp_restarted = False
+        self._view.set_connected(True)
         self._view.set_browsing_enabled(True)
         self._ctl.refresh_storage()
         pending, self._ctl.pending_on_connect = self._ctl.pending_on_connect, []
@@ -130,8 +134,7 @@ class ExplorerUpdater:
         """
         self._ctl.target = None
         self._view.remote.clear()
-        self._view.set_browsing_enabled(False)
-        self._view.set_storage((), "")
+        self._view.set_connected(False)
         self._view.connection.set_state(False, "Sin conexión.")
 
     def _on_listing(self, event: RemoteListing) -> None:
@@ -144,7 +147,8 @@ class ExplorerUpdater:
         self._view.set_path(event.path)
         self._view.remote.show(event.entries)
         target = self._ctl.target
-        if target is not None:
+        # Durante una subida el estado muestra la operación; el listado no lo pisa.
+        if target is not None and self._view.is_browsing_enabled:
             text = presenters.connection_text(target.host, target.port, event.path)
             self._view.connection.set_state(True, text)
 
