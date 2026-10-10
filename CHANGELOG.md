@@ -5,6 +5,13 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Corregido
+- Al reanudar una descarga de la PS5 el avance podía pasar del 100 % y el archivo
+  crecer sin límite: el FTP de ps5upload acepta `REST` pero envía el archivo desde
+  el principio, y se pegaba detrás de lo ya descargado. Ahora se verifica la
+  reanudación (si la consola empieza de cero, se reescribe el archivo), se descarta
+  un `.part` que no coincide y nunca se escribe más allá del tamaño esperado.
+
 ### Cambiado
 - Interfaz rediseñada: barra lateral con navegación, estado de la PS5 (IP, modo del
   FTP y espacio libre) y selector de tema; tema claro y oscuro que sigue al del

@@ -2,7 +2,8 @@
 
 El archivo se escribe como ``nombre.part`` y solo se renombra al nombre final
 cuando tiene exactamente el tamaño esperado. Si la descarga se corta, el
-``.part`` queda y la siguiente vez se continúa desde donde quedó (``REST``).
+``.part`` queda y la siguiente vez se continúa desde donde quedó (``REST``),
+comprobando antes que la PS5 de verdad envíe desde esa posición.
 """
 from __future__ import annotations
 
@@ -11,11 +12,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import BinaryIO, cast
 
+from ffpfsc_converter.config import RESUME_OVERLAP_BYTES
 from ffpfsc_converter.domain.remote import FileTransfer
 from ffpfsc_converter.errors import ConverterError, DownloadCancelledError, TransientError
 from ffpfsc_converter.services.download_planner import partial_path
 from ffpfsc_converter.services.progress_meter import ProgressMeter
 from ffpfsc_converter.services.remote_client import RemoteClient
+from ffpfsc_converter.services.resume_writer import LocalOSError, ResumingWriter
 
 
 class LocalWriteError(ConverterError):
@@ -55,7 +58,9 @@ def download_file(
 ) -> None:
     """Descarga un archivo, reanudando si existe un ``.part`` previo.
 
-    Si el archivo final ya existe con el tamaño correcto, no se descarga.
+    Si el archivo final ya existe con el tamaño correcto, no se descarga. Al
+    reanudar se verifica que la PS5 continúe desde donde quedó (ver
+    :mod:`~ffpfsc_converter.services.resume_writer`).
 
     Args:
         client (RemoteClient): Cliente conectado.
@@ -67,6 +72,8 @@ def download_file(
         DownloadCancelledError: Si se canceló durante la descarga.
         LocalWriteError: Si no se pudo escribir en el disco local.
         IncompleteDownloadError: Si el tamaño final no coincide con el esperado.
+        ResumeMismatchError: Si el ``.part`` no coincidía con la PS5 (se borra).
+        OversizeDownloadError: Si la PS5 envió más datos de los esperados (se borra).
     """
     final, part = transfer.local_path, partial_path(transfer.local_path)
     if final.is_file() and final.stat().st_size == transfer.size:
@@ -76,32 +83,33 @@ def download_file(
     if offset > transfer.size:
         offset = 0
     meter.skip(offset)
-    name = final.name
+    overlap = min(offset, RESUME_OVERLAP_BYTES)
 
-    def on_chunk(size: int) -> None:
-        """Suma el bloque recibido y aborta si el usuario canceló.
+    def on_chunk(_size: int) -> None:
+        """Aborta la descarga si el usuario canceló (el avance lo suma el escritor).
 
         Args:
-            size (int): Bytes recibidos.
+            _size (int): Bytes recibidos.
 
         Raises:
             DownloadCancelledError: Si se pidió cancelar.
         """
         if should_cancel():
             raise DownloadCancelledError()
-        meter.advance(size, name)
 
+    progress = (lambda size: meter.advance(size, final.name), meter.rewind)
     try:
         final.parent.mkdir(parents=True, exist_ok=True)
-        sink = part.open("ab" if offset else "wb")
+        writer = ResumingWriter(part, transfer.size, offset, overlap, progress)
     except OSError as exc:
         raise LocalWriteError(part, exc) from exc
-    with sink:
+    with writer:
         try:
             if offset < transfer.size or transfer.size == 0:
-                client.download(transfer.remote_path, cast(BinaryIO, _GuardedSink(sink)),
-                                offset, on_chunk)
-        except _LocalOSError as exc:
+                client.download(transfer.remote_path, cast(BinaryIO, writer),
+                                offset - overlap, on_chunk)
+                writer.finish()
+        except LocalOSError as exc:
             raise LocalWriteError(part, exc.original) from exc.original
     _finalize(transfer, part, final)
 
@@ -125,45 +133,3 @@ def _finalize(transfer: FileTransfer, part: Path, final: Path) -> None:
         os.replace(part, final)
     except OSError as exc:
         raise LocalWriteError(final, exc) from exc
-
-
-class _LocalOSError(Exception):
-    """Envoltorio para distinguir errores del disco local de los de red."""
-
-    def __init__(self, original: OSError) -> None:
-        """Guarda el error original.
-
-        Args:
-            original (OSError): Error del sistema al escribir.
-        """
-        super().__init__(str(original))
-        self.original = original
-
-
-class _GuardedSink:
-    """Archivo de destino que marca sus errores como locales."""
-
-    def __init__(self, sink: BinaryIO) -> None:
-        """Envuelve un archivo abierto.
-
-        Args:
-            sink (BinaryIO): Archivo binario abierto para escritura.
-        """
-        self._sink = sink
-
-    def write(self, data: bytes) -> int:
-        """Escribe datos en el archivo local.
-
-        Args:
-            data (bytes): Datos recibidos.
-
-        Returns:
-            int: Bytes escritos.
-
-        Raises:
-            _LocalOSError: Si el sistema rechaza la escritura.
-        """
-        try:
-            return self._sink.write(data)
-        except OSError as exc:
-            raise _LocalOSError(exc) from exc

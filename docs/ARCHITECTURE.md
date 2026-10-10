@@ -81,6 +81,7 @@ src/ffpfsc_converter/
 │   ├── retry.py           # Reintentos automáticos ante fallos transitorios
 │   ├── download_planner.py#   carpeta remota → lista de archivos y rutas locales
 │   ├── file_download.py   #   un archivo: .part, REST, verificación de tamaño
+│   ├── resume_writer.py   #   escribe el .part verificando la reanudación y con tope
 │   ├── progress_meter.py  #   progreso y velocidad con frecuencia limitada
 │   ├── remote_client.py   #   Protocol RemoteClient (para tests)
 │   ├── console_access.py  # Sesión AVA1 emparejada, ftp.start y escritura temporal
@@ -197,6 +198,7 @@ sequenceDiagram
 | FTP iniciado en solo lectura con credenciales aleatorias | Mientras corre, cualquier equipo de la red podría usarlo; así nadie más puede modificar la consola. |
 | `CWD` antes de `MLSD` | El servidor del helper ignora la ruta de `MLSD` y lista la carpeta actual. |
 | Descargas como `.part` + renombre al verificar el tamaño | Una descarga cortada nunca parece completa y se puede reanudar con `REST`. |
+| Al reanudar se vuelven a pedir 64 KiB ya descargados | El FTP de ps5upload acepta `REST` pero envía desde el principio: se comprueba el solapamiento y, si llega el comienzo del archivo, se reescribe desde cero en vez de pegarlo detrás. Nunca se escribe más allá del tamaño informado. |
 | Subir, verificar y luego borrar el original | Si la subida falla nunca se pierde el juego. Solo sin espacio se borra antes, con confirmación y la copia local como respaldo. |
 | Borrado con `job.run` DELETE del helper | Un borrado recursivo por FTP serían miles de órdenes; el helper lo hace en la consola y protege raíces y puntos de montaje. |
 | Reintentos automáticos solo ante fallos transitorios | Las transferencias son reanudables, así que reintentar es reconectar y seguir; un error definitivo se informa sin esperar. |

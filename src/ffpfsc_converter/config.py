@@ -66,6 +66,9 @@ FTP_BLOCK_SIZE = 1024 * 1024
 PROGRESS_INTERVAL_SECONDS = 0.25
 #: Sufijo de los archivos a medio descargar; permite reanudar.
 PARTIAL_SUFFIX = ".part"
+#: Bytes ya descargados que se vuelven a pedir al reanudar, para comprobar que el
+#: servidor respeta la posición (el FTP de ps5upload acepta REST pero envía desde 0).
+RESUME_OVERLAP_BYTES = 64 * 1024
 #: Carpetas de la PS5 que se ofrecen como accesos rápidos.
 PS5_FAVORITE_PATHS = (
     "/data/homebrew", "/mnt/usb0", "/mnt/usb1", "/mnt/ext0", "/mnt/ext1", "/data", "/",

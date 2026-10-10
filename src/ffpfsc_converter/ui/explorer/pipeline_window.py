@@ -126,6 +126,7 @@ class PipelineWindow(Modal):
             detail (str): Texto de progreso.
             eta (float | None): Segundos restantes estimados.
         """
+        percent = min(max(percent, 0.0), 100.0)
         self._bar.configure(value=percent)
         self._percent.configure(text=f"{percent:.0f} %")
         self._detail.configure(text=detail)

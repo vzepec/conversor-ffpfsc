@@ -47,6 +47,7 @@ los tests.
 | `test_ftp_listing.py` | interpretación de MLSD/LIST y nombres inseguros |
 | `test_remote_browser.py` | cliente FTP y explorador contra un FTP real local (`pyftpdlib`) |
 | `test_downloads.py` | descargas de carpetas, reanudación, cancelación, falta de espacio |
+| `test_download_resume.py` | reanudación verificada: servidor que ignora `REST`, `.part` dañado, tope de tamaño |
 | `test_ftp_launcher.py` | inicio del FTP con una sesión AVA1 simulada (emparejamiento, reinicio, errores) |
 | `test_ava1_vectors.py` | cliente AVA1 contra los vectores oficiales de ps5upload |
 | `test_explorer_support.py` | textos de la pestaña PS5, ajustes, progreso y almacén de confianza |
