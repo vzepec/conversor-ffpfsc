@@ -47,3 +47,11 @@ def test_windows_only_helpers_do_nothing_elsewhere() -> None:
     """La identidad de la app y la escala de Windows no hacen nada en Linux."""
     assert system.set_windows_app_id("x.y", platform="linux") is False
     assert system.enable_dpi_awareness(platform="linux") is False
+
+
+def test_mkpfs_is_tied_to_the_app_only_where_supported() -> None:
+    """Linux usa PR_SET_PDEATHSIG y Windows un Job Object; en otros sistemas no se hace nada."""
+    from ffpfsc_converter.infrastructure.mkpfs_adapter.lifeline import bind_to_app, child_setup
+
+    assert child_setup("win32") is None and child_setup("darwin") is None
+    assert bind_to_app(object(), platform="linux") is False  # type: ignore[arg-type]

@@ -14,9 +14,12 @@ SIDEBAR_WIDTH = 232
 PADDING = {"padx": 10, "pady": 6}
 #: Intervalo (ms) con el que la UI vacía la cola de eventos.
 EVENT_POLL_MS = 100
+#: Tiempo máximo (ms) que la UI dedica a eventos por ciclo antes de ceder el control a Tk.
+EVENT_BUDGET_MS = 40
 
 __all__ = [
     "DARK",
+    "EVENT_BUDGET_MS",
     "EVENT_POLL_MS",
     "LIGHT",
     "MODES",

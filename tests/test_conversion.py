@@ -109,3 +109,35 @@ def test_spawn_error_is_reported(tmp_path: Path) -> None:
     result = next(e for e in events if isinstance(e, JobFinished)).result
     assert result.message == "no python"
     assert job.state is JobState.FAILED
+
+
+def test_progress_flood_is_throttled(tmp_path: Path) -> None:
+    """Miles de líneas de avance seguidas no se convierten en miles de eventos."""
+    flood = [f"[1/2] {i % 100}% compress" for i in range(5000)] + ["[1/2] 100% compress"]
+    events: list[Event] = []
+    runner = ConversionRunner(
+        events.append, process_factory=lambda cmd: FakeProcess(cmd, flood, 0))
+    runner.start([_job(tmp_path, "a")], OPTIONS).join(timeout=5)
+    progress = [e for e in events if isinstance(e, JobProgress)]
+    assert 1 <= len(progress) < 20
+    assert progress[-1].progress.percent == 100  # el último avance siempre se publica
+
+
+def test_existing_output_is_replaced_without_prompt(tmp_path: Path) -> None:
+    """Tras confirmar en la app, el .ffpfsc anterior se borra antes de lanzar MkPFS.
+
+    MkPFS no tiene opción para sobrescribir: si el archivo existe, pregunta por
+    consola y, sin consola, falla.
+    """
+    job = _job(tmp_path, "a")
+    job.output.write_bytes(b"viejo")
+    seen: list[bool] = []
+
+    def factory(cmd: list[str]) -> FakeProcess:
+        """Registra si la salida existía al lanzar MkPFS."""
+        seen.append(Path(cmd[-1]).exists())
+        return FakeProcess(cmd, [], 0)
+
+    runner = ConversionRunner(lambda _e: None, process_factory=factory)
+    runner.start([job], OPTIONS).join(timeout=5)
+    assert seen == [False]

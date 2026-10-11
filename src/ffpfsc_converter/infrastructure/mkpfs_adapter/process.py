@@ -8,6 +8,7 @@ import subprocess
 from collections.abc import Iterator
 from typing import Any
 
+from ffpfsc_converter.infrastructure.mkpfs_adapter.lifeline import bind_to_app, child_setup
 from ffpfsc_converter.infrastructure.mkpfs_adapter.output import split_lines
 
 _READ_CHUNK = 4096
@@ -51,7 +52,8 @@ class PackProcess:
     """Proceso ``mkpfs pack`` en ejecución.
 
     Se lanza en su propio grupo de procesos para poder terminar también a sus
-    procesos hijo (MkPFS usa varios procesos de compresión).
+    procesos hijo (MkPFS usa varios procesos de compresión), y atado a la vida
+    de la app (ver :mod:`~ffpfsc_converter.infrastructure.mkpfs_adapter.lifeline`).
     """
 
     def __init__(self, command: list[str]) -> None:
@@ -68,8 +70,10 @@ class PackProcess:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=0,
+            preexec_fn=child_setup(),  # solo una llamada a prctl entre fork y exec
             **popen_options(),
         )
+        bind_to_app(self._proc)
 
     def lines(self) -> Iterator[str]:
         """Lee la salida del proceso línea a línea hasta que termina.
