@@ -13,6 +13,7 @@ from ffpfsc_converter.domain.pipeline_events import (
 from ffpfsc_converter.domain.remote_events import (
     DownloadFinished,
     FtpReady,
+    FtpRestoreFailed,
     RemoteConnected,
     RemoteDisconnected,
     RemoteError,
@@ -54,6 +55,8 @@ def journal_line(event: object) -> JournalEntry | None:
         return JournalEntry(logging.INFO, f"PS5 {type(event).__name__}: {host}:{port}")
     if isinstance(event, RemoteDisconnected):
         return JournalEntry(logging.INFO, "PS5 desconectada")
+    if isinstance(event, FtpRestoreFailed):
+        return JournalEntry(logging.WARNING, "El FTP no volvió a solo lectura; se reconecta")
     if isinstance(event, DownloadFinished):
         result = event.result
         return _outcome(result.succeeded, f"Descarga {event.job.entry.path}: {result.message}")

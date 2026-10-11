@@ -136,6 +136,9 @@ Si cancelas o falla, al volver a intentarlo con el mismo juego:
 - Si la conexión se corta durante una descarga o subida, la app **reintenta sola
   hasta 3 veces** (esperando 3, 10 y 20 s) y continúa donde quedó. La
   fila del panel de transferencias muestra "Reintentando (1 de 3)…".
+- Al terminar de escribir en la PS5 (subir, reemplazar), el FTP vuelve a solo
+  lectura; si la consola no responde a eso (por ejemplo, tras un corte), la app
+  reintenta y, si sigue fallando, reinicia el FTP y se reconecta sola.
 - **Límite de ps5upload 6.x:** su FTP solo sabe retomar un archivo en los primeros
   2 GiB (guarda la posición en un entero de 32 bits). Si un archivo más grande se
   corta más allá de ese punto, ese archivo se vuelve a descargar o subir desde el

@@ -94,6 +94,21 @@ class FtpReady:
 
 
 @dataclass(frozen=True)
+class FtpRestoreFailed:
+    """Tras escribir en la PS5 no se pudo volver el FTP a solo lectura.
+
+    La vista PS5 lo recupera reiniciando el FTP y reconectándose.
+
+    Attributes:
+        host (str): Dirección de la PS5.
+        port (int): Puerto FTP.
+    """
+
+    host: str
+    port: int
+
+
+@dataclass(frozen=True)
 class FtpLoginRefused:
     """El FTP rechazó las credenciales (lo inició otro programa con otras).
 
@@ -181,6 +196,7 @@ RemoteEvent = (
     | PairingCodeRequired
     | StorageUpdated
     | FtpReady
+    | FtpRestoreFailed
     | FtpLoginRefused
     | DownloadStarted
     | DownloadProgress

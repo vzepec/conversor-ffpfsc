@@ -5,14 +5,15 @@ from pathlib import Path
 import pytest
 
 from conftest import FakeConsole
+from ffpfsc_converter import config
 from ffpfsc_converter.domain.pipeline import SpaceStrategy
 from ffpfsc_converter.domain.pipeline_events import (
     RemoteDeleted,
     UploadFinished,
     UploadProgress,
 )
-from ffpfsc_converter.domain.remote import RemoteEntry
-from ffpfsc_converter.domain.remote_events import FtpReady
+from ffpfsc_converter.domain.remote import ConsoleTarget, RemoteEntry
+from ffpfsc_converter.domain.remote_events import FtpReady, FtpRestoreFailed
 from ffpfsc_converter.services.pipeline.plan import (
     build_replace_plan,
     choose_strategy,
@@ -121,3 +122,35 @@ def test_upload_restarts_when_remote_part_is_from_another_file(
     while changes.busy:
         pass
     assert (ftp_root / "data" / "homebrew" / "juego.ffpfsc").read_bytes() == local.read_bytes()
+
+
+class _RestoreFails(FakeConsole):
+    """Consola que no logra volver el FTP a solo lectura (como tras un corte)."""
+
+    def start_ftp(self, session: object, host: str, port: int, writable: bool,
+                  restart: bool) -> ConsoleTarget:
+        """Inicia la escritura, pero falla al pedir solo lectura."""
+        if not writable:
+            self.modes.append(writable)
+            raise ValueError("ftp_start:stopping")
+        return super().start_ftp(session, host, port, writable, restart)
+
+
+def test_failed_restore_is_reported_instead_of_ignored(
+        writable_ftp: int, ftp_root: Path, tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Si el FTP no vuelve a solo lectura, se reintenta y se avisa (antes se ignoraba).
+
+    Sin el aviso, la vista PS5 se quedaba con la navegación en pausa para siempre.
+    """
+    monkeypatch.setattr(config, "FTP_RESTORE_RETRY_SECONDS", 0)
+    local = tmp_path / "nuevo.ffpfsc"
+    local.write_bytes(b"N" * 1000)
+    console = _RestoreFails(ftp_root, writable_ftp, usable=10**9)
+    events: list[object] = []
+    changes = RemoteChanges(events.append, console)  # type: ignore[arg-type]
+    changes.upload("ps5", writable_ftp, [local], "/data/homebrew")
+    while changes.busy:
+        pass
+    assert events[-1] == FtpRestoreFailed("ps5", writable_ftp)
+    assert console.modes == [True] + [False] * config.FTP_RESTORE_ATTEMPTS

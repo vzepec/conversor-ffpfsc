@@ -5,6 +5,13 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Corregido
+- Tras subir a la PS5 (por ejemplo, desde «Subir a la PS5» en Convertir) la vista
+  PS5 podía quedar con todos los botones bloqueados, incluso «Desconectar»: si el
+  FTP no lograba volver a solo lectura (habitual tras un corte de conexión), el
+  error se ignoraba en silencio. Ahora se reintenta, queda en el registro y, si
+  aun así falla, la vista reinicia el FTP y se reconecta sola en la misma carpeta.
+
 ## [1.4.1] - 2026-10-10
 
 ### Corregido

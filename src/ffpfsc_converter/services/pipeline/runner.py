@@ -26,11 +26,10 @@ from ffpfsc_converter.domain.pipeline_events import (
     PipelineOptionsRequired,
 )
 from ffpfsc_converter.domain.remote import ConsoleTarget, RemoteEntry
-from ffpfsc_converter.domain.remote_events import FtpReady
 from ffpfsc_converter.errors import ConverterError, DownloadCancelledError
 from ffpfsc_converter.formatting import format_size
 from ffpfsc_converter.infrastructure.ftp import FTP_ERRORS, FtpClient
-from ffpfsc_converter.services.console_access import ConsoleAccess
+from ffpfsc_converter.services.console_access import ConsoleAccess, restore_notifier
 from ffpfsc_converter.services.launch_errors import describe_launch_error
 from ffpfsc_converter.services.pipeline import stages
 from ffpfsc_converter.services.pipeline.compress import Compressor, compress_job
@@ -165,7 +164,7 @@ class Ps5ConversionPipeline:
         ctx = ReplaceContext(
             self._access, self._factory, target.host, target.port, plan, job.output,
             attempt.original_size, self._reporter.stage, self._reporter.report, self._confirm,
-            self._cancel.is_set, lambda ro: self._emit(FtpReady(ro, started=True)),
+            self._cancel.is_set, restore_notifier(self._emit, target.host, target.port),
             self._reporter.retry, original_deleted=attempt.original_deleted)
         try:
             size = replace_on_console(ctx)
