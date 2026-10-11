@@ -96,7 +96,8 @@ Selecciona **una** carpeta de juego o imagen `.exfat`/`.ffpkg` y pulsa
    **comprueba con CRC32** que cada archivo es idéntico al de la PS5 (la consola
    calcula el suyo mientras este equipo calcula el propio).
 2. **Analiza** el juego y abre la ventana de compresión: modo (con peso
-   estimado), núcleos, verificación completa y si borrar los temporales al final.
+   estimado), núcleos, rendimiento en la PS5, verificación completa y si borrar los
+   temporales al final.
    Esa ventana muestra exactamente qué se subirá y qué se borrará.
 3. **Comprime** a `.ffpfsc` con MkPFS (comprueba antes el espacio de este equipo).
 4. **Comprueba el espacio** de la PS5 (`fs.freespace` del helper).

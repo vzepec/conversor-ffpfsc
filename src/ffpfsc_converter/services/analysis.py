@@ -16,7 +16,7 @@ from ffpfsc_converter.services.metadata import read_game_info
 
 
 def analyze_job(job: ConversionJob, levels: Sequence[int], emit: EventSink) -> None:
-    """Completa ``info``, ``size`` y ``estimates`` del trabajo (bloqueante).
+    """Completa ``info``, ``size`` y las estimaciones del trabajo (bloqueante).
 
     Modifica ``job`` a propósito y publica ``JobInfoReady``, ``JobSizeReady`` y
     ``JobEstimateReady`` en ese orden (sin estimación si ya es un ``.ffpfsc``).
@@ -36,7 +36,8 @@ def analyze_job(job: ConversionJob, levels: Sequence[int], emit: EventSink) -> N
     emit(JobSizeReady(job))
     if job.already_compressed:  # un .ffpfsc no se vuelve a comprimir: no hay qué estimar
         return
-    job.estimates = estimate_sizes(files, levels)
+    estimates = estimate_sizes(files, levels)
+    job.estimates, job.performance_estimates = estimates.standard, estimates.performance
     emit(JobEstimateReady(job))
 
 

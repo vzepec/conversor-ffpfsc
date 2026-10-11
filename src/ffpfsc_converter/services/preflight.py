@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ffpfsc_converter.config import FREE_SPACE_MARGIN
-from ffpfsc_converter.domain.models import ConversionJob
+from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
 from ffpfsc_converter.infrastructure.filesystem import free_space
 
 
@@ -30,12 +30,12 @@ class SpaceCheck:
         return self.free >= self.needed
 
 
-def check_free_space(job: ConversionJob, level: int) -> SpaceCheck | None:
+def check_free_space(job: ConversionJob, options: ConversionOptions) -> SpaceCheck | None:
     """Compara el espacio libre en destino con el peso estimado más el margen.
 
     Args:
         job (ConversionJob): Trabajo ya analizado.
-        level (int): Nivel de compresión elegido.
+        options (ConversionOptions): Nivel de compresión y rendimiento elegidos.
 
     Returns:
         SpaceCheck | None: Resultado de la comparación, o ``None`` si aún no se
@@ -46,5 +46,5 @@ def check_free_space(job: ConversionJob, level: int) -> SpaceCheck | None:
     """
     if not job.size:
         return None
-    estimate = job.estimate_for(level) or job.size
+    estimate = job.estimate_for(options.compression_level, options.is_performance) or job.size
     return SpaceCheck(free_space(job.output.parent), int(estimate * FREE_SPACE_MARGIN))

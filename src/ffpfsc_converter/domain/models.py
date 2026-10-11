@@ -79,11 +79,36 @@ class ConversionOptions:
         compression_level (int): Nivel de compresión zlib (1-9).
         cpu_count (int): Núcleos que puede usar MkPFS.
         full_verify (bool): ``True`` para verificar cada bloque al terminar.
+        threshold_gain (int): Ganancia mínima (en %) para guardar comprimido un bloque;
+            ``0`` = comprimir todo lo que se reduzca (lo predeterminado de MkPFS).
     """
 
     compression_level: int
     cpu_count: int
     full_verify: bool
+    threshold_gain: int = 0
+
+    @property
+    def is_performance(self) -> bool:
+        """Indica si se eligió priorizar el rendimiento en la PS5.
+
+        Returns:
+            bool: ``True`` si hay bloques que quedarán en crudo a propósito.
+        """
+        return self.threshold_gain > 0
+
+
+@dataclass(frozen=True)
+class SizeEstimates:
+    """Peso final estimado de un juego por nivel de compresión.
+
+    Attributes:
+        standard (dict[int, int]): Nivel → bytes, comprimiendo todo lo que se reduzca.
+        performance (dict[int, int]): Nivel → bytes con «Rendimiento en la PS5».
+    """
+
+    standard: dict[int, int]
+    performance: dict[int, int]
 
 
 @dataclass(frozen=True)
@@ -132,6 +157,8 @@ class ConversionJob:
         info (GameInfo): Metadatos del juego, disponibles tras el análisis.
         size (int): Tamaño total del juego en bytes, disponible tras el análisis.
         estimates (dict[int, int]): Peso final estimado por nivel de compresión.
+        performance_estimates (dict[int, int]): Igual que ``estimates``, pero con
+            «Rendimiento en la PS5».
         state (JobState): Estado actual en la cola.
         id (str): Identificador único, usado también como fila de la tabla.
         already_compressed (bool): ``True`` si se agregó un ``.ffpfsc`` ya hecho: no se
@@ -144,6 +171,7 @@ class ConversionJob:
     info: GameInfo = field(default_factory=GameInfo)
     size: int = 0
     estimates: dict[int, int] = field(default_factory=dict)
+    performance_estimates: dict[int, int] = field(default_factory=dict)
     state: JobState = JobState.QUEUED
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     already_compressed: bool = False
@@ -166,13 +194,14 @@ class ConversionJob:
         """
         return self.state is JobState.QUEUED
 
-    def estimate_for(self, level: int) -> int | None:
+    def estimate_for(self, level: int, performance: bool = False) -> int | None:
         """Obtiene el peso final estimado para un nivel de compresión.
 
         Args:
             level (int): Nivel de compresión zlib.
+            performance (bool): ``True`` si está activo «Rendimiento en la PS5».
 
         Returns:
             int | None: Bytes estimados, o ``None`` si aún no se calculó.
         """
-        return self.estimates.get(level)
+        return (self.performance_estimates if performance else self.estimates).get(level)

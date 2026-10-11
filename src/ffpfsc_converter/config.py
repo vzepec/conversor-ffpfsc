@@ -31,6 +31,11 @@ PRESETS: tuple[CompressionPreset, ...] = (
     CompressionPreset("Máxima compresión (nivel 9, lento)", "Máxima compresión", 9),
 )
 DEFAULT_PRESET = PRESETS[0]
+#: «Rendimiento en la PS5»: ganancia mínima (en %) para que MkPFS guarde comprimido un
+#: bloque de 64 KiB (``--threshold-gain``). Los bloques que casi no se reducen (texturas
+#: y audio ya comprimidos por el juego) quedan en crudo: la consola no tiene que
+#: descomprimirlos al leer y el archivo pesa apenas un poco más.
+PERFORMANCE_THRESHOLD_GAIN = 20
 
 # -------------------------------------------------------------- estimación
 #: Tamaño de bloque PFSC usado por MkPFS (64 KiB).

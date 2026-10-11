@@ -1,4 +1,4 @@
-"""Tarjeta de opciones: modo de compresión, núcleos, verificación y carpeta de destino."""
+"""Tarjeta de opciones: modo, núcleos, verificación, rendimiento en la PS5 y destino."""
 from __future__ import annotations
 
 import os
@@ -7,8 +7,8 @@ from collections.abc import Callable
 from pathlib import Path
 from tkinter import ttk
 
-from ffpfsc_converter.config import DEFAULT_PRESET, PRESETS
-from ffpfsc_converter.domain.models import CompressionPreset
+from ffpfsc_converter.config import DEFAULT_PRESET, PERFORMANCE_THRESHOLD_GAIN, PRESETS
+from ffpfsc_converter.domain.models import CompressionPreset, ConversionOptions
 from ffpfsc_converter.infrastructure.settings_store import load_settings
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.preferences import convert_from, save_convert
@@ -23,8 +23,8 @@ _DEFAULT_OUTPUT_TEXT = "Junto a cada juego"
 class OptionsPanel(ttk.Frame):
     """Controles con las opciones de conversión elegidas por el usuario.
 
-    Recuerda entre sesiones el modo, los núcleos, la verificación y la carpeta
-    de destino.
+    Recuerda entre sesiones el modo, los núcleos, la verificación, el rendimiento
+    en la PS5 y la carpeta de destino.
 
     Attributes:
         cpu_total (int): Núcleos detectados en el equipo.
@@ -39,7 +39,8 @@ class OptionsPanel(ttk.Frame):
         Args:
             parent (tk.Misc): Contenedor del panel.
             theme (ThemeManager): Tema.
-            on_preset_changed (Callable[[], None]): Se llama al cambiar el modo.
+            on_preset_changed (Callable[[], None]): Se llama al cambiar el modo o el
+                rendimiento en la PS5 (cambia el peso estimado).
             on_output_changed (Callable[[Path | None], None]): Recibe la carpeta de destino
                 nueva (``None`` = junto a cada juego).
         """
@@ -52,7 +53,9 @@ class OptionsPanel(ttk.Frame):
         self._preset_var = tk.StringVar(value=saved.preset or DEFAULT_PRESET.label)
         self._cores_var = tk.IntVar(value=saved.cores or self.cpu_total)
         self._verify_var = tk.BooleanVar(value=saved.full_verify)
-        for variable in (self._preset_var, self._cores_var, self._verify_var):
+        self._performance_var = tk.BooleanVar(value=saved.performance)
+        for variable in (self._preset_var, self._cores_var, self._verify_var,
+                         self._performance_var):
             variable.trace_add("write", lambda *_args: self._remember())
         self.columnconfigure(2, weight=1)
         modes = [(p.label, p.short_label) for p in PRESETS]
@@ -61,15 +64,27 @@ class OptionsPanel(ttk.Frame):
         verify = ttk.Checkbutton(self, text="  Más lento, más seguro", variable=self._verify_var,
                                  style=theme.switch_style("surface"))
         self._field(2, "VERIFICACIÓN COMPLETA", verify)
-        self._build_destination()
+        self._build_destination(theme, on_preset_changed)
 
-    def _build_destination(self) -> None:
-        """Crea la línea inferior con la carpeta donde se guardan los ``.ffpfsc``."""
+    def _build_destination(self, theme: ThemeManager,
+                           on_performance_changed: Callable[[], None]) -> None:
+        """Crea la línea inferior: carpeta de los ``.ffpfsc`` y rendimiento en la PS5.
+
+        Args:
+            theme (ThemeManager): Tema.
+            on_performance_changed (Callable[[], None]): Se llama al cambiar el interruptor.
+        """
         m = self._metrics
         ttk.Separator(self).grid(row=2, column=0, columnspan=3, sticky="ew",
                                  pady=(m.px(12), m.px(8)))
         dest = ttk.Frame(self, style="Surface.TFrame")
         dest.grid(row=3, column=0, columnspan=3, sticky="ew")
+        # Se ubica primero a la derecha para que una ruta de destino larga no lo tape.
+        ttk.Checkbutton(dest, text="  Carga más rápido, pesa algo más",
+                        variable=self._performance_var, command=on_performance_changed,
+                        style=theme.switch_style("surface")).pack(side="right")
+        ttk.Label(dest, text="RENDIMIENTO EN LA PS5", style="CardCaption.TLabel").pack(
+            side="right", padx=(m.px(16), m.px(10)))
         ttk.Label(dest, text="GUARDAR EN", style="CardCaption.TLabel").pack(side="left")
         self._outdir_label = ttk.Label(dest, style="Card.TLabel")
         self._outdir_label.pack(side="left", padx=(m.px(10), 0))
@@ -120,6 +135,27 @@ class OptionsPanel(ttk.Frame):
         """
         return self._verify_var.get()
 
+    def is_performance(self) -> bool:
+        """Indica si se pidió priorizar el rendimiento en la PS5.
+
+        Returns:
+            bool: ``True`` si el interruptor está activado.
+        """
+        return self._performance_var.get()
+
+    def conversion_options(self) -> ConversionOptions:
+        """Reúne las opciones elegidas para lanzar una conversión.
+
+        Returns:
+            ConversionOptions: Nivel, núcleos, verificación y umbral de ganancia por bloque.
+        """
+        return ConversionOptions(
+            compression_level=self.selected_preset().level,
+            cpu_count=self.cpu_count(),
+            full_verify=self.full_verify(),
+            threshold_gain=PERFORMANCE_THRESHOLD_GAIN if self.is_performance() else 0,
+        )
+
     def _pick_output(self) -> None:
         """Pide la carpeta de destino."""
         folder = dialogs.ask_output_dir()
@@ -146,4 +182,5 @@ class OptionsPanel(ttk.Frame):
 
     def _remember(self) -> None:
         """Guarda las opciones elegidas para la próxima vez."""
-        save_convert(self._preset_var.get(), self.cpu_count(), self.full_verify())
+        save_convert(self._preset_var.get(), self.cpu_count(), self.full_verify(),
+                     self.is_performance())

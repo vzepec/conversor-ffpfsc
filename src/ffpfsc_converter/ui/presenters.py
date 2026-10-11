@@ -104,18 +104,19 @@ def source_display_name(job: ConversionJob) -> str:
     return f"{source.name}/{root.name}"
 
 
-def estimate_text(job: ConversionJob, level: int) -> str:
+def estimate_text(job: ConversionJob, level: int, performance: bool = False) -> str:
     """Formatea el peso final estimado para un nivel de compresión.
 
     Args:
         job (ConversionJob): Trabajo analizado.
         level (int): Nivel de compresión seleccionado.
+        performance (bool): ``True`` si está activo «Rendimiento en la PS5».
 
     Returns:
         str: Por ejemplo ``"≈ 7.1 GB (−63%)"``, o ``PENDING_TEXT`` si aún no
         hay estimación.
     """
-    estimate = job.estimate_for(level)
+    estimate = job.estimate_for(level, performance)
     if estimate is None:
         return PENDING_TEXT
     return f"≈ {format_size(estimate)} ({savings_text(job.size, estimate)})"

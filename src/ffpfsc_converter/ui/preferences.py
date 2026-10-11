@@ -13,6 +13,7 @@ from ffpfsc_converter.infrastructure.settings_store import save_settings
 
 #: Claves de los ajustes.
 _PRESET, _CORES, _VERIFY = "convert_preset", "convert_cores", "convert_verify"
+_PERFORMANCE = "convert_ps5_performance"
 _OUTPUT = "output_dir"
 _SIZE, _ZOOMED, _VIEW = "window_size", "window_zoomed", "last_view"
 
@@ -25,12 +26,14 @@ class ConvertPreferences:
         preset (str | None): Etiqueta del modo elegido; ``None`` = el predeterminado.
         cores (int | None): Núcleos elegidos; ``None`` = todos.
         full_verify (bool): Verificación completa activada.
+        performance (bool): «Rendimiento en la PS5» activado.
         output_dir (Path | None): Carpeta de destino; ``None`` = junto a cada juego.
     """
 
     preset: str | None
     cores: int | None
     full_verify: bool
+    performance: bool
     output_dir: Path | None
 
 
@@ -69,6 +72,7 @@ def convert_from(settings: Mapping[str, object], presets: Collection[str],
         preset=preset if isinstance(preset, str) and preset in presets else None,
         cores=min(max(cores, 1), cpu_total) if isinstance(cores, int) else None,
         full_verify=settings.get(_VERIFY) is True,
+        performance=settings.get(_PERFORMANCE) is True,
         output_dir=folder if folder is not None and folder.is_dir() else None,
     )
 
@@ -100,15 +104,17 @@ def window_from(settings: Mapping[str, object], minimum: tuple[int, int],
     )
 
 
-def save_convert(preset: str, cores: int, full_verify: bool) -> None:
+def save_convert(preset: str, cores: int, full_verify: bool, performance: bool) -> None:
     """Guarda las opciones de conversión elegidas.
 
     Args:
         preset (str): Etiqueta del modo.
         cores (int): Núcleos.
         full_verify (bool): Verificación completa.
+        performance (bool): «Rendimiento en la PS5».
     """
-    save_settings({_PRESET: preset, _CORES: cores, _VERIFY: full_verify})
+    save_settings({_PRESET: preset, _CORES: cores, _VERIFY: full_verify,
+                   _PERFORMANCE: performance})
 
 
 def save_output_dir(folder: Path | None) -> None:
