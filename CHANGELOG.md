@@ -5,6 +5,8 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.5.0] - 2026-10-10
+
 ### Añadido
 - Arrastrar (o elegir) un `.ffpfsc` ya comprimido en la vista Convertir lo agrega a
   la cola como «✓ Ya comprimido», con su nombre, Title ID y versión leídos del
