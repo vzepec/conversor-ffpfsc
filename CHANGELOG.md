@@ -9,7 +9,8 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - La app se congelaba al comprimir (sobre todo en Windows y con muchos núcleos):
   MkPFS redibuja su barra cientos o miles de veces por segundo y cada redibujo
   llegaba a la interfaz. Ahora el avance se publica como máximo 4 veces por
-  segundo y la interfaz nunca dedica más de 40 ms seguidos a procesar eventos.
+  segundo (también en «Comprimir y reemplazar», incluida la comprobación CRC32) y
+  la interfaz nunca dedica más de 40 ms seguidos a procesar eventos.
 - Volver a convertir un juego cuyo `.ffpfsc` ya existía fallaba con `EOFError`:
   MkPFS preguntaba por consola si sobrescribir. Tras confirmar en la app, el
   archivo anterior se borra antes de lanzar MkPFS.
