@@ -24,6 +24,7 @@ from ffpfsc_converter.ui import job_presenters as jp
 from ffpfsc_converter.ui.convert_upload import ConvertedUploader
 from ffpfsc_converter.ui.event_handlers import ViewUpdater
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
+from ffpfsc_converter.ui.job_presenters import READY_DETAIL, READY_LABEL
 from ffpfsc_converter.ui.main_view import MainView, ViewCallbacks
 from ffpfsc_converter.ui.preferences import save_output_dir
 from ffpfsc_converter.ui.theme import ThemeManager
@@ -149,10 +150,13 @@ class ConvertController:
         except ConverterError as exc:
             dialogs.show_error(str(exc))
             return
-        if any(j.game_root == job.game_root for j in self._queued_jobs()):
+        if any(j.game_root == job.game_root and (j.is_queued or j.already_compressed)
+               for j in self.jobs):
             return
         self.jobs.append(job)
         self.view.table.add_row(job.id, "Leyendo…", presenters.source_display_name(job))
+        if job.already_compressed:
+            self.view.table.set_status(job.id, "ok", READY_LABEL, READY_DETAIL)
         self.refresh_queue()
         if job.game_root != path:
             self.view.write_log(f"Juego detectado en: {job.game_root}")

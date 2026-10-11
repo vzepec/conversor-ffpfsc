@@ -9,6 +9,7 @@
 | **Carpeta de juego** | Una carpeta que contenga `eboot.bin` y `sce_sys/` (puede estar hasta 3 niveles más adentro de la carpeta que arrastras). |
 | **Imagen `.exfat`** | Imagen exFAT de un juego. |
 | **Imagen `.ffpkg`** | Imagen del juego en formato ffpkg. |
+| **`.ffpfsc` ya comprimido** | No se vuelve a comprimir: se agrega a la cola como **✓ Ya comprimido**, con su nombre, Title ID y versión, y el botón **Subir a la PS5** listo. |
 | **Carpeta con una imagen dentro** | Si la carpeta no tiene `eboot.bin`, se usa el `.exfat`/`.ffpkg` más grande que haya dentro (hasta 2 niveles). |
 
 El resultado es un único archivo **`.ffpfsc`** (PFS comprimido) con el nombre

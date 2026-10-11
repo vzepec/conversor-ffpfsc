@@ -10,7 +10,7 @@ from ffpfsc_converter.config import (
     IMAGE_SEARCH_DEPTH,
     OUTPUT_EXTENSION,
 )
-from ffpfsc_converter.domain.models import ConversionJob
+from ffpfsc_converter.domain.models import ConversionJob, JobState
 from ffpfsc_converter.errors import GameNotFoundError, SourceNotFoundError, UnsupportedFormatError
 
 
@@ -24,6 +24,18 @@ def is_image_file(path: Path) -> bool:
         bool: ``True`` si la extensión es ``.exfat`` o ``.ffpkg`` (sin distinguir mayúsculas).
     """
     return path.suffix.lower() in IMAGE_EXTENSIONS
+
+
+def is_compressed_file(path: Path) -> bool:
+    """Indica si la ruta es un ``.ffpfsc`` ya comprimido.
+
+    Args:
+        path (Path): Ruta a comprobar.
+
+    Returns:
+        bool: ``True`` si es un archivo con extensión ``.ffpfsc``.
+    """
+    return path.is_file() and path.suffix.lower() == OUTPUT_EXTENSION
 
 
 def find_game_root(path: Path, max_depth: int = GAME_ROOT_SEARCH_DEPTH) -> Path | None:
@@ -128,16 +140,20 @@ def create_job(source: Path, output_dir: Path | None = None) -> ConversionJob:
     """Crea un trabajo de conversión para la ruta agregada por el usuario.
 
     Args:
-        source (Path): Carpeta o imagen que agregó el usuario.
+        source (Path): Carpeta, imagen o ``.ffpfsc`` que agregó el usuario.
         output_dir (Path | None): Carpeta de destino; ``None`` = junto al origen.
 
     Returns:
-        ConversionJob: Trabajo en estado ``QUEUED``, aún sin analizar.
+        ConversionJob: Trabajo en estado ``QUEUED``, aún sin analizar; si es un
+        ``.ffpfsc``, un trabajo ya terminado (``already_compressed``) listo para subir.
 
     Raises:
         SourceNotFoundError: Si la ruta no existe.
         UnsupportedFormatError: Si es un archivo que no es una imagen soportada.
         GameNotFoundError: Si es una carpeta sin un juego reconocible.
     """
+    if is_compressed_file(source):
+        return ConversionJob(source, source, source, state=JobState.SUCCEEDED,
+                             already_compressed=True)
     game_root = resolve_game_root(source)
     return ConversionJob(source, game_root, output_path_for(source, output_dir))

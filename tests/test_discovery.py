@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from ffpfsc_converter.domain.models import JobState
 from ffpfsc_converter.errors import GameNotFoundError, SourceNotFoundError, UnsupportedFormatError
 from ffpfsc_converter.services.discovery import (
     create_job,
@@ -62,3 +63,13 @@ def test_create_job(game_folder: Path) -> None:
     assert job.game_root == game_folder / "PPSA00000-app"
     assert job.output == game_folder.parent / "Juego.ffpfsc"
     assert job.is_queued
+
+
+def test_compressed_file_is_ready_to_upload(tmp_path: Path) -> None:
+    """Un .ffpfsc se agrega como ya comprimido: su salida es el propio archivo."""
+    ready = tmp_path / "Juego.FFPFSC"
+    ready.write_bytes(b"P" * 10)
+    job = create_job(ready, Path("/otra/carpeta"))
+    assert job.already_compressed and not job.is_queued
+    assert job.game_root == ready and job.output == ready
+    assert job.state is JobState.SUCCEEDED

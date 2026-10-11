@@ -44,7 +44,7 @@ class UnsupportedFormatError(ConverterError):
         """
         super().__init__(
             f"Formato no soportado:\n{path}\n\n"
-            "Usa una carpeta de juego o un archivo .exfat / .ffpkg."
+            "Usa una carpeta de juego, una imagen .exfat / .ffpkg o un .ffpfsc ya comprimido."
         )
         self.path = path
 

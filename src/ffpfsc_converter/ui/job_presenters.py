@@ -14,6 +14,9 @@ from ffpfsc_converter.formatting import PHASE_NAMES, format_eta, format_size
 from ffpfsc_converter.ui.presenters import savings_text
 
 _SEPARATOR = "  ·  "
+#: Píldora y detalle de un ``.ffpfsc`` agregado ya comprimido.
+READY_LABEL = "✓ Ya comprimido"
+READY_DETAIL = "Listo para subir a la PS5"
 
 
 class RowStatus(NamedTuple):
@@ -82,6 +85,8 @@ def size_lines(job: ConversionJob, level: int) -> SizeText:
     """
     if not job.size:
         return SizeText("calculando…", "", "")
+    if job.already_compressed:
+        return SizeText(format_size(job.size), "", "ya comprimido")
     estimate = job.estimate_for(level)
     if estimate is None:
         return SizeText(format_size(job.size), "", "estimando…")
@@ -156,8 +161,9 @@ def queue_summary(jobs: Iterable[ConversionJob], level: int) -> str:
         return ""
     count = f"{len(items)} juego" + ("s" if len(items) != 1 else "")
     sized = [j for j in items if j.size]
-    if not sized or any(j.estimate_for(level) is None for j in sized):
+    finals = [j.size if j.already_compressed else j.estimate_for(level) for j in sized]
+    if not sized or any(final is None for final in finals):
         return count
     total = sum(j.size for j in sized)
-    estimate = sum(j.estimate_for(level) or 0 for j in sized)
+    estimate = sum(final or 0 for final in finals)
     return f"{count}{_SEPARATOR}{format_size(total)} → ≈ {format_size(estimate)}"

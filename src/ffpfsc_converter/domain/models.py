@@ -134,6 +134,8 @@ class ConversionJob:
         estimates (dict[int, int]): Peso final estimado por nivel de compresión.
         state (JobState): Estado actual en la cola.
         id (str): Identificador único, usado también como fila de la tabla.
+        already_compressed (bool): ``True`` si se agregó un ``.ffpfsc`` ya hecho: no se
+            convierte y queda listo para subir a la PS5.
     """
 
     source: Path
@@ -144,6 +146,7 @@ class ConversionJob:
     estimates: dict[int, int] = field(default_factory=dict)
     state: JobState = JobState.QUEUED
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    already_compressed: bool = False
 
     @property
     def kind(self) -> SourceKind:
