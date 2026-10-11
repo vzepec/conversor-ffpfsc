@@ -12,11 +12,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ffpfsc_converter.domain.pipeline import PipelineStage, ReplacePlan, SpaceStrategy
-from ffpfsc_converter.domain.remote import ConsoleTarget
 from ffpfsc_converter.errors import ConverterError
 from ffpfsc_converter.formatting import format_size
 from ffpfsc_converter.infrastructure.ava1.console import JobStatus, delete_tree, free_space
-from ffpfsc_converter.services.console_access import ConsoleAccess, writable_ftp
+from ffpfsc_converter.services.console_access import (
+    ConsoleAccess,
+    RestoreCallback,
+    writable_ftp,
+)
 from ffpfsc_converter.services.integrity import FilePair, IntegrityError, verify_files
 from ffpfsc_converter.services.pipeline.plan import choose_strategy
 from ffpfsc_converter.services.remote_client import ClientFactory
@@ -66,7 +69,7 @@ class ReplaceContext:
         progress (ProgressCallback): Avance de la subida.
         confirm (Callable[[str], bool]): Pide una confirmación al usuario.
         should_cancel (Callable[[], bool]): Devuelve ``True`` si hay que cancelar.
-        on_restored (Callable[[ConsoleTarget], None]): Recibe el FTP de solo lectura final.
+        on_restored (RestoreCallback): Recibe el FTP de solo lectura final (o ``None``).
         on_retry (RetryCallback): Avisa cada reintento automático tras un corte.
         original_deleted (bool): ``True`` una vez borrado el original (también si se
             borró en un intento anterior; así no se vuelve a borrar).
@@ -83,7 +86,7 @@ class ReplaceContext:
     progress: ProgressCallback
     confirm: Callable[[str], bool]
     should_cancel: Callable[[], bool]
-    on_restored: Callable[[ConsoleTarget], None]
+    on_restored: RestoreCallback
     on_retry: RetryCallback
     original_deleted: bool = False
 

@@ -47,6 +47,8 @@ class ExplorerController:
         quiet (bool): ``True`` durante una conexión automática (sin diálogos de error).
         user_disconnected (bool): ``True`` si el usuario pulsó «Desconectar» (no se reconecta).
         reconnects (int): Intentos de reconexión automática hechos tras un corte.
+        needs_restart (bool): ``True`` si al reconectar hay que reiniciar el FTP (por
+            ejemplo, si no volvió a solo lectura tras una subida).
         browser (RemoteBrowser): Navegación por la PS5.
         downloads (DownloadRunner): Cola de descargas.
         storage (StorageMonitor): Espacio libre de las unidades de la PS5.
@@ -87,6 +89,7 @@ class ExplorerController:
         self.pending_on_connect: list[Callable[[], None]] = []
         self.ftp_restarted = False
         self.quiet, self.user_disconnected, self.reconnects = False, False, 0
+        self.needs_restart = False
         settings = load_settings()
         self.download_dir = Path(settings["download_dir"]) if settings.get("download_dir") else None
         self.view.connection.set_values(str(settings.get("ps5_host", "")),
@@ -106,7 +109,7 @@ class ExplorerController:
         self.quiet, self.user_disconnected, self.reconnects = False, False, 0
         save_settings({"ps5_host": host, "ps5_ftp_port": port})
         self.view.connection.set_state(False, f"Conectando con {host}…", busy=True)
-        self.launcher.connect(host, port, restart=restart)
+        self.launcher.connect(host, port, restart=restart or self.needs_restart)
 
     def auto_connect(self) -> None:
         """Se conecta sin molestar si la PS5 ya está vinculada (al abrir o tras un corte).
@@ -120,7 +123,7 @@ class ExplorerController:
             return
         self.quiet = True
         self.view.connection.set_state(False, f"Conectando con {host}…", busy=True)
-        self.launcher.connect(host, port, quick=True)
+        self.launcher.connect(host, port, restart=self.needs_restart, quick=True)
 
     def when_connected(self, action: Callable[[], None]) -> None:
         """Ejecuta una acción ahora si hay conexión o, si no, apenas se conecte.

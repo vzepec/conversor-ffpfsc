@@ -19,11 +19,15 @@ from ffpfsc_converter.domain.pipeline_events import (
     UploadProgress,
 )
 from ffpfsc_converter.domain.remote import ConsoleTarget
-from ffpfsc_converter.domain.remote_events import FtpReady, RemoteError, TransferRetrying
+from ffpfsc_converter.domain.remote_events import RemoteError, TransferRetrying
 from ffpfsc_converter.errors import ConverterError, DownloadCancelledError
 from ffpfsc_converter.infrastructure.ava1.console import delete_tree
 from ffpfsc_converter.infrastructure.ftp import FTP_ERRORS, FtpClient, join_remote
-from ffpfsc_converter.services.console_access import ConsoleAccess, writable_ftp
+from ffpfsc_converter.services.console_access import (
+    ConsoleAccess,
+    restore_notifier,
+    writable_ftp,
+)
 from ffpfsc_converter.services.launch_errors import describe_launch_error
 from ffpfsc_converter.services.remote_client import ClientFactory
 from ffpfsc_converter.services.remote_upload import (
@@ -144,17 +148,10 @@ class RemoteChanges:
             items (list[tuple[str, Path]]): Pares (id de subida, archivo local).
             remote_dir (str): Carpeta remota de destino.
         """
-        def restore(target: ConsoleTarget) -> None:
-            """Avisa que el FTP volvió a solo lectura para reconectar el explorador.
-
-            Args:
-                target (ConsoleTarget): FTP de solo lectura.
-            """
-            self._emit(FtpReady(target, started=True))
-
         pending = list(items)
         try:
-            with writable_ftp(self._access, host, port, restore) as target:
+            with writable_ftp(self._access, host, port,
+                              restore_notifier(self._emit, host, port)) as target:
                 while pending:
                     upload_id, local = pending[0]
                     self._upload_one(target, upload_id, local, remote_dir)

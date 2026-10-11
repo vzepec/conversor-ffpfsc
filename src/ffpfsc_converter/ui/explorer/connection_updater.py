@@ -9,6 +9,7 @@ from ffpfsc_converter.config import RECONNECT_ATTEMPTS, RECONNECT_DELAY_MS
 from ffpfsc_converter.domain.remote_events import (
     FtpLoginRefused,
     FtpReady,
+    FtpRestoreFailed,
     PairingCodeRequired,
     RemoteConnected,
     RemoteDisconnected,
@@ -37,6 +38,7 @@ class ConnectionUpdater:
         self._ctl, self._view = controller, controller.view
         self.handlers: dict[type, Callable] = {
             FtpReady: self._on_ftp_ready,
+            FtpRestoreFailed: self._on_restore_failed,
             FtpLoginRefused: self._on_login_refused,
             PairingCodeRequired: self._on_pairing_code,
             RemoteConnected: self._on_connected,
@@ -57,6 +59,20 @@ class ConnectionUpdater:
             self._view.connection.set_state(False, f"{verb}; abriendo…", busy=True)
         keep_path = self._ctl.target is not None or self._ctl.reconnects > 0
         self._ctl.browser.connect(event.target, start_path=self._ctl.path if keep_path else None)
+
+    def _on_restore_failed(self, _event: FtpRestoreFailed) -> None:
+        """Recupera la vista si el FTP no volvió a solo lectura tras escribir.
+
+        Se trata como un corte: se reinicia el FTP (en solo lectura) y se vuelve a
+        la carpeta abierta; así la navegación nunca queda en pausa para siempre.
+
+        Args:
+            _event (FtpRestoreFailed): Aviso del servicio.
+        """
+        self._ctl.target = None
+        self._ctl.needs_restart = True
+        self._view.set_connected(False)
+        self._schedule_reconnect()
 
     def _on_login_refused(self, event: FtpLoginRefused) -> None:
         """Reinicia el FTP con credenciales nuevas (lo había iniciado otro programa).
@@ -95,6 +111,7 @@ class ConnectionUpdater:
         self._ctl.target = event.target
         self._ctl.ftp_restarted = False
         self._ctl.quiet, self._ctl.user_disconnected, self._ctl.reconnects = False, False, 0
+        self._ctl.needs_restart = False
         self._view.set_connected(True)
         self._view.set_browsing_enabled(True)
         self._ctl.refresh_storage()

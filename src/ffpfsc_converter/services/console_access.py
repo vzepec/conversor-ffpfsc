@@ -7,13 +7,18 @@ e inicia el FTP con los permisos mínimos que necesite cada operación.
 from __future__ import annotations
 
 import contextlib
+import logging
 import secrets
 import time
 from collections.abc import Callable, Iterator
 
+from ffpfsc_converter import config
 from ffpfsc_converter.config import AVA1_CLIENT_NAME, AVA1_PORT, FTP_TIMEOUT_SECONDS
+from ffpfsc_converter.domain.events import EventSink
 from ffpfsc_converter.domain.remote import ConsoleTarget
+from ffpfsc_converter.domain.remote_events import FtpReady, FtpRestoreFailed
 from ffpfsc_converter.errors import ConverterError
+from ffpfsc_converter.infrastructure.app_log import LOGGER_NAME
 from ffpfsc_converter.infrastructure.ava1.session import METHOD_FTP_START, Ava1Session
 from ffpfsc_converter.infrastructure.ava1.trust import TrustStore
 from ffpfsc_converter.infrastructure.settings_store import load_settings, save_settings
@@ -116,20 +121,26 @@ class ConsoleAccess:
         return ConsoleTarget(host, port, _FTP_USER, password)
 
 
+#: Recibe el FTP de solo lectura restaurado, o ``None`` si no se pudo restaurar.
+RestoreCallback = Callable[[ConsoleTarget | None], None]
+
+
 @contextlib.contextmanager
 def writable_ftp(
-    access: ConsoleAccess, host: str, port: int, on_restored: Callable[[ConsoleTarget], None]
+    access: ConsoleAccess, host: str, port: int, on_restored: RestoreCallback
 ) -> Iterator[ConsoleTarget]:
     """Activa la escritura en el FTP solo mientras dura el bloque ``with``.
 
     Al salir (también por error o cancelación) lo reinicia en solo lectura con
-    credenciales nuevas y entrega esos datos a ``on_restored``.
+    credenciales nuevas, reintentando unas veces (tras un corte, la consola puede
+    tardar en responder), y entrega el resultado a ``on_restored``.
 
     Args:
         access (ConsoleAccess): Acceso a la consola (ya emparejada).
         host (str): Dirección de la PS5.
         port (int): Puerto FTP.
-        on_restored (Callable[[ConsoleTarget], None]): Recibe el FTP de solo lectura.
+        on_restored (RestoreCallback): Recibe el FTP de solo lectura, o ``None`` si no
+            se pudo restaurar (nunca se ignora en silencio: la interfaz lo recupera).
 
     Yields:
         ConsoleTarget: Datos de conexión al FTP con escritura.
@@ -142,12 +153,57 @@ def writable_ftp(
     try:
         yield target
     finally:
-        with contextlib.suppress(OSError, ValueError, ConverterError):
+        on_restored(_restore_readonly(access, host, port))
+
+
+def restore_notifier(emit: EventSink, host: str, port: int) -> RestoreCallback:
+    """Crea el aviso de fin de escritura para la interfaz.
+
+    Args:
+        emit (EventSink): Cola de eventos.
+        host (str): Dirección de la PS5.
+        port (int): Puerto FTP.
+
+    Returns:
+        RestoreCallback: Publica ``FtpReady`` (reconectar en solo lectura) o
+        ``FtpRestoreFailed`` (la interfaz recupera la conexión).
+    """
+    def notify(target: ConsoleTarget | None) -> None:
+        """Publica el evento que corresponde al resultado.
+
+        Args:
+            target (ConsoleTarget | None): FTP de solo lectura, o ``None`` si falló.
+        """
+        emit(FtpReady(target, started=True) if target else FtpRestoreFailed(host, port))
+
+    return notify
+
+
+def _restore_readonly(access: ConsoleAccess, host: str, port: int) -> ConsoleTarget | None:
+    """Reinicia el FTP en solo lectura, con reintentos.
+
+    Args:
+        access (ConsoleAccess): Acceso a la consola.
+        host (str): Dirección de la PS5.
+        port (int): Puerto FTP.
+
+    Returns:
+        ConsoleTarget | None: FTP de solo lectura, o ``None`` si no se pudo.
+    """
+    log = logging.getLogger(LOGGER_NAME)
+    for attempt in range(1, config.FTP_RESTORE_ATTEMPTS + 1):
+        try:
             session = access.open_session(host)
             try:
-                on_restored(access.start_ftp(session, host, port, writable=False, restart=True))
+                return access.start_ftp(session, host, port, writable=False, restart=True)
             finally:
                 session.close()
+        except (OSError, ValueError, ConverterError) as exc:
+            log.warning("No se pudo volver el FTP a solo lectura (intento %d de %d): %s",
+                        attempt, config.FTP_RESTORE_ATTEMPTS, exc)
+            if attempt < config.FTP_RESTORE_ATTEMPTS:
+                time.sleep(config.FTP_RESTORE_RETRY_SECONDS)
+    return None
 
 
 def saved_target(host: str, port: int) -> ConsoleTarget:
