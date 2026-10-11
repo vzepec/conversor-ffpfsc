@@ -14,6 +14,7 @@ from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.preferences import convert_from, save_convert
 from ffpfsc_converter.ui.theme import ThemeManager
 from ffpfsc_converter.ui.widgets.basics import Segmented
+from ffpfsc_converter.ui.widgets.flow_frame import FlowFrame
 from ffpfsc_converter.ui.widgets.stepper import Stepper
 
 _PRESETS_BY_LABEL = {p.label: p for p in PRESETS}
@@ -57,34 +58,38 @@ class OptionsPanel(ttk.Frame):
         for variable in (self._preset_var, self._cores_var, self._verify_var,
                          self._performance_var):
             variable.trace_add("write", lambda *_args: self._remember())
-        self.columnconfigure(2, weight=1)
-        modes = [(p.label, p.short_label) for p in PRESETS]
-        self._field(0, "MODO", Segmented(self, self._preset_var, modes, on_preset_changed))
-        self._field(1, "NÚCLEOS", Stepper(self, theme, self._cores_var, (1, self.cpu_total)))
-        verify = ttk.Checkbutton(self, text="  Más lento, más seguro", variable=self._verify_var,
-                                 style=theme.switch_style("surface"))
-        self._field(2, "VERIFICACIÓN COMPLETA", verify)
-        self._build_destination(theme, on_preset_changed)
+        self.columnconfigure(0, weight=1)
+        self._build_fields(theme, on_preset_changed)
+        self._build_destination()
 
-    def _build_destination(self, theme: ThemeManager,
-                           on_performance_changed: Callable[[], None]) -> None:
-        """Crea la línea inferior: carpeta de los ``.ffpfsc`` y rendimiento en la PS5.
+    def _build_fields(self, theme: ThemeManager, on_preset_changed: Callable[[], None]) -> None:
+        """Crea el modo, los núcleos y los interruptores; pasan a otra línea si no caben.
 
         Args:
             theme (ThemeManager): Tema.
-            on_performance_changed (Callable[[], None]): Se llama al cambiar el interruptor.
+            on_preset_changed (Callable[[], None]): Se llama al cambiar el modo o el
+                rendimiento en la PS5.
         """
+        m, switch = self._metrics, theme.switch_style("surface")
+        self._fields = FlowFrame(self, gap=m.px(26), line_gap=m.px(10))
+        self._fields.grid(row=0, column=0, sticky="ew")
+        modes = [(p.label, p.short_label) for p in PRESETS]
+        self._field("MODO", lambda box: Segmented(box, self._preset_var, modes,
+                                                  on_preset_changed))
+        self._field("NÚCLEOS", lambda box: Stepper(box, theme, self._cores_var,
+                                                   (1, self.cpu_total)))
+        self._field("VERIFICACIÓN COMPLETA", lambda box: ttk.Checkbutton(
+            box, text="  Más lento, más seguro", variable=self._verify_var, style=switch))
+        self._field("RENDIMIENTO EN LA PS5", lambda box: ttk.Checkbutton(
+            box, text="  Carga más rápido", variable=self._performance_var,
+            command=on_preset_changed, style=switch))
+
+    def _build_destination(self) -> None:
+        """Crea la línea inferior con la carpeta donde se guardan los ``.ffpfsc``."""
         m = self._metrics
-        ttk.Separator(self).grid(row=2, column=0, columnspan=3, sticky="ew",
-                                 pady=(m.px(12), m.px(8)))
+        ttk.Separator(self).grid(row=1, column=0, sticky="ew", pady=(m.px(12), m.px(8)))
         dest = ttk.Frame(self, style="Surface.TFrame")
-        dest.grid(row=3, column=0, columnspan=3, sticky="ew")
-        # Se ubica primero a la derecha para que una ruta de destino larga no lo tape.
-        ttk.Checkbutton(dest, text="  Carga más rápido, pesa algo más",
-                        variable=self._performance_var, command=on_performance_changed,
-                        style=theme.switch_style("surface")).pack(side="right")
-        ttk.Label(dest, text="RENDIMIENTO EN LA PS5", style="CardCaption.TLabel").pack(
-            side="right", padx=(m.px(16), m.px(10)))
+        dest.grid(row=2, column=0, sticky="ew")
         ttk.Label(dest, text="GUARDAR EN", style="CardCaption.TLabel").pack(side="left")
         self._outdir_label = ttk.Label(dest, style="Card.TLabel")
         self._outdir_label.pack(side="left", padx=(m.px(10), 0))
@@ -95,18 +100,19 @@ class OptionsPanel(ttk.Frame):
                                  command=lambda: self._set_output(None))
         self._show_output()
 
-    def _field(self, column: int, caption: str, widget: tk.Widget) -> None:
-        """Ubica un control con su etiqueta en mayúsculas encima.
+    def _field(self, caption: str, build: Callable[[tk.Misc], tk.Widget]) -> None:
+        """Agrega un control con su etiqueta en mayúsculas encima.
 
         Args:
-            column (int): Columna de la cuadrícula.
             caption (str): Etiqueta del campo.
-            widget (tk.Widget): Control.
+            build (Callable[[tk.Misc], tk.Widget]): Crea el control dentro del contenedor
+                que recibe.
         """
-        pad = (0, self._metrics.px(26))
-        ttk.Label(self, text=caption, style="CardCaption.TLabel").grid(
-            row=0, column=column, sticky="w", padx=pad, pady=(0, self._metrics.px(4)))
-        widget.grid(row=1, column=column, sticky="w", padx=pad)
+        box = ttk.Frame(self._fields, style="Surface.TFrame")
+        ttk.Label(box, text=caption, style="CardCaption.TLabel").pack(
+            anchor="w", pady=(0, self._metrics.px(4)))
+        build(box).pack(anchor="w", expand=True)  # centrado en el alto de la línea
+        self._fields.add(box)
 
     def selected_preset(self) -> CompressionPreset:
         """Obtiene el modo de compresión elegido.
