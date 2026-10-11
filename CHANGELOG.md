@@ -5,6 +5,8 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.6.0] - 2026-10-11
+
 ### Añadido
 - Opción **Rendimiento en la PS5** (vista Convertir y «Comprimir y reemplazar»):
   MkPFS solo guarda comprimidos los bloques que se reducen al menos un 20 %
