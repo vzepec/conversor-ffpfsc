@@ -183,16 +183,11 @@ class ConvertController:
         if not pending:
             dialogs.show_info("Agrega primero una carpeta de juego.")
             return
-        options = self.view.options
-        level = options.selected_preset().level
-        if not all(self._confirm_job(job, level) for job in pending):
+        options = self.view.options.conversion_options()
+        if not all(self._confirm_job(job, options) for job in pending):
             return
         self.view.set_running(True)
-        self.runner.start(pending, ConversionOptions(
-            compression_level=level,
-            cpu_count=options.cpu_count(),
-            full_verify=options.full_verify(),
-        ))
+        self.runner.start(pending, options)
 
     def cancel(self) -> None:
         """Pide cancelar la conversión en curso."""
@@ -201,8 +196,9 @@ class ConvertController:
 
     def refresh_queue(self) -> None:
         """Actualiza el resumen de la cola, el contador lateral y los botones de subida."""
-        level = self.view.options.selected_preset().level
-        self.view.set_summary(jp.queue_summary(self.jobs, level))
+        options = self.view.options
+        self.view.set_summary(jp.queue_summary(self.jobs, options.selected_preset().level,
+                                               options.is_performance()))
         self._on_queue_changed(len(self.jobs))
         self._uploader.refresh()
 
@@ -214,24 +210,25 @@ class ConvertController:
         """
         return [j for j in self.jobs if j.is_queued]
 
-    def _confirm_job(self, job: ConversionJob, level: int) -> bool:
+    def _confirm_job(self, job: ConversionJob, options: ConversionOptions) -> bool:
         """Pide confirmación si se va a sobrescribir o si puede faltar espacio.
 
         Args:
             job (ConversionJob): Trabajo a comprobar.
-            level (int): Nivel de compresión elegido.
+            options (ConversionOptions): Opciones elegidas (nivel y rendimiento).
 
         Returns:
             bool: ``True`` si se puede convertir el trabajo.
         """
         if job.output.exists() and not dialogs.confirm_overwrite(job.output):
             return False
-        space = check_free_space(job, level)
+        space = check_free_space(job, options)
         return space is None or space.is_enough or dialogs.confirm_low_space(space)
 
     def _refresh_estimates(self) -> None:
-        """Actualiza el peso estimado de cada fila al cambiar el modo."""
-        level = self.view.options.selected_preset().level
+        """Actualiza el peso estimado de cada fila al cambiar el modo o el rendimiento."""
+        options = self.view.options
+        level, performance = options.selected_preset().level, options.is_performance()
         for job in self.jobs:
-            self.view.table.set_sizes(job.id, jp.size_lines(job, level))
+            self.view.table.set_sizes(job.id, jp.size_lines(job, level, performance))
         self.refresh_queue()

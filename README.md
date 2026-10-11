@@ -62,7 +62,8 @@ Sigue al tema del sistema (o el que elijas) y se ve nítida en pantallas HiDPI.
 
 ### ⚡ Máxima velocidad
 Usa todos los núcleos de la CPU y el backend **zlib-ng**, el único seguro para
-el descompresor de la PS5.
+el descompresor de la PS5. Con **Rendimiento en la PS5**, los bloques que casi no
+se reducen quedan sin comprimir para que los juegos grandes carguen más rápido.
 
 ### 📋 Cola de conversión
 Convierte varios juegos seguidos con progreso, velocidad en vivo y registro

@@ -39,6 +39,7 @@ def test_build_command_for_folder(game_folder: Path, tmp_path: Path) -> None:
     assert cmd[cmd.index("--temp-folder") + 1] == str(output.parent)
     assert "--require-game-files" in cmd
     assert "--verify-structure" in cmd
+    assert "--threshold-gain" not in cmd  # lo predeterminado de MkPFS: comprimir todo
     assert cmd[-2:] == [str(root), str(output)]
 
 
@@ -51,3 +52,13 @@ def test_build_command_for_image_with_full_verify(tmp_path: Path) -> None:
     assert cmd[5] == "file"
     assert "--require-game-files" not in cmd
     assert "--verify" in cmd
+
+
+def test_build_command_with_ps5_performance(tmp_path: Path) -> None:
+    """«Rendimiento en la PS5» pasa a MkPFS la ganancia mínima por bloque."""
+    image = tmp_path / "g.exfat"
+    image.touch()
+    job = ConversionJob(image, image, tmp_path / "g.ffpfsc")
+    cmd = build_pack_command(job, ConversionOptions(3, 1, False, threshold_gain=20))
+    assert cmd[cmd.index("--threshold-gain") + 1] == "20"
+    assert cmd.index("--threshold-gain") < len(cmd) - 2  # antes de las rutas

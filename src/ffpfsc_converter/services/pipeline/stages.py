@@ -112,7 +112,7 @@ def compress_stage(job: ConversionJob, choice: PipelineChoice, compressor: Compr
         DownloadCancelledError: Si se canceló.
         ConverterError: Si MkPFS falla.
     """
-    space = check_free_space(job, choice.options.compression_level)
+    space = check_free_space(job, choice.options)
     if space is not None and not space.is_enough:
         raise NotEnoughSpaceError(space.needed, free_space(job.output.parent))
     reporter.stage(PipelineStage.COMPRESS, job.output.name)

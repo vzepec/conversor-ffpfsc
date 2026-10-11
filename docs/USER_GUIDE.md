@@ -66,11 +66,12 @@ sola ante cortes. Más detalles en [PS5.md](PS5.md).
 | **Núcleos** | Por defecto todos (**−** / **+**). Bájalo si quieres seguir usando el equipo mientras convierte. |
 | **Guardar en** | Por defecto junto al juego original. |
 | **Verificación completa** | Relee y comprueba cada bloque al terminar. Más lento, máxima seguridad. Sin marcarla se verifica solo la estructura. |
+| **Rendimiento en la PS5** | Solo comprime los bloques que se reducen al menos un 20 %; el resto (texturas y audio que el juego ya trae comprimidos) queda sin comprimir, así la consola descomprime menos al cargar. El `.ffpfsc` pesa algo más (el peso estimado de la cola lo refleja). Recomendado para juegos grandes. |
 
 Mientras convierte o transfiere con la PS5, **el equipo no se suspende**. Al
 terminar, si la ventana no está en primer plano, aparece un **aviso del escritorio**.
 
-La app **recuerda** el modo, los núcleos, la verificación y la carpeta de destino
+La app **recuerda** el modo, los núcleos, la verificación, el rendimiento en la PS5 y la carpeta de destino
 entre sesiones, además del tamaño de la ventana y la última vista abierta. Con
 **Usar «junto a cada juego»** vuelves a guardar los `.ffpfsc` al lado del original.
 

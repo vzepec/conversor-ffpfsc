@@ -5,7 +5,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 
-from ffpfsc_converter.config import DEFAULT_PRESET, PRESETS
+from ffpfsc_converter.config import DEFAULT_PRESET, PERFORMANCE_THRESHOLD_GAIN, PRESETS
 from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
 from ffpfsc_converter.domain.pipeline import PipelineChoice, ReplacePlan
 from ffpfsc_converter.formatting import format_size
@@ -40,6 +40,7 @@ class CompressDialog(Modal):
         self._preset = tk.StringVar(value=DEFAULT_PRESET.label)
         self._cores = tk.IntVar(value=cpu_total)
         self._verify = tk.BooleanVar(value=False)
+        self._performance = tk.BooleanVar(value=False)
         self._cleanup = tk.BooleanVar(value=True)
         self._build_options(cpu_total)
         self._build_summary(plan)
@@ -77,11 +78,13 @@ class CompressDialog(Modal):
                 self._estimate = ttk.Label(body, style="CardMuted.TLabel")
                 self._estimate.pack(anchor="w", pady=(m.px(4), 0))
         switch = self.theme.switch_style("surface")
-        for text, variable in (("  Verificación completa al final (más lento)", self._verify),
-                               ("  Borrar los temporales de este equipo al terminar bien",
-                                self._cleanup)):
-            ttk.Checkbutton(body, text=text, variable=variable, style=switch).pack(
-                anchor="w", pady=(m.px(10), 0))
+        for text, variable in (
+            ("  Rendimiento en la PS5 (carga más rápido, pesa algo más)", self._performance),
+            ("  Verificación completa al final (más lento)", self._verify),
+            ("  Borrar los temporales de este equipo al terminar bien", self._cleanup),
+        ):
+            ttk.Checkbutton(body, text=text, variable=variable, style=switch,
+                            command=self._update_estimate).pack(anchor="w", pady=(m.px(10), 0))
 
     def _build_summary(self, plan: ReplacePlan) -> None:
         """Explica qué pasará en la PS5.
@@ -101,9 +104,9 @@ class CompressDialog(Modal):
                   wraplength=m.px(480)).pack(anchor="w")
 
     def _update_estimate(self) -> None:
-        """Muestra el peso estimado para el modo elegido."""
+        """Muestra el peso estimado para el modo y el rendimiento elegidos."""
         level = _PRESETS_BY_LABEL[self._preset.get()].level
-        text = presenters.estimate_text(self._job, level)
+        text = presenters.estimate_text(self._job, level, self._performance.get())
         self._estimate.configure(text=f"Peso estimado: {text}")
 
     def _accept(self) -> None:
@@ -112,6 +115,7 @@ class CompressDialog(Modal):
             compression_level=_PRESETS_BY_LABEL[self._preset.get()].level,
             cpu_count=max(1, int(self._cores.get())),
             full_verify=self._verify.get(),
+            threshold_gain=PERFORMANCE_THRESHOLD_GAIN if self._performance.get() else 0,
         )
         self.result = PipelineChoice(options, delete_local=self._cleanup.get())
         self.destroy()

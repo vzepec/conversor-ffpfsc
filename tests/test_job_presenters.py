@@ -99,3 +99,12 @@ def test_compressed_job_texts() -> None:
     assert jp.size_lines(_ready(2048), 3) == ("2.0 KB", "", "ya comprimido")
     jobs = [_job(1024, {3: 512}), _ready(1024)]
     assert jp.queue_summary(jobs, 3) == "2 juegos  ·  2.0 KB → ≈ 1.5 KB"
+
+
+def test_performance_shows_its_own_estimate() -> None:
+    """Con «Rendimiento en la PS5» la fila y la cola muestran el peso de ese modo."""
+    job = _job(1000, {3: 250})
+    job.performance_estimates = {3: 400}
+    assert jp.size_lines(job, 3, performance=True) == ("1000.0 B →", "≈ 400.0 B",
+                                                        "−60% estimado")
+    assert jp.queue_summary([job], 3, performance=True) == "1 juego  ·  1000.0 B → ≈ 400.0 B"

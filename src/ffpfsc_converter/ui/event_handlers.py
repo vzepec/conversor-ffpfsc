@@ -19,6 +19,7 @@ from ffpfsc_converter.domain.events import (
     LogMessage,
     QueueFinished,
 )
+from ffpfsc_converter.domain.models import ConversionJob
 from ffpfsc_converter.ui import job_presenters as jp
 from ffpfsc_converter.ui import presenters
 from ffpfsc_converter.ui.main_view import MainView
@@ -56,13 +57,17 @@ class ViewUpdater:
         """
         self._handlers[type(event)](event)
 
-    def _level(self) -> int:
-        """Obtiene el nivel de compresión elegido en la vista.
+    def _size_lines(self, job: ConversionJob) -> jp.SizeText:
+        """Genera los tamaños de una fila con el modo y el rendimiento elegidos en la vista.
+
+        Args:
+            job (ConversionJob): Trabajo a mostrar.
 
         Returns:
-            int: Nivel de compresión.
+            jp.SizeText: Tamaño original, estimado y ahorro.
         """
-        return self._view.options.selected_preset().level
+        options = self._view.options
+        return jp.size_lines(job, options.selected_preset().level, options.is_performance())
 
     def _on_job_info(self, event: JobInfoReady) -> None:
         """Muestra el nombre del juego y su Title ID y versión.
@@ -80,7 +85,7 @@ class ViewUpdater:
         Args:
             event (JobSizeReady): Evento con el trabajo actualizado.
         """
-        self._view.table.set_sizes(event.job.id, jp.size_lines(event.job, self._level()))
+        self._view.table.set_sizes(event.job.id, self._size_lines(event.job))
 
     def _on_job_estimate(self, event: JobEstimateReady) -> None:
         """Muestra el peso estimado del modo actual y registra todos los modos.
@@ -89,7 +94,7 @@ class ViewUpdater:
             event (JobEstimateReady): Evento con el trabajo actualizado.
         """
         job = event.job
-        self._view.table.set_sizes(job.id, jp.size_lines(job, self._level()))
+        self._view.table.set_sizes(job.id, self._size_lines(job))
         self._view.write_log(presenters.estimates_summary(job, PRESETS))
 
     def _on_job_started(self, event: JobStarted) -> None:

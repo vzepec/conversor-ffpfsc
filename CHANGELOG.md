@@ -5,6 +5,17 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Añadido
+- Opción **Rendimiento en la PS5** (vista Convertir y «Comprimir y reemplazar»):
+  MkPFS solo guarda comprimidos los bloques que se reducen al menos un 20 %
+  (`--threshold-gain 20`); el resto queda en crudo y la consola no tiene que
+  descomprimirlo al cargar. El `.ffpfsc` pesa algo más y el peso estimado de la
+  cola lo muestra. Pensada para juegos grandes; la app la recuerda entre sesiones.
+
+### Cambiado
+- Las opciones de Convertir pasan a una segunda línea cuando la ventana es angosta,
+  en vez de quedar cortadas.
+
 ## [1.5.0] - 2026-10-10
 
 ### Añadido

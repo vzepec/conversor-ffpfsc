@@ -20,7 +20,8 @@ def build_pack_command(
 
     Args:
         job (ConversionJob): Trabajo a convertir.
-        options (ConversionOptions): Nivel de compresión, núcleos y verificación.
+        options (ConversionOptions): Nivel de compresión, núcleos, verificación y
+            umbral de ganancia por bloque.
         python_executable (str): Intérprete de Python que ejecutará MkPFS.
 
     Returns:
@@ -34,6 +35,8 @@ def build_pack_command(
         "--no-adjust-output-file-extension",
         "--temp-folder", str(job.output.parent),
     ]
+    if options.is_performance:
+        cmd += ["--threshold-gain", str(options.threshold_gain)]
     if job.kind is SourceKind.FOLDER:
         cmd.append("--require-game-files")
     cmd.append("--verify" if options.full_verify else "--verify-structure")

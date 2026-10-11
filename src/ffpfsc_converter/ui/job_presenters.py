@@ -73,12 +73,13 @@ class SizeText(NamedTuple):
     note: str
 
 
-def size_lines(job: ConversionJob, level: int) -> SizeText:
+def size_lines(job: ConversionJob, level: int, performance: bool = False) -> SizeText:
     """Genera el tamaño original, el estimado y el ahorro de un juego.
 
     Args:
         job (ConversionJob): Juego (con tamaño y estimaciones si ya se analizó).
         level (int): Nivel de compresión elegido.
+        performance (bool): ``True`` si está activo «Rendimiento en la PS5».
 
     Returns:
         SizeText: Por ejemplo ``("48.2 GB →", "≈ 21.7 GB", "−55% estimado")``.
@@ -87,7 +88,7 @@ def size_lines(job: ConversionJob, level: int) -> SizeText:
         return SizeText("calculando…", "", "")
     if job.already_compressed:
         return SizeText(format_size(job.size), "", "ya comprimido")
-    estimate = job.estimate_for(level)
+    estimate = job.estimate_for(level, performance)
     if estimate is None:
         return SizeText(format_size(job.size), "", "estimando…")
     return SizeText(f"{format_size(job.size)} →", f"≈ {format_size(estimate)}",
@@ -146,12 +147,13 @@ def upload_status(done: int, total: int, speed: str, eta: float | None) -> tuple
     return RowStatus("run", f"Subiendo a la PS5 · {percent:.0f}%", detail), percent
 
 
-def queue_summary(jobs: Iterable[ConversionJob], level: int) -> str:
+def queue_summary(jobs: Iterable[ConversionJob], level: int, performance: bool = False) -> str:
     """Resume la cola: cantidad de juegos, tamaño total y estimado.
 
     Args:
         jobs (Iterable[ConversionJob]): Juegos de la cola.
         level (int): Nivel de compresión elegido.
+        performance (bool): ``True`` si está activo «Rendimiento en la PS5».
 
     Returns:
         str: Por ejemplo ``"3 juegos  ·  69.6 GB → ≈ 31.4 GB"``, o vacío si no hay juegos.
@@ -161,7 +163,8 @@ def queue_summary(jobs: Iterable[ConversionJob], level: int) -> str:
         return ""
     count = f"{len(items)} juego" + ("s" if len(items) != 1 else "")
     sized = [j for j in items if j.size]
-    finals = [j.size if j.already_compressed else j.estimate_for(level) for j in sized]
+    finals = [j.size if j.already_compressed else j.estimate_for(level, performance)
+              for j in sized]
     if not sized or any(final is None for final in finals):
         return count
     total = sum(j.size for j in sized)
