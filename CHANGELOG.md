@@ -5,6 +5,8 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.4.1] - 2026-10-10
+
 ### Corregido
 - La app se congelaba al comprimir (sobre todo en Windows y con muchos núcleos):
   MkPFS redibuja su barra cientos o miles de veces por segundo y cada redibujo
