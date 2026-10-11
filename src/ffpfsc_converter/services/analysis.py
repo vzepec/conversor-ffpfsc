@@ -19,7 +19,7 @@ def analyze_job(job: ConversionJob, levels: Sequence[int], emit: EventSink) -> N
     """Completa ``info``, ``size`` y ``estimates`` del trabajo (bloqueante).
 
     Modifica ``job`` a propósito y publica ``JobInfoReady``, ``JobSizeReady`` y
-    ``JobEstimateReady`` en ese orden.
+    ``JobEstimateReady`` en ese orden (sin estimación si ya es un ``.ffpfsc``).
 
     Args:
         job (ConversionJob): Trabajo a analizar.
@@ -34,6 +34,8 @@ def analyze_job(job: ConversionJob, levels: Sequence[int], emit: EventSink) -> N
     files = collect_game_files(job.game_root)
     job.size = sum(f.size for f in files)
     emit(JobSizeReady(job))
+    if job.already_compressed:  # un .ffpfsc no se vuelve a comprimir: no hay qué estimar
+        return
     job.estimates = estimate_sizes(files, levels)
     emit(JobEstimateReady(job))
 

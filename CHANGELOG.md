@@ -5,6 +5,12 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Añadido
+- Arrastrar (o elegir) un `.ffpfsc` ya comprimido en la vista Convertir lo agrega a
+  la cola como «✓ Ya comprimido», con su nombre, Title ID y versión leídos del
+  archivo, y el botón «Subir a la PS5» listo; no se vuelve a comprimir y también
+  entra en «Subir completados a la PS5».
+
 ### Corregido
 - Tras subir a la PS5 (por ejemplo, desde «Subir a la PS5» en Convertir) la vista
   PS5 podía quedar con todos los botones bloqueados, incluso «Desconectar»: si el

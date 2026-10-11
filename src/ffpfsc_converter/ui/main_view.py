@@ -22,7 +22,7 @@ from ffpfsc_converter.ui.widgets.drop_zone import DropZone
 
 _DROP_TITLE = ("Arrastra juegos: carpetas o imágenes .exfat / .ffpkg" if HAS_DND
                else "Elige un juego: carpeta o imagen .exfat / .ffpkg")
-_DROP_HINT = "Encuentra el eboot.bin aunque esté en subcarpetas."
+_DROP_HINT = "Busca el eboot.bin en subcarpetas · un .ffpfsc queda listo para subir"
 
 
 @dataclass(frozen=True)

@@ -85,3 +85,17 @@ def test_connection_pill() -> None:
         "run", "Eliminando…")
     assert connection_pill(ConsoleStatus(False, "", False, "")).label == "Escribe la IP de la PS5"
     assert connection_pill(ConsoleStatus(False, "Sin conexión.", False, "ip")) is None
+
+
+def _ready(size: int) -> ConversionJob:
+    """Crea un trabajo de un .ffpfsc ya comprimido."""
+    path = Path("/g.ffpfsc")
+    return ConversionJob(path, path, path, size=size, already_compressed=True)
+
+
+def test_compressed_job_texts() -> None:
+    """Un .ffpfsc muestra su tamaño sin estimación y cuenta tal cual en el resumen."""
+    assert jp.size_lines(_ready(0), 3) == ("calculando…", "", "")
+    assert jp.size_lines(_ready(2048), 3) == ("2.0 KB", "", "ya comprimido")
+    jobs = [_job(1024, {3: 512}), _ready(1024)]
+    assert jp.queue_summary(jobs, 3) == "2 juegos  ·  2.0 KB → ≈ 1.5 KB"

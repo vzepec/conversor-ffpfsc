@@ -13,7 +13,7 @@ from ffpfsc_converter.infrastructure.system import desktop_dir
 from ffpfsc_converter.services.preflight import SpaceCheck
 from ffpfsc_converter.ui.presenters import format_size
 
-_IMAGE_FILETYPES = [("Imágenes de juego", "*.exfat *.ffpkg"), ("Todos", "*")]
+_IMAGE_FILETYPES = [("Imágenes de juego", "*.exfat *.ffpkg *.ffpfsc"), ("Todos", "*")]
 
 
 def _initial_dir() -> str:
@@ -37,7 +37,7 @@ def ask_game_folder() -> Path | None:
 
 
 def ask_game_image() -> Path | None:
-    """Pide al usuario una imagen ``.exfat``/``.ffpkg``.
+    """Pide al usuario una imagen ``.exfat``/``.ffpkg`` o un ``.ffpfsc`` ya comprimido.
 
     Returns:
         Path | None: Archivo elegido, o ``None`` si canceló.
