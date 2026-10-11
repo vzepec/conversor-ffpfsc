@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 from collections.abc import Iterable
 from pathlib import Path
 from types import TracebackType
@@ -87,13 +88,19 @@ class MainWindow:
         self.root.destroy()
 
     def _poll_events(self) -> None:
-        """Entrega los eventos pendientes y se vuelve a programar."""
+        """Entrega los eventos pendientes sin pasar del presupuesto de tiempo y se reprograma.
+
+        Si llegan más eventos de los que caben en el presupuesto, se cede el control
+        a Tk (para que la ventana siga respondiendo) y se continúa enseguida.
+        """
+        deadline = time.monotonic() + theme.EVENT_BUDGET_MS / 1000
+        pending = True
         try:
-            while True:
+            while time.monotonic() < deadline:
                 self._dispatch(self._events.get_nowait())
         except queue.Empty:
-            pass
-        self.root.after(theme.EVENT_POLL_MS, self._poll_events)
+            pending = False
+        self.root.after(1 if pending else theme.EVENT_POLL_MS, self._poll_events)
 
     def _dispatch(self, event: Event | RemoteEvent) -> None:
         """Entrega un evento a la vista que lo maneja.

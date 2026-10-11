@@ -50,6 +50,7 @@ src/ffpfsc_converter/
 │   │   ├── command.py     #   línea de comandos de `mkpfs pack`
 │   │   ├── output.py      #   corte de líneas y parseo del progreso
 │   │   ├── process.py     #   PackProcess: lanzar, leer y terminar (POSIX y Windows)
+│   │   ├── lifeline.py    #   MkPFS muere con la app (Job Object / PR_SET_PDEATHSIG)
 │   │   └── metadata.py    #   metadatos y lectura de imágenes exFAT
 │   ├── ftp/               # Cliente FTP (ftplib) para el FTP del helper de ps5upload
 │   │   ├── client.py      #   FtpClient: conectar, listar (CWD + MLSD), recorrer, descargar
@@ -222,6 +223,7 @@ sequenceDiagram
 | Escritura del FTP solo durante la operación | `writable_ftp` reinicia el FTP con escritura y siempre lo restaura a solo lectura al salir. |
 | Aviso de versión con la API pública de GitHub | Sin credenciales ni servidor propio; corre en un hilo y, sin red o sin *Releases*, no muestra nada. El botón abre la página de la versión en vez de actualizar solo: la instalación es una carpeta con `git`/ZIP y el usuario decide cuándo. |
 | Icono dibujado en código (`app_icon.py`) | Una sola fuente para la ventana y la barra lateral; `tools/make_icon.py` genera `assets/icon.png` y `assets/icon.ico` para los accesos directos. |
+| Avance de MkPFS limitado a 4 por segundo y presupuesto de 40 ms por ciclo en la UI | MkPFS redibuja su barra cientos o miles de veces por segundo; reenviar cada redibujo congelaba la ventana (sobre todo en Windows). |
 | Cliente AVA1 verificado con los vectores oficiales | `tests/vectors/ava1` fija cada byte del protocolo; un cambio que lo rompa falla en `pytest`. |
 
 ## Cómo extender

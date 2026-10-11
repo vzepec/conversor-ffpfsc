@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ffpfsc_converter.config import PRESETS
-from ffpfsc_converter.domain.events import Event, EventSink
+from ffpfsc_converter.domain.events import Event, EventSink, JobProgress, LogMessage
 from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
 from ffpfsc_converter.errors import ConverterError
 from ffpfsc_converter.infrastructure.system import open_in_file_manager
@@ -97,7 +97,8 @@ class ConvertController:
             event (Event): Evento publicado por un servicio de conversión.
         """
         self._updater.handle(event)
-        self.refresh_queue()
+        if not isinstance(event, (JobProgress, LogMessage)):  # el avance no cambia la cola
+            self.refresh_queue()
 
     def pick_folder(self) -> None:
         """Pide una carpeta de juego y la encola."""

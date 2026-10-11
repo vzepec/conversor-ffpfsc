@@ -1,6 +1,10 @@
 """Publica las etapas y el progreso del pipeline como eventos."""
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
+
+from ffpfsc_converter.config import PROGRESS_INTERVAL_SECONDS
 from ffpfsc_converter.domain.events import EventSink
 from ffpfsc_converter.domain.models import ProgressUpdate
 from ffpfsc_converter.domain.pipeline import PipelineStage
@@ -12,15 +16,17 @@ from ffpfsc_converter.formatting import PHASE_NAMES, format_size
 class PipelineReporter:
     """Recuerda la etapa actual y traduce cada tipo de avance a ``PipelineProgress``."""
 
-    def __init__(self, emit: EventSink) -> None:
+    def __init__(self, emit: EventSink, clock: Callable[[], float] = time.monotonic) -> None:
         """Prepara el publicador.
 
         Args:
             emit (EventSink): Destino de los eventos.
+            clock (Callable[[], float]): Reloj monotónico; los tests usan un doble.
         """
-        self._emit = emit
+        self._emit, self._clock = emit, clock
         self.current = PipelineStage.DOWNLOAD
         self._percent = 0.0
+        self._last_report = float("-inf")
 
     def stage(self, stage: PipelineStage, detail: str) -> None:
         """Publica el cambio de etapa.
@@ -30,10 +36,15 @@ class PipelineReporter:
             detail (str): Texto adicional.
         """
         self.current, self._percent = stage, 0.0
+        self._last_report = float("-inf")
         self._emit(PipelineStageChanged(stage, detail))
 
     def report(self, done: int, total: int, speed: float, eta: float | None = None) -> None:
         """Publica el avance de la etapa actual (bytes, o elementos al borrar).
+
+        Se publica como máximo una vez por ``PROGRESS_INTERVAL_SECONDS`` (y siempre al
+        llegar al final): algunas etapas, como el CRC32, avisan cientos de veces por
+        segundo y saturarían la interfaz.
 
         Args:
             done (int): Cantidad completada.
@@ -43,6 +54,10 @@ class PipelineReporter:
         """
         percent = done * 100 / total if total else 0.0
         self._percent = percent
+        now = self._clock()
+        if now - self._last_report < PROGRESS_INTERVAL_SECONDS and done < total:
+            return
+        self._last_report = now
         if self.current is PipelineStage.DELETE_ORIGINAL:
             detail = f"{done} de {total} elementos"
         else:

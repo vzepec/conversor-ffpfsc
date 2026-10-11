@@ -6,6 +6,7 @@ import time
 from collections.abc import Callable, Iterator, Sequence
 from typing import Protocol
 
+from ffpfsc_converter.config import PROGRESS_INTERVAL_SECONDS
 from ffpfsc_converter.domain.events import (
     EventSink,
     JobFinished,
@@ -27,6 +28,8 @@ from ffpfsc_converter.infrastructure.mkpfs_adapter import (
     parse_progress,
 )
 from ffpfsc_converter.timing import PercentEta
+
+_COMPLETE = 100  # porcentaje con el que MkPFS cierra cada fase
 
 
 class ProcessHandle(Protocol):
@@ -145,6 +148,9 @@ class ConversionRunner:
         command = build_pack_command(job, options)
         job.state = JobState.RUNNING
         self._emit(JobStarted(job, " ".join(command)))
+        # MkPFS no sabe sobrescribir: si la salida existe pregunta por consola y, sin
+        # consola, falla. La interfaz ya pidió confirmación antes de llegar aquí.
+        remove_quietly(job.output)
         started = time.monotonic()
         try:
             process = self._process_factory(command)
@@ -168,12 +174,21 @@ class ConversionRunner:
         if self._cancel.is_set():  # cancelado mientras arrancaba
             process.terminate()
         eta = PercentEta()
+        last_time, last_phase = 0.0, ""
         for line in process.lines():
             progress = parse_progress(line)
             if progress is None:
                 self._emit(LogMessage(line))
-            else:
-                self._emit(JobProgress(job, progress, eta.update(progress.phase, progress.percent)))
+                continue
+            remaining = eta.update(progress.phase, progress.percent)
+            now = time.monotonic()
+            # MkPFS redibuja su barra cientos o miles de veces por segundo: publicar
+            # cada una saturaría la interfaz. Se publica como máximo una vez por
+            # intervalo, además de cada cambio de fase y el final de cada fase.
+            if (now - last_time >= PROGRESS_INTERVAL_SECONDS or progress.phase != last_phase
+                    or progress.percent >= _COMPLETE):
+                self._emit(JobProgress(job, progress, remaining))
+                last_time, last_phase = now, progress.phase
         return_code = process.wait()
         self._process = None
         return return_code
