@@ -127,7 +127,9 @@ El original **solo se lee**. Lo temporal (`.<juego>-LZ4.lz4-temporal`) y lo parc
 (`<juego>-LZ4.parcial`) van en la carpeta de destino y se borran al terminar, fallar o
 cancelar; una conversión anterior en la misma ruta solo se reemplaza al final. Espacio
 necesario: el peso estimado (los paquetes se mueven, no se copian). Subir la carpeta a
-la PS5 desde la app todavía no está disponible: cópiala a `homebrew/` por FTP.
+la PS5 desde la app todavía no está disponible: cópiala a `homebrew/` por FTP. El juego
+necesita que ShadowMountPlus cargue su `fakelib`: si no arranca, revisa que su opción
+de fakelib no esté en «Desactivado» (exfat2ampr la ajusta solo; desde el PC no se puede).
 
 ## Datos que guarda la app
 
