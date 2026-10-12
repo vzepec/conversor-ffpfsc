@@ -44,6 +44,7 @@ src/ffpfsc_converter/
 │   ├── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
 │   ├── remote*.py         # Vista PS5: ConsoleTarget, RemoteEntry…; eventos RemoteListing, FtpReady…
 │   ├── lz4*.py, app_events.py  # LZ4 en la PS5 (modelos, eventos); AppEvent: todo lo que recibe la ventana
+│   ├── third_party.py     # ThirdPartyAsset: archivo de terceros fijado (URL + SHA-256)
 │   └── update.py          # ReleaseInfo y UpdateAvailable (aviso de versión nueva)
 ├── infrastructure/
 │   ├── mkpfs_adapter/     # Todo lo relativo a MkPFS (API pública en __init__.py)
@@ -52,13 +53,10 @@ src/ffpfsc_converter/
 │   │   ├── process.py     #   PackProcess: lanzar, leer y terminar (POSIX y Windows)
 │   │   ├── lifeline.py    #   MkPFS muere con la app (Job Object / PR_SET_PDEATHSIG)
 │   │   └── metadata.py    #   metadatos y lectura de imágenes exFAT
-│   ├── ftp/               # Cliente FTP (ftplib) para el FTP del helper de ps5upload
-│   │   ├── client.py      #   FtpClient: conectar, listar (CWD + MLSD), recorrer, descargar
-│   │   ├── listing.py     #   MLSD/LIST → RemoteEntry; valida nombres (sin ../)
-│   │   └── errors.py      #   clasificación de errores de ftplib y de red
+│   ├── ftp/               # Cliente FTP (ftplib): client.py (listar, recorrer, descargar),
+│   │                      #   listing.py (MLSD/LIST → RemoteEntry) y errors.py
 │   ├── ava1/              # Cliente mínimo del protocolo AVA1 (puerto 9120)
-│   │   ├── frames.py      #   cabecera CRC32C y sellado ChaCha20-Poly1305
-│   │   ├── codec.py       #   codificación de mensajes del esquema
+│   │   ├── frames.py, codec.py  # cabecera CRC32C, sellado ChaCha20-Poly1305 y mensajes
 │   │   ├── noise.py       #   handshake Noise_XX_25519_ChaChaPoly_BLAKE2b
 │   │   ├── keys.py        #   claves de carril, compromiso y PAKE CPace (Elligator2)
 │   │   ├── handshake.py   #   pasos 1-4 del handshake y validación del Welcome
@@ -66,10 +64,10 @@ src/ffpfsc_converter/
 │   │   ├── console.py     #   fs.volumes y fs.freespace
 │   │   ├── jobs.py        #   job.run/status/cancel: borrado recursivo y CRC32
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
-│   ├── exfat2ampr/        # Cliente de exfat2ampr: LZ4 (AMPR) en la PS5 (API en __init__.py)
-│   │   ├── client.py, transport.py  # E2aClient sobre HTTP/1.0 + JSON (urllib), E2aHttpError
-│   │   ├── parsing.py     #   JSON de la API → modelos de domain/lz4.py
-│   │   └── elf_loader.py  #   send_elf: envía el ELF al cargador de la PS5 (puerto 9021)
+│   ├── exfat2ampr/        # Cliente de exfat2ampr (LZ4 en la PS5): client.py/transport.py
+│   │                      #   (HTTP + JSON), parsing.py y elf_loader.py (envío al puerto 9021)
+│   ├── ampr_tools/        # ampr_emu (LZ4 en el PC): comandos y salida de sus scripts
+│   ├── third_party.py     # third_party/: ubicación, descarga y verificación SHA-256
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
 │   ├── release_feed.py    # Última versión publicada (API pública de GitHub)
 │   ├── app_log.py         # Registro en archivo rotativo (carpeta «registros»)
@@ -103,6 +101,8 @@ src/ffpfsc_converter/
 │   ├── remote_changes.py  # RemoteChanges: eliminar y subir desde el explorador
 │   ├── lz4_remote.py      # Lz4Remote: compresión LZ4 dentro de la PS5 con exfat2ampr
 │   ├── lz4_*.py           #   flows, engine, watch, tracking, plan, deps, settings, messages
+│   ├── lz4_local*.py      # LZ4 en el PC: pasos (steps), archivos (files) y orquestación
+│   ├── ampr_profile.py, ampr_compat.py, lz4_estimator.py  # perfil, compatibilidad, peso
 │   ├── pipeline/          # "Comprimir y reemplazar en la PS5"
 │   │   ├── runner.py      #   orquesta las etapas; reintento manual sin repetir lo hecho
 │   │   ├── stages.py      #   descargar, preparar, comprimir y limpiar

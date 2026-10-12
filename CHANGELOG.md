@@ -15,6 +15,14 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   convierte, la fila indica que se reanudará sola al cerrarlo. Textos cortos y sin
   jerga; el detalle técnico queda en Registros. Su autor no lo probó en consola:
   conserva el original hasta probar el juego. Guía: [docs/LZ4.md](docs/LZ4.md).
+- **Formato LZ4 en la vista Convertir** (en este equipo): selector «Formato»; la cola
+  indica si cada juego es compatible y su peso estimado en LZ4, y la conversión usa
+  las herramientas de [ampr_emu](https://github.com/drakmor/ampr_emu) 0.4.2.1
+  (perfil genérico, verificación byte a byte contra el original) y deja una carpeta
+  `<juego>-LZ4`. Solo carpetas de juego; el original nunca se modifica.
+- Los instaladores descargan `exfat2ampr.elf` y lo necesario de ampr_emu en
+  `third_party/` (fuera de Git) desde sus páginas oficiales, con su SHA-256
+  comprobado. Sin internet avisan y siguen. Nueva dependencia: `lz4`.
 
 ## [1.6.0] - 2026-10-11
 

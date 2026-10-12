@@ -1,4 +1,7 @@
-# Compresión LZ4 en la PS5 (exfat2ampr) — EXPERIMENTAL
+# Compresión LZ4 (formato AMPR) — EXPERIMENTAL
+
+Se puede comprimir en LZ4 **en la PS5** (sección PS5, con exfat2ampr) o **en este
+equipo** (vista Convertir, con ampr_emu; ver [más abajo](#en-este-equipo-vista-convertir)).
 
 > [!WARNING]
 > Función **experimental**. La conversión la hace
@@ -29,16 +32,16 @@ seleccionada al formato **AMPR LZ4**. La app no transfiere el juego: solo da las
   para que el juego convertido cargue el emulador AMPR.
 - La sección **PS5** conectada (ps5upload, ver [PS5.md](PS5.md)): la app usa el FTP
   para elegir el juego y la API de exfat2ampr (puerto **6972**) para convertirlo.
-- **`exfat2ampr.elf` 1.45**, que **no viene incluido** con la app. Descárgalo de
-  <https://github.com/ViiNCENZO10/exfat2ampr/releases>.
+- **`exfat2ampr.elf` 1.45**: lo descarga el instalador en `third_party/` desde
+  <https://github.com/ViiNCENZO10/exfat2ampr/releases> y comprueba su SHA-256. Si
+  falta (instalación sin internet), la app te pide elegirlo una vez.
 
 ## Primer uso
 
 1. En la sección **PS5**, selecciona **una** carpeta de juego o imagen y pulsa
    **Comprimir LZ4 en la PS5…**.
-2. Si exfat2ampr no está en marcha, la app lo explica y te pide elegir el
-   `exfat2ampr.elf` que descargaste. Lo recuerda y, cuando haga falta, lo envía
-   sola al cargador de ELF (9021) y espera a que responda (hasta 30 s).
+2. Si exfat2ampr no está en marcha, la app envía sola el `exfat2ampr.elf` instalado
+   (o el que elegiste) al cargador de ELF (9021) y espera a que responda (hasta 30 s).
 3. Al arrancar, la PS5 muestra una notificación con la dirección y un **código de
    6 dígitos** (`http://IP:6972/  code 123456`). Escríbelo en la ventana de
    emparejamiento. Se pide **una sola vez** por consola: el token se guarda en la
@@ -97,8 +100,34 @@ exfat2ampr la rechaza y hay que empezar de nuevo.
   esté «Desactivado» (exfat2ampr lo cambia a «Emuladores» si hace falta).
 - El registro de exfat2ampr está en la PS5, en `/data/exfat2ampr/exfat2ampr.log`;
   el de la app, en **Registros** (barra lateral).
-- Solo se envía el ELF a tu consola si exfat2ampr no responde; la app nunca lo
-  descarga por su cuenta.
+- Solo se envía el ELF a tu consola si exfat2ampr no responde. Lo descarga el
+  instalador, desde la página oficial y con su huella comprobada; la app no.
+
+## En este equipo (vista Convertir)
+
+Elige **Formato → LZ4 (experimental)** en la vista Convertir. La cola muestra si cada
+juego es **compatible** (busca `libSceAmpr` en `eboot.bin` y `sce_module/`) y su peso
+estimado en LZ4; las imágenes `.exfat`/`.ffpkg` y los juegos no compatibles se omiten
+avisando antes. Los modos equivalen a LZ4 rápido (Máxima velocidad), HC 9
+(Equilibrado) y HC 12 (Máxima compresión).
+
+La conversión usa las herramientas en Python de
+[ampr_emu](https://github.com/drakmor/ampr_emu) 0.4.2.1 (las descarga el instalador):
+
+1. Índice del juego (`build_ampr_index.py`), escrito fuera del original.
+2. Perfil genérico: las mismas reglas que exfat2ampr (quedan sin empaquetar
+   ejecutables, `sce_sys/`, `sce_module/`, vídeo, audio comprimido, `.pak`/`.utoc`,
+   archivos de la raíz…; el audio usa bloques de 16 KiB).
+3. Paquetes LZ4 (`ampr_pack.py pack`) con deduplicación.
+4. Verificación de cada bloque y comparación byte a byte con el original.
+5. Carpeta final `<juego>-LZ4` junto a donde iría el `.ffpfsc`: lo que queda suelto,
+   los paquetes, `ampr_emu.index` y `fakelib/libSceAmpr.sprx`.
+
+El original **solo se lee**. Lo temporal (`.<juego>-LZ4.lz4-temporal`) y lo parcial
+(`<juego>-LZ4.parcial`) van en la carpeta de destino y se borran al terminar, fallar o
+cancelar; una conversión anterior en la misma ruta solo se reemplaza al final. Espacio
+necesario: el peso estimado (los paquetes se mueven, no se copian). Subir la carpeta a
+la PS5 desde la app todavía no está disponible: cópiala a `homebrew/` por FTP.
 
 ## Datos que guarda la app
 
