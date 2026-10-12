@@ -170,3 +170,21 @@ def test_packing_stops_when_the_disk_runs_low(tmp_path: Path,
     finished = _run(job, LZ4, lambda cmd: _FakeProcess(lines if "pack" in cmd else [], 0))
     assert finished.result.message == lz4_local.DISK_FULL_TEXT
     assert not workspace_for(job).work.exists()
+
+
+@pytest.mark.skipif(installed_components() is None, reason="sin componentes de ampr_emu")
+def test_linked_loose_files_never_change_the_original(tmp_path: Path) -> None:
+    """Lo suelto se enlaza, y escribir el índice y la biblioteca propios no toca el original."""
+    game = _game(tmp_path / "PPSA01234")
+    (game / "ampr_emu.index").write_bytes(b"indice viejo del juego")
+    (game / "fakelib").mkdir()
+    (game / "fakelib/libSceAmpr.sprx").write_bytes(b"emulador sin paquetes")
+    before = _tree_hash(game)
+    job = create_job(game)
+    assert _run(job, LZ4).result.succeeded
+    assert _tree_hash(game) == before
+    out = job.output
+    assert (out / "ampr_emu.index").read_bytes() != b"indice viejo del juego"
+    runtime = installed_components().runtime
+    assert (out / "fakelib/libSceAmpr.sprx").read_bytes() == runtime.read_bytes()
+    assert (out / "eboot.bin").stat().st_ino == (game / "eboot.bin").stat().st_ino

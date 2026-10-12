@@ -29,12 +29,12 @@ from ffpfsc_converter.services.lz4_local_files import (
     Lz4Workspace,
     copy_loose,
     discard,
-    finish_folder,
     folder_size,
     relative_files,
     workspace_for,
     write_profile,
 )
+from ffpfsc_converter.services.lz4_local_publish import finish_folder
 from ffpfsc_converter.services.lz4_local_steps import (
     Lz4Components,
     StepContext,

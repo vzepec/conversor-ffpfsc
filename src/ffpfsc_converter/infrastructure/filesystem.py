@@ -63,6 +63,22 @@ def free_space(directory: Path) -> int:
     return shutil.disk_usage(directory).free
 
 
+def same_device(first: Path, second: Path) -> bool:
+    """Indica si dos rutas existentes están en el mismo disco (se pueden enlazar).
+
+    Args:
+        first (Path): Ruta existente.
+        second (Path): Ruta existente.
+
+    Returns:
+        bool: ``True`` si comparten dispositivo; ``False`` si no o si no se pueden leer.
+    """
+    try:
+        return os.stat(first).st_dev == os.stat(second).st_dev
+    except OSError:
+        return False
+
+
 def remove_quietly(path: Path) -> None:
     """Borra un archivo si existe, ignorando cualquier error del sistema.
 

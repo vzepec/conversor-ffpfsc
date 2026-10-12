@@ -6,14 +6,14 @@ from pathlib import Path
 import pytest
 
 from ffpfsc_converter.domain.models import ConversionJob, FileEntry
-from ffpfsc_converter.services.lz4_estimator import estimate_lz4
+from ffpfsc_converter.services.lz4_estimator import estimate_lz4, packed_end, stored_size
 from ffpfsc_converter.services.lz4_local_files import (
-    _publish,
     copy_loose,
     discard,
     lz4_output_path,
     workspace_for,
 )
+from ffpfsc_converter.services.lz4_local_publish import _publish
 
 
 def _job(tmp_path: Path) -> ConversionJob:
@@ -92,4 +92,21 @@ def test_lz4_estimate_counts_loose_files_whole(tmp_path: Path) -> None:
         (root / rel).write_bytes(data)
         files.append(FileEntry(str(root / rel), len(data)))
     estimate = estimate_lz4(files, root, sample_blocks=16)
-    assert 50_000 <= estimate < 100_000
+    assert 50_000 <= estimate.total < 100_000 and estimate.loose == 50_000
+
+
+def test_blocks_that_save_little_are_stored_raw() -> None:
+    """Un bloque de 64 KiB va crudo si ahorra menos de 8 KiB o del 12,5 %."""
+    page = 64 * 1024
+    assert stored_size(page, page - 4 * 1024) == page
+    assert stored_size(page, page // 2) == page // 2
+    assert stored_size(page, page + 100) == page
+
+
+def test_chunks_never_straddle_a_page() -> None:
+    """Dos bloques de 40 KiB no caben en una página: el segundo empieza en la siguiente."""
+    kib = 1024
+    assert packed_end([40 * kib, 40 * kib]) == 64 * kib + 40 * kib
+    assert packed_end([20 * kib, 20 * kib, 20 * kib]) == 60 * kib
+    assert packed_end([100, 100]) == 128 + 100  # alineados a 64 bytes
+    assert packed_end([64 * kib, 64 * kib]) == 128 * kib

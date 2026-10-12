@@ -125,8 +125,11 @@ La conversión usa las herramientas en Python de
 
 El original **solo se lee**. Lo temporal (`.<juego>-LZ4.lz4-temporal`) y lo parcial
 (`<juego>-LZ4.parcial`) van en la carpeta de destino y se borran al terminar, fallar o
-cancelar; una conversión anterior en la misma ruta solo se reemplaza al final. Espacio
-necesario: el peso estimado (los paquetes se mueven, no se copian). Subir la carpeta a
+cancelar; una conversión anterior en la misma ruta solo se reemplaza al final. Lo que
+queda sin empaquetar se **enlaza** al original si está en el mismo disco (no ocupa espacio
+extra: son los mismos archivos, no los edites en la carpeta nueva); si no, se copia. Espacio
+necesario: el de los paquetes, más lo suelto si la salida está en otro disco. El peso
+estimado simula cómo ampr_pack ubica los bloques en páginas de 64 KiB. Subir la carpeta a
 la PS5 desde la app todavía no está disponible: cópiala a `homebrew/` por FTP. El juego
 necesita que ShadowMountPlus cargue su `fakelib`: si no arranca, revisa que su opción
 de fakelib no esté en «Desactivado» (exfat2ampr la ajusta solo; desde el PC no se puede).

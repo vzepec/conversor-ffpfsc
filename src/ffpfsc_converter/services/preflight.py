@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from ffpfsc_converter.config import FREE_SPACE_MARGIN
 from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions, OutputFormat
-from ffpfsc_converter.infrastructure.filesystem import free_space
+from ffpfsc_converter.infrastructure.filesystem import free_space, same_device
 
 
 @dataclass(frozen=True)
@@ -48,6 +48,8 @@ def check_free_space(job: ConversionJob, options: ConversionOptions) -> SpaceChe
         return None
     if options.output_format is OutputFormat.LZ4:
         estimate = job.lz4_estimate or job.size
+        if same_device(job.game_root, job.output.parent):  # lo suelto se enlaza
+            estimate -= min(job.lz4_loose_bytes, estimate)
     else:
         estimate = job.estimate_for(options.compression_level, options.is_performance) or job.size
     return SpaceCheck(free_space(job.output.parent), int(estimate * FREE_SPACE_MARGIN))

@@ -230,3 +230,10 @@ LZ4_ESTIMATE_LEVEL = 9
 LZ4_LEVEL_BY_PRESET = {3: 1, 6: 9, 9: 12}
 #: Si durante el empaquetado LZ4 el disco de destino baja de esto, se detiene y limpia.
 LZ4_MIN_FREE_BYTES = 2 * 1024**3
+#: Reglas de ampr_pack para bloques de lectura mixta (para estimar el peso real): un bloque
+#: va comprimido solo si ahorra ≥ 8 KiB y ≥ 12,5 %; los comprimidos se alinean a 64 B y no
+#: cruzan el borde de una página de 64 KiB (los crudos ocupan una página entera).
+AMPR_IO_PAGE_BYTES = 64 * 1024
+AMPR_CHUNK_ALIGN_BYTES = 64
+AMPR_MIN_SAVINGS_BYTES = 8 * 1024
+AMPR_MIN_SAVINGS_RATIO = 0.125

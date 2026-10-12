@@ -12,9 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ffpfsc_converter.config import (
-    AMPR_FAKELIB_DIR,
     AMPR_INDEX_FILE,
-    LZ4_BACKUP_SUFFIX,
     LZ4_PARTIAL_SUFFIX,
     LZ4_SEPARATE_NAME_SUFFIX,
     LZ4_WORK_SUFFIX,
@@ -118,7 +116,10 @@ def write_profile(ws: Lz4Workspace, profile: AmprProfile) -> None:
 
 
 def copy_loose(ws: Lz4Workspace, loose: Iterable[str], progress: CopyProgress) -> bool:
-    """Copia al resultado los archivos que quedan sin empaquetar.
+    """Lleva al resultado los archivos que quedan sin empaquetar.
+
+    En el mismo disco se enlazan (enlace duro: no ocupan espacio extra ni se toca su
+    contenido); si no se puede (otro disco, exFAT…), se copian.
 
     Args:
         ws (Lz4Workspace): Rutas de la conversión.
@@ -137,58 +138,27 @@ def copy_loose(ws: Lz4Workspace, loose: Iterable[str], progress: CopyProgress) -
         if ws.root.resolve() not in source.resolve().parents:
             raise OSError(f"Ruta fuera del juego: {relative}")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, dest)
+        _link_or_copy(source, dest)
         copied += source.stat().st_size
         if not progress(copied):
             return False
     return True
 
 
-def finish_folder(ws: Lz4Workspace, runtime: Path) -> None:
-    """Completa la carpeta final y la publica en su ruta definitiva.
-
-    Mueve los paquetes y su índice, copia ``ampr_emu.index`` y la biblioteca que los
-    lee (``fakelib/libSceAmpr.sprx``) y publica ``<salida>.parcial`` como ``<salida>``
-    (la interfaz ya confirmó reemplazar una salida anterior).
+def _link_or_copy(source: Path, dest: Path) -> None:
+    """Enlaza un archivo del juego en el resultado o, si no se puede, lo copia.
 
     Args:
-        ws (Lz4Workspace): Rutas de la conversión.
-        runtime (Path): ``libSceAmpr.sprx`` instalado.
+        source (Path): Archivo original (solo se lee).
+        dest (Path): Ruta en la carpeta parcial.
 
     Raises:
-        OSError: Si falla algún movimiento o copia.
+        OSError: Si tampoco se puede copiar.
     """
-    paths = ws.pack_paths
-    for item in paths.output.iterdir():
-        shutil.move(str(item), ws.partial / item.name)
-    shutil.copy2(paths.index, ws.partial / AMPR_INDEX_FILE)
-    fakelib = ws.partial / AMPR_FAKELIB_DIR
-    fakelib.mkdir(exist_ok=True)
-    shutil.copy2(runtime, fakelib / runtime.name)
-    _publish(ws.partial, ws.output)
-
-
-def _publish(partial: Path, output: Path) -> None:
-    """Renombra la carpeta nueva a su ruta final sin perder la anterior si algo falla.
-
-    Args:
-        partial (Path): Carpeta recién armada.
-        output (Path): Ruta definitiva (puede tener una conversión anterior).
-
-    Raises:
-        OSError: Si no se puede renombrar (la anterior queda restaurada).
-    """
-    backup = output.with_name(f"{output.name}{LZ4_BACKUP_SUFFIX}")
-    shutil.rmtree(backup, ignore_errors=True)
-    if output.exists():
-        output.rename(backup)
     try:
-        partial.rename(output)
+        os.link(source, dest)
     except OSError:
-        if backup.exists():
-            backup.rename(output)
-        raise
-    shutil.rmtree(backup, ignore_errors=True)
+        shutil.copy2(source, dest)
 
 
 def folder_size(folder: Path) -> int:
