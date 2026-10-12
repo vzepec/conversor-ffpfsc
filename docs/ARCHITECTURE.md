@@ -118,7 +118,8 @@ src/ffpfsc_converter/
     ├── window.py          # Crea la ventana: escala, clase/ID del sistema, tema e icono
     ├── shell.py           # AppShell: barra lateral (navegación, estado de la PS5, tema)
     ├── main_view.py       # MainView + ViewCallbacks: vista Convertir
-    ├── options_panel.py   # Modo, núcleos, verificación, rendimiento y destino
+    ├── options_panel.py   # Formato, modo, núcleos, verificación y rendimiento
+    ├── destination_row.py # Línea «Guardar en»: carpeta de destino
     ├── job_list.py        # Filas de la cola (ficha, tamaños, estado, «Subir a la PS5»)
     ├── job_presenters.py  # Textos puros de las filas y del resumen de la cola
     ├── convert_upload.py  # Subida a la PS5 de los juegos convertidos

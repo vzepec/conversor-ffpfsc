@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from ffpfsc_converter.domain.events import JobFinished
+from ffpfsc_converter.domain.events import JobFinished, JobProgress
 from ffpfsc_converter.domain.models import ConversionOptions, JobState, OutputFormat
 from ffpfsc_converter.infrastructure.ampr_tools import AmprTools
 from ffpfsc_converter.services.conversion import ConversionRunner
@@ -28,7 +28,7 @@ from ffpfsc_converter.services.lz4_local_steps import (
     installed_components,
 )
 
-LZ4 = ConversionOptions(9, 2, False, output_format=OutputFormat.LZ4)
+LZ4 = ConversionOptions(9, 2, True, output_format=OutputFormat.LZ4)
 
 
 def _game(root: Path) -> Path:
@@ -83,6 +83,18 @@ def test_real_tools_build_a_verified_lz4_folder(tmp_path: Path) -> None:
     check = subprocess.run([sys.executable, str(tools.tools_dir / "ampr_pack.py"), "verify",
                             "--index", str(out / "ampr_assets.index")], capture_output=True)
     assert check.returncode == 0
+
+
+@pytest.mark.skipif(installed_components() is None, reason="sin componentes de ampr_emu")
+def test_verification_can_be_skipped(tmp_path: Path) -> None:
+    """Sin verificación completa, LZ4 no ejecuta el paso de comprobación pero termina bien."""
+    job = create_job(_game(tmp_path / "PPSA01234"))
+    events: list[object] = []
+    options = ConversionOptions(9, 2, False, output_format=OutputFormat.LZ4)
+    ConversionRunner(events.append).start([job], options).join(timeout=300)
+    phases = {e.progress.phase for e in events if isinstance(e, JobProgress)}
+    assert {"scan", "compress"} <= phases and "verify" not in phases
+    assert next(e for e in events if isinstance(e, JobFinished)).result.succeeded
 
 
 class _FakeProcess:

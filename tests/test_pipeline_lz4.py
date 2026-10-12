@@ -31,7 +31,7 @@ LZ4_FILES = {
     "ampr_emu.index": b"I" * 2_000,
     "fakelib/libSceAmpr.sprx": b"S" * 1_000,
 }
-CHOICE = PipelineChoice(lz4_options(3, 2), delete_local=True)
+CHOICE = PipelineChoice(lz4_options(3, 2, True), delete_local=True)
 
 
 @pytest.fixture(autouse=True)

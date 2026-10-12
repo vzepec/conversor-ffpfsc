@@ -10,9 +10,12 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   uso paso a paso, `.ffpfsc` o LZ4 (experimental) y preguntas frecuentes. Lo técnico
   (tecnologías, componentes, arquitectura y desarrollo) pasa a
   [docs/TECHNICAL.md](docs/TECHNICAL.md).
-- En Convertir, al elegir el formato LZ4 se ocultan las opciones que solo aplican a
-  `.ffpfsc` (Verificación completa y Rendimiento en la PS5) con una animación breve, y
-  vuelven a aparecer al elegir `.ffpfsc`.
+- En Convertir, al elegir el formato LZ4 se oculta «Rendimiento en la PS5» (solo aplica a
+  `.ffpfsc`) con una animación breve, y vuelve a aparecer al elegir `.ffpfsc`.
+- **Verificación completa también en LZ4** (Convertir y «Comprimir y reemplazar»):
+  activada por defecto; al apagarla se omite la comparación final con el original y la
+  conversión termina antes. Cada formato recuerda su propio valor. La comprobación con
+  CRC32 al subir a la PS5 sigue siendo obligatoria.
 
 ### Añadido (experimental)
 - **Formato LZ4 en la vista Convertir** (en este equipo): selector «Formato»; la cola

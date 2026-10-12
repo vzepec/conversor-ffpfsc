@@ -15,6 +15,7 @@ from ffpfsc_converter.infrastructure.settings_store import save_settings
 #: Claves de los ajustes.
 _PRESET, _CORES, _VERIFY = "convert_preset", "convert_cores", "convert_verify"
 _PERFORMANCE = "convert_ps5_performance"
+_LZ4_VERIFY = "convert_lz4_verify"
 _FORMAT = "convert_output_format"
 _OUTPUT = "output_dir"
 _SIZE, _ZOOMED, _VIEW = "window_size", "window_zoomed", "last_view"
@@ -27,7 +28,8 @@ class ConvertPreferences:
     Attributes:
         preset (str | None): Etiqueta del modo elegido; ``None`` = el predeterminado.
         cores (int | None): Núcleos elegidos; ``None`` = todos.
-        full_verify (bool): Verificación completa activada.
+        full_verify (bool): Verificación completa activada (``.ffpfsc``).
+        lz4_verify (bool): Verificación completa de LZ4 (activada salvo que se apague).
         performance (bool): «Rendimiento en la PS5» activado.
         output_format (OutputFormat): ``.ffpfsc`` o LZ4.
         output_dir (Path | None): Carpeta de destino; ``None`` = junto a cada juego.
@@ -36,6 +38,7 @@ class ConvertPreferences:
     preset: str | None
     cores: int | None
     full_verify: bool
+    lz4_verify: bool
     performance: bool
     output_format: OutputFormat
     output_dir: Path | None
@@ -76,6 +79,7 @@ def convert_from(settings: Mapping[str, object], presets: Collection[str],
         preset=preset if isinstance(preset, str) and preset in presets else None,
         cores=min(max(cores, 1), cpu_total) if isinstance(cores, int) else None,
         full_verify=settings.get(_VERIFY) is True,
+        lz4_verify=settings.get(_LZ4_VERIFY) is not False,
         performance=settings.get(_PERFORMANCE) is True,
         output_format=_format_from(settings.get(_FORMAT)),
         output_dir=folder if folder is not None and folder.is_dir() else None,
@@ -120,6 +124,15 @@ def save_convert(preset: str, cores: int, full_verify: bool, performance: bool) 
     """
     save_settings({_PRESET: preset, _CORES: cores, _VERIFY: full_verify,
                    _PERFORMANCE: performance})
+
+
+def save_lz4_verify(full_verify: bool) -> None:
+    """Guarda si se verifica el resultado de las conversiones LZ4.
+
+    Args:
+        full_verify (bool): Verificación completa de LZ4.
+    """
+    save_settings({_LZ4_VERIFY: full_verify})
 
 
 def save_output_format(output_format: OutputFormat) -> None:

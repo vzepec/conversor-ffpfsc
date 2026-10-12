@@ -128,7 +128,7 @@ class Lz4LocalConversion:
             return False
         summary = parse_pack_summary(lines)
         verify = tools.verify_command(paths.output / AMPR_ASSETS_INDEX, ws.root)
-        if not runner.run(verify, "verify"):
+        if options.full_verify and not runner.run(verify, "verify"):
             return False
         ws.partial.mkdir()
         if not copy_loose(ws, summary.loose_paths, runner.copy_progress()):

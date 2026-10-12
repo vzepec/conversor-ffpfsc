@@ -80,17 +80,18 @@ def planned_output(job: ConversionJob, options: ConversionOptions) -> Path:
     return lz4_output_path(job) if options.output_format is OutputFormat.LZ4 else job.output
 
 
-def lz4_options(preset_level: int, cpu_count: int) -> ConversionOptions:
+def lz4_options(preset_level: int, cpu_count: int, full_verify: bool) -> ConversionOptions:
     """Arma las opciones de una conversión LZ4 a partir del modo elegido.
 
     Args:
         preset_level (int): Nivel del modo (el mismo que usa ``.ffpfsc``).
         cpu_count (int): Núcleos a usar.
+        full_verify (bool): ``True`` para comparar el resultado con el original al final.
 
     Returns:
         ConversionOptions: Formato LZ4 con su nivel equivalente.
     """
-    return ConversionOptions(LZ4_LEVEL_BY_PRESET[preset_level], cpu_count, False,
+    return ConversionOptions(LZ4_LEVEL_BY_PRESET[preset_level], cpu_count, full_verify,
                              output_format=OutputFormat.LZ4)
 
 

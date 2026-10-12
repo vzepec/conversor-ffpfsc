@@ -47,6 +47,7 @@ class CompressDialog(Modal):
         self._preset = tk.StringVar(value=DEFAULT_PRESET.label)
         self._cores = tk.IntVar(value=cpu_total)
         self._verify = tk.BooleanVar(value=False)
+        self._lz4_verify = tk.BooleanVar(value=True)
         self._performance = tk.BooleanVar(value=False)
         self._cleanup = tk.BooleanVar(value=True)
         if request.lz4_plan is not None:
@@ -96,8 +97,9 @@ class CompressDialog(Modal):
     def _build_options(self, cpu_total: int) -> None:
         """Crea el modo (con su estimación), los núcleos y los interruptores.
 
-        Rendimiento y verificación completa solo existen en ``.ffpfsc``: van en cajas
-        que se ocultan con una animación al elegir LZ4.
+        «Rendimiento en la PS5» solo existe en ``.ffpfsc``: va en una caja que se oculta
+        con una animación al elegir LZ4. La verificación tiene un valor por formato (en
+        LZ4 empieza activada).
 
         Args:
             cpu_total (int): Núcleos disponibles.
@@ -109,29 +111,31 @@ class CompressDialog(Modal):
         self._estimate.pack(anchor="w", pady=(self.theme.metrics.px(4), 0))
         self._caption("NÚCLEOS")
         Stepper(self.body, self.theme, self._cores, (1, cpu_total)).pack(anchor="w")
-        self._ffpfsc_only: list[RevealBox] = []
-        for text, variable in (
-            ("  Rendimiento en la PS5 (carga más rápido, pesa algo más)", self._performance),
-            ("  Verificación completa al final (más lento)", self._verify),
-        ):
-            box = RevealBox(self.body, lambda: None)
-            box.pack(anchor="w")
-            self._switch(box.inner, text, variable)
-            self._ffpfsc_only.append(box)
+        self._performance_box = RevealBox(self.body, lambda: None)
+        self._performance_box.pack(anchor="w")
+        self._switch(self._performance_box.inner,
+                     "  Rendimiento en la PS5 (carga más rápido, pesa algo más)",
+                     self._performance)
+        self._verify_check = self._switch(
+            self.body, "  Verificación completa al final (más lento)", self._verify)
         self._switch(self.body, "  Borrar los temporales de este equipo al terminar bien",
                      self._cleanup)
 
-    def _switch(self, parent: tk.Misc, text: str, variable: tk.BooleanVar) -> None:
+    def _switch(self, parent: tk.Misc, text: str, variable: tk.BooleanVar) -> ttk.Checkbutton:
         """Agrega un interruptor.
 
         Args:
             parent (tk.Misc): Contenedor.
             text (str): Texto del interruptor.
             variable (tk.BooleanVar): Valor que controla.
+
+        Returns:
+            ttk.Checkbutton: Interruptor creado.
         """
-        ttk.Checkbutton(parent, text=text, variable=variable,
-                        style=self.theme.switch_style("surface"),
-                        command=self._refresh).pack(anchor="w", pady=(self.theme.metrics.px(10), 0))
+        switch = ttk.Checkbutton(parent, text=text, variable=variable,
+                                 style=self.theme.switch_style("surface"), command=self._refresh)
+        switch.pack(anchor="w", pady=(self.theme.metrics.px(10), 0))
+        return switch
 
     def _build_summary(self) -> None:
         """Crea el recuadro que explica qué pasará en la PS5."""
@@ -151,9 +155,13 @@ class CompressDialog(Modal):
         return self._format.get() == OutputFormat.LZ4.value
 
     def _on_format(self) -> None:
-        """Oculta (LZ4) o muestra (``.ffpfsc``) sus opciones propias y actualiza los textos."""
-        for box in self._ffpfsc_only:
-            box.hide() if self._is_lz4() else box.show()
+        """Oculta (LZ4) o muestra (``.ffpfsc``) «Rendimiento» y cambia la verificación."""
+        lz4 = self._is_lz4()
+        self._verify_check.configure(variable=self._lz4_verify if lz4 else self._verify)
+        if lz4:
+            self._performance_box.hide()
+        else:
+            self._performance_box.show()
         self._refresh()
 
     def _refresh(self) -> None:
@@ -173,12 +181,15 @@ class CompressDialog(Modal):
         """Guarda la elección y cierra la ventana."""
         level = _PRESETS_BY_LABEL[self._preset.get()].level
         cores = max(1, int(self._cores.get()))
-        options = lz4_options(level, cores) if self._is_lz4() else ConversionOptions(
-            compression_level=level,
-            cpu_count=cores,
-            full_verify=self._verify.get(),
-            threshold_gain=PERFORMANCE_THRESHOLD_GAIN if self._performance.get() else 0,
-        )
+        if self._is_lz4():
+            options = lz4_options(level, cores, self._lz4_verify.get())
+        else:
+            options = ConversionOptions(
+                compression_level=level,
+                cpu_count=cores,
+                full_verify=self._verify.get(),
+                threshold_gain=PERFORMANCE_THRESHOLD_GAIN if self._performance.get() else 0,
+            )
         self.result = PipelineChoice(options, delete_local=self._cleanup.get())
         self.destroy()
 

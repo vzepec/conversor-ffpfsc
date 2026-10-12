@@ -21,6 +21,12 @@ def test_convert_preferences_are_validated(tmp_path: Path) -> None:
     assert not odd.performance
 
 
+def test_lz4_verification_is_on_unless_turned_off() -> None:
+    """La verificación de LZ4 empieza activada y respeta que el usuario la apague."""
+    assert convert_from({}, PRESETS, cpu_total=8).lz4_verify
+    assert not convert_from({"convert_lz4_verify": False}, PRESETS, cpu_total=8).lz4_verify
+
+
 def test_window_preferences_fit_the_screen() -> None:
     """Solo recupera un tamaño que quepa en la pantalla y una vista que exista."""
     views = ("convert", "ps5")

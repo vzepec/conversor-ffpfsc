@@ -39,8 +39,10 @@ La app busca `libSceAmpr` en `eboot.bin` y en `sce_module/`. Las imágenes
 
 ## Vista Convertir
 
-Elige **Formato → LZ4 (experimental)**. Se ocultan las opciones que solo usa `.ffpfsc`
-(Verificación completa y Rendimiento en la PS5: LZ4 siempre verifica). La cola muestra
+Elige **Formato → LZ4 (experimental)**. Se oculta «Rendimiento en la PS5», que solo usa
+`.ffpfsc`. **Verificación completa** sigue disponible y en LZ4 viene **activada**: compara
+el resultado con el original al terminar (paso 4). Apagarla ahorra tiempo, pero un paquete
+dañado solo se notaría en la PS5; cada formato recuerda su propio valor. La cola muestra
 si cada juego es compatible y su peso estimado; las imágenes y los juegos no compatibles
 se omiten avisando antes. Los modos equivalen a LZ4 rápido (Máxima velocidad), HC 9
 (Equilibrado) y HC 12 (Máxima compresión).
@@ -52,7 +54,8 @@ Pasos de la conversión:
    vídeo, audio comprimido, `.pak`/`.utoc`, archivos de la raíz…; el audio usa bloques
    de 16 KiB.
 3. Paquetes LZ4 (`ampr_pack.py pack`) con deduplicación.
-4. Verificación de cada bloque y comparación byte a byte con el original.
+4. Verificación de cada bloque y comparación byte a byte con el original (si
+   **Verificación completa** está activada).
 5. Carpeta final `<juego>-LZ4` junto a donde iría el `.ffpfsc`: lo que queda suelto,
    los paquetes, `ampr_emu.index` y `fakelib/libSceAmpr.sprx`.
 
@@ -72,7 +75,8 @@ publica con su nombre al final.
 
 En la ventana de **Comprimir y reemplazar** (sección PS5) aparece **Formato** cuando el
 original es una carpeta. **LZ4** queda desactivado, con el motivo, si el juego no es
-compatible o faltan los componentes. Con LZ4:
+compatible o faltan los componentes. Con LZ4 se oculta «Rendimiento en la PS5» y
+**Verificación completa** empieza activada (puedes apagarla). Además:
 
 - La carpeta LZ4 ocupa el lugar del original **con el mismo nombre**, así que la ruta
   del juego en la PS5 no cambia.
