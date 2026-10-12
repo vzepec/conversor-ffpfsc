@@ -116,7 +116,7 @@ class JobList(ttk.Frame):
         self._separators: dict[str, ttk.Separator] = {}
         self._selected: set[str] = set()
         self._empty = ttk.Label(self._scroll.inner, text=_EMPTY_TEXT, style="CardMuted.TLabel",
-                                justify="center", padding=theme.metrics.px(28))
+                                justify="center", anchor="center", padding=theme.metrics.px(28))
         self._empty.pack(fill="x")
 
     def add_row(self, row_id: str, title: str, meta: str) -> None:
