@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from ffpfsc_converter.config import DEFAULT_FTP_PORT
-from ffpfsc_converter.domain.app_events import AppEventSink
+from ffpfsc_converter.domain.events import EventSink
 from ffpfsc_converter.domain.remote import ConsoleTarget, DownloadJob, RemoteEntry
 from ffpfsc_converter.infrastructure.ava1.trust import TrustStore
 from ffpfsc_converter.infrastructure.ftp.listing import join_remote
@@ -22,7 +22,6 @@ from ffpfsc_converter.services.remote_browser import RemoteBrowser
 from ffpfsc_converter.services.remote_storage import StorageMonitor
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
-from ffpfsc_converter.ui.explorer.lz4_actions import Lz4Actions
 from ffpfsc_converter.ui.explorer.modify_actions import ModifyActions
 from ffpfsc_converter.ui.explorer.retry_actions import RetryActions
 from ffpfsc_converter.ui.explorer.view import ExplorerCallbacks, ExplorerView
@@ -41,7 +40,6 @@ class ExplorerController:
         entries (tuple[RemoteEntry, ...]): Contenido de la carpeta abierta.
         modify (ModifyActions): Eliminar, subir y comprimir y reemplazar.
         retry (RetryActions): Reintento manual de transferencias fallidas.
-        lz4 (Lz4Actions): Compresión LZ4 dentro de la PS5 con exfat2ampr.
         upload_listeners (dict[str, Callable[[object], None]]): Fila de subida → función
             que también recibe sus eventos (la vista Convertir sigue así sus subidas).
         pending_on_connect (list[Callable[[], None]]): Acciones a ejecutar al conectar.
@@ -56,13 +54,13 @@ class ExplorerController:
         storage (StorageMonitor): Espacio libre de las unidades de la PS5.
     """
 
-    def __init__(self, parent: tk.Misc, theme: ThemeManager, emit: AppEventSink) -> None:
+    def __init__(self, parent: tk.Misc, theme: ThemeManager, emit: EventSink) -> None:
         """Crea la vista y los servicios, y restaura los últimos ajustes.
 
         Args:
             parent (tk.Misc): Contenedor donde se construye la vista.
             theme (ThemeManager): Tema.
-            emit (AppEventSink): Cola de eventos de la ventana principal.
+            emit (EventSink): Cola de eventos de la ventana principal.
         """
         self.theme = theme
         self.view = ExplorerView(parent, theme, ExplorerCallbacks(
@@ -77,7 +75,6 @@ class ExplorerController:
             on_upload_folder=lambda: self.modify.upload_folder(),
             on_delete=lambda: self.modify.delete_selected(),
             on_convert=lambda: self.modify.convert_selected(),
-            on_lz4=lambda: self.lz4.compress_selected(),
         ))
         self._trust = TrustStore(settings_path().parent)
         self.launcher = FtpLauncher(emit, self._trust)
@@ -86,7 +83,6 @@ class ExplorerController:
         self.storage = StorageMonitor(emit, self.launcher.access)
         self.modify = ModifyActions(self, emit, self.launcher.access)
         self.retry = RetryActions(self)
-        self.lz4 = Lz4Actions(self, emit)
         self.target: ConsoleTarget | None = None
         self.path = "/"
         self.entries: tuple[RemoteEntry, ...] = ()

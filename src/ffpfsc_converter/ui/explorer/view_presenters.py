@@ -64,14 +64,12 @@ class ActionStates:
         convert (bool): Comprimir y reemplazar el elemento elegido.
         upload (bool): Subir archivos a la carpeta abierta.
         delete (bool): Eliminar la selección.
-        lz4 (bool): Comprimir en LZ4 dentro de la PS5 el elemento elegido (exfat2ampr).
     """
 
     download: bool
     convert: bool
     upload: bool
     delete: bool
-    lz4: bool
 
 
 def entry_badge(entry: RemoteEntry) -> Badge | None:
@@ -197,5 +195,4 @@ def action_states(connected: bool, writing: bool,
     convertible = one and (selected[0].is_dir
                            or PurePosixPath(selected[0].name).suffix.lower() in IMAGE_EXTENSIONS)
     return ActionStates(download=usable and bool(selected), convert=usable and convertible,
-                        upload=usable, delete=usable and bool(selected),
-                        lz4=usable and convertible)
+                        upload=usable, delete=usable and bool(selected))

@@ -27,7 +27,7 @@ from ffpfsc_converter.services.ampr_profile import (
     ("fakelib/libSceAmpr.sprx", AmprAction.LOOSE),
 ])
 def test_classify_follows_generic_rules(path: str, action: AmprAction) -> None:
-    """Clasifica sin distinguir mayúsculas con las reglas genéricas de exfat2ampr."""
+    """Clasifica sin distinguir mayúsculas con las reglas genéricas."""
     assert classify(path) is action
 
 

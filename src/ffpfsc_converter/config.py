@@ -122,47 +122,8 @@ PIPELINE_WORK_DIR_NAME = "ffpfsc-temporal"
 #: Esperas (s) antes de cada reintento automático tras un corte de conexión.
 RETRY_DELAYS_SECONDS = (3.0, 10.0, 20.0)
 
-# --------------------------------------------------- LZ4 en la PS5 (exfat2ampr)
-#: Puerto de la API HTTP de exfat2ampr (convierte juegos a AMPR LZ4 dentro de la PS5).
-E2A_HTTP_PORT = 6972
-#: Puerto del cargador de ELF de la PS5 (etaHEN, elfldr): ahí se envía exfat2ampr.
-ELF_LOADER_PORT = 9021
-#: Clave de los ajustes con la ruta del ``exfat2ampr.elf`` que eligió el usuario (no se
-#: incluye en la app: se descarga de github.com/ViiNCENZO10/exfat2ampr/releases).
-E2A_ELF_PATH_KEY = "e2a_elf_path"
-#: Página de descargas de exfat2ampr, para mostrarla cuando falta el ELF.
-E2A_RELEASES_URL = "https://github.com/ViiNCENZO10/exfat2ampr/releases"
-#: Segundos de espera de cada petición a la API (``/api/sources`` recorre los discos).
-E2A_HTTP_TIMEOUT_SECONDS = 20
-#: Segundos que se espera a que exfat2ampr responda tras enviarlo al cargador de ELF.
-E2A_START_TIMEOUT_SECONDS = 30
-#: Cada cuánto se consulta el avance de la conversión.
-E2A_POLL_SECONDS = 1.0
-#: Fallos de red seguidos al consultar el avance antes de darlo por perdido.
-E2A_POLL_MAX_FAILURES = 10
-#: Clave de los ajustes donde se guarda el token de emparejamiento por consola.
-E2A_TOKENS_KEY = "e2a_tokens"
-#: Modos de compresión LZ4: nivel 1 (rápido), HC 9 (el que recomienda exfat2ampr) y HC 12;
-#: los HC tardan más al comprimir pero se leen igual de rápido. La etiqueta larga es la
-#: explicación que la ventana muestra bajo el modo elegido.
-LZ4_PRESETS: tuple[CompressionPreset, ...] = (
-    CompressionPreset("Termina antes; ocupa algo más.", "Rápido", 1),
-    CompressionPreset("Recomendado.", "Equilibrado", 9),
-    CompressionPreset("Ocupa un poco menos; tarda bastante más.", "Máximo", 12),
-)
-DEFAULT_LZ4_PRESET = LZ4_PRESETS[1]
-#: Cada cuánto se pregunta si exfat2ampr ya responde tras enviarlo al cargador de ELF.
-E2A_START_POLL_SECONDS = 1.0
-#: Segundos tras ``/api/start`` en los que un resultado terminado del mismo juego aún
-#: puede ser el de la conversión anterior (exfat2ampr lo conserva hasta la siguiente).
-E2A_STALE_GRACE_SECONDS = 5.0
-#: Segundos de espera al enviar ``exfat2ampr.elf`` al cargador de ELF de la PS5.
-ELF_SEND_TIMEOUT_SECONDS = 15
-#: Código de pausa de exfat2ampr cuando se abre en la PS5 el juego que se convierte: el
-#: propio motor la reanuda al cerrarlo, así que la app sigue esperando sin pedir nada.
-E2A_PAUSED_GAME_CODE = "paused_game"
-#: Sufijo de la carpeta de salida cuando ``<destino>/<TITLE_ID>`` sería el propio original
-#: (juego ya en ``/data/homebrew`` comprimido a la misma unidad): exfat2ampr lo rechazaría.
+# --------------------------------------------------------------- LZ4 (PC)
+#: Sufijo de la carpeta LZ4 que se crea junto a donde iría el ``.ffpfsc``.
 LZ4_SEPARATE_NAME_SUFFIX = "-LZ4"
 
 # ------------------------------------------------- archivos de terceros (LZ4)
@@ -172,16 +133,11 @@ THIRD_PARTY_DIR_NAME = "third_party"
 THIRD_PARTY_CHUNK_BYTES = 1024 * 1024
 #: Segundos de espera de red de cada descarga.
 THIRD_PARTY_TIMEOUT_SECONDS = 60
-_E2A_RELEASE = "https://github.com/ViiNCENZO10/exfat2ampr/releases/download/v1.45"
 _AMPR_RELEASE = "https://github.com/drakmor/ampr_emu/releases/download/0.4.2.1"
-#: Lo que descarga el instalador (GPL-3.0; cada uno desde su página oficial y con su huella):
-#: exfat2ampr comprime en LZ4 dentro de la PS5; ampr_emu aporta el empaquetador en Python
-#: (LZ4 en el PC) y la biblioteca que el juego convertido carga para leer sus paquetes.
+#: Lo que descarga el instalador (GPL-3.0; desde su página oficial y con su huella): de
+#: ampr_emu, el empaquetador en Python (LZ4 en el PC) y la biblioteca que el juego
+#: convertido carga para leer sus paquetes.
 THIRD_PARTY_ASSETS: tuple[ThirdPartyAsset, ...] = (
-    ThirdPartyAsset(
-        "exfat2ampr 1.45", f"{_E2A_RELEASE}/exfat2ampr.elf",
-        "025a0d8f59f4cccd9a10c891929a658c5cbed0a309aa59d60eb903ffad27bcb8",
-        "exfat2ampr/exfat2ampr.elf"),
     ThirdPartyAsset(
         "libSceAmpr.sprx (ampr_emu 0.4.2.1)", f"{_AMPR_RELEASE}/libSceAmpr.sprx",
         "69e6c4d5e4f5fb83c9e01815db5861c4c75734acbf4595cafa50d4c218116d1a",
@@ -192,7 +148,6 @@ THIRD_PARTY_ASSETS: tuple[ThirdPartyAsset, ...] = (
         "ampr_emu/python-tools", "ampr-pack-tools-windows-x64/python-tools/"),
 )
 #: Rutas (dentro de ``third_party/``) que usa la app.
-E2A_INSTALLED_ELF = "exfat2ampr/exfat2ampr.elf"
 AMPR_RUNTIME_FILE = "ampr_emu/libSceAmpr.sprx"
 AMPR_TOOLS_DIR = "ampr_emu/python-tools"
 #: Scripts de ampr_emu (dentro de ``AMPR_TOOLS_DIR``) y archivos que generan.
@@ -202,7 +157,7 @@ AMPR_INDEX_FILE = "ampr_emu.index"
 AMPR_ASSETS_INDEX = "ampr_assets.index"
 #: Carpeta del juego donde va la biblioteca que lee los paquetes LZ4.
 AMPR_FAKELIB_DIR = "fakelib"
-#: Perfil genérico (sin trazas del juego), con las mismas reglas que exfat2ampr: queda
+#: Perfil genérico (sin trazas del juego), con las reglas de exfat2ampr/Lazy_AMPR: queda
 #: sin comprimir lo que el juego puede leer sin pasar por libSceAmpr (ejecutables, mmap),
 #: lo ya comprimido (vídeo, audio, archivos) y los archivos en la raíz del juego.
 AMPR_LOOSE_EXTENSIONS = frozenset({

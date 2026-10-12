@@ -14,7 +14,8 @@ from pathlib import Path
 from types import TracebackType
 
 from ffpfsc_converter.config import AUTO_CONNECT_DELAY_MS
-from ffpfsc_converter.domain.app_events import AppEvent
+from ffpfsc_converter.domain.events import Event
+from ffpfsc_converter.domain.remote_events import RemoteEvent
 from ffpfsc_converter.domain.update import UpdateAvailable
 from ffpfsc_converter.infrastructure.app_log import log_dir, setup_file_log
 from ffpfsc_converter.services.update_check import start_update_check
@@ -41,7 +42,7 @@ class MainWindow:
         self._log = setup_file_log(log_dir())
         self._window = create_window()
         self.root, self.theme = self._window.root, self._window.theme
-        self._events: queue.Queue[AppEvent] = queue.Queue()
+        self._events: queue.Queue[Event | RemoteEvent] = queue.Queue()
         self._shell = AppShell(self.root, self.theme, presenters.version_text())
         self._shell.pack(fill="both", expand=True)
         convert_tab = self._shell.add_view("convert", "Convertir", "convert")
@@ -81,7 +82,6 @@ class MainWindow:
         if self._explorer.downloads.is_running and not dialogs.confirm_quit_while_downloading():
             return
         self._explorer.downloads.cancel()
-        self._explorer.lz4.remote.stop_watching()  # la conversión LZ4 sigue en la PS5
         self._convert.runner.cancel()
         self._activity.stop()
         remember_window(self.root, self._shell.current)
@@ -102,11 +102,11 @@ class MainWindow:
             pending = False
         self.root.after(1 if pending else theme.EVENT_POLL_MS, self._poll_events)
 
-    def _dispatch(self, event: AppEvent) -> None:
+    def _dispatch(self, event: Event | RemoteEvent) -> None:
         """Entrega un evento a la vista que lo maneja.
 
         Args:
-            event (AppEvent): Evento publicado por un servicio.
+            event (Event | RemoteEvent): Evento publicado por un servicio.
         """
         self._notifier.handle(event)
         entry = journal_line(event)
@@ -120,13 +120,13 @@ class MainWindow:
             self._convert.handle(event)
 
     def _is_busy(self) -> bool:
-        """Indica si hay una tarea larga en curso (conversión, transferencia o LZ4 en la PS5).
+        """Indica si hay una tarea larga en curso (conversión o transferencia con la PS5).
 
         Returns:
             bool: ``True`` mientras no conviene que el equipo se suspenda.
         """
         return (self._convert.runner.is_running or self._explorer.downloads.is_running
-                or self._explorer.modify.busy or self._explorer.lz4.busy)
+                or self._explorer.modify.busy)
 
     def _on_unexpected(self, kind: type[BaseException], error: BaseException,
                        trace: TracebackType | None) -> None:

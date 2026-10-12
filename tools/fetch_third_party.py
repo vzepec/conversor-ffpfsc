@@ -1,7 +1,7 @@
 """Descarga los archivos de terceros que usa la compresión LZ4 (lo llama el instalador).
 
-Baja ``exfat2ampr.elf`` y lo necesario de ``ampr_emu`` desde la página oficial de
-cada proyecto, comprueba su SHA-256 y los deja en ``third_party/``. Si algo falla
+Baja lo necesario de ``ampr_emu`` (empaquetador y ``libSceAmpr.sprx``) desde su página
+oficial, comprueba su SHA-256 y los deja en ``third_party/``. Si algo falla
 (por ejemplo, sin internet) lo avisa y sigue: el resto de la app funciona igual.
 
 Uso: ``python tools/fetch_third_party.py``
@@ -48,7 +48,7 @@ def main() -> int:
     Returns:
         int: ``0`` si todo quedó listo; ``1`` si faltó algo.
     """
-    print("Descargando los componentes de LZ4 (exfat2ampr y ampr_emu)…")
+    print("Descargando los componentes de LZ4 (ampr_emu)…")
     failures = fetch_all(THIRD_PARTY_ASSETS, third_party_dir())
     if failures:
         print("Aviso: faltan componentes de LZ4. La app funciona igual; vuelve a ejecutar "

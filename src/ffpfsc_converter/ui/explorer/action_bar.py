@@ -5,19 +5,18 @@ import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
 
-from ffpfsc_converter.ui.explorer.lz4_presenters import LZ4_ACTION_TEXT, LZ4_SHORT_TEXT
 from ffpfsc_converter.ui.explorer.view_presenters import ActionStates
 from ffpfsc_converter.ui.theme import ThemeManager
 from ffpfsc_converter.ui.widgets.basics import icon_button
 
 #: Botón → (texto completo, texto corto para ventanas angostas).
-_LABELS = {"lz4": (LZ4_ACTION_TEXT, LZ4_SHORT_TEXT), "upload": ("Subir a la PS5…", "Subir…")}
+_LABELS = {"upload": ("Subir a la PS5…", "Subir…")}
 #: Opciones del menú «Subir a la PS5…» → acción.
 _UPLOAD_MENU = (("Archivos…", "upload"), ("Carpeta…", "upload_folder"))
 
 
 class ActionBar(ttk.Frame):
-    """Cantidad seleccionada y botones Descargar, Comprimir y reemplazar, LZ4, Subir y Eliminar."""
+    """Cantidad seleccionada y botones Descargar, Comprimir y reemplazar, Subir y Eliminar."""
 
     def __init__(self, parent: tk.Misc, theme: ThemeManager,
                  actions: dict[str, Callable[[], None]]) -> None:
@@ -27,7 +26,7 @@ class ActionBar(ttk.Frame):
             parent (tk.Misc): Contenedor.
             theme (ThemeManager): Tema.
             actions (dict[str, Callable[[], None]]): Acciones ``"download"``, ``"convert"``,
-                ``"lz4"``, ``"upload"`` (archivos), ``"upload_folder"`` y ``"delete"``.
+                ``"upload"`` (archivos), ``"upload_folder"`` y ``"delete"``.
         """
         m = theme.metrics
         super().__init__(parent, style="Bar.TFrame", padding=(m.px(12), m.px(8)))
@@ -39,8 +38,6 @@ class ActionBar(ttk.Frame):
             "convert": icon_button(self, theme, "Comprimir y reemplazar…", "replace",
                                    actions["convert"], style="Alt.SmallAccent.TButton",
                                    role="accent_ink"),
-            "lz4": icon_button(self, theme, LZ4_ACTION_TEXT, "compress", actions["lz4"],
-                               style="Alt.Small.TButton"),
             "delete": icon_button(self, theme, "Eliminar", "trash", actions["delete"],
                                   style="Alt.SmallDanger.TButton", role="bad"),
             "upload": icon_button(self, theme, _LABELS["upload"][0], "upload",
@@ -51,7 +48,7 @@ class ActionBar(ttk.Frame):
             self._upload_menu.add_command(label=label, command=actions[key])
         self._paint_menu(theme)
         theme.on_change(lambda _p: self._paint_menu(theme))
-        for key in ("download", "convert", "lz4"):
+        for key in ("download", "convert"):
             self._buttons[key].pack(side="left", padx=(0, m.px(8)))
         self._buttons["delete"].pack(side="right")
         self._buttons["upload"].pack(side="right", padx=(0, m.px(8)))

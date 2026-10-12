@@ -5,17 +5,6 @@ import logging
 from dataclasses import dataclass
 
 from ffpfsc_converter.domain.events import JobFinished, QueueFinished
-from ffpfsc_converter.domain.lz4 import Lz4JobState
-from ffpfsc_converter.domain.lz4_events import (
-    Lz4ElfRequired,
-    Lz4EngineLaunched,
-    Lz4Failed,
-    Lz4Finished,
-    Lz4PairingRequired,
-    Lz4Ready,
-    Lz4Rejected,
-    Lz4Started,
-)
 from ffpfsc_converter.domain.pipeline_events import (
     PipelineFinished,
     PipelineStageChanged,
@@ -97,43 +86,6 @@ def _result_line(event: object) -> JournalEntry | None:
         return JournalEntry(logging.INFO, f"Cola terminada (cancelada: {event.cancelled})")
     if isinstance(event, UpdateAvailable):
         return JournalEntry(logging.INFO, f"Versión nueva disponible: {event.release.version}")
-    return _lz4_line(event)
-
-
-def _lz4_line(event: object) -> JournalEntry | None:
-    """Describe los eventos de la compresión LZ4 en la PS5 (nunca registra tokens ni códigos).
-
-    Args:
-        event (object): Evento publicado por un servicio.
-
-    Returns:
-        JournalEntry | None: Línea del registro, o ``None`` si no se registra (el avance).
-    """
-    if isinstance(event, Lz4EngineLaunched):
-        return JournalEntry(logging.INFO, f"LZ4: exfat2ampr enviado al cargador de {event.host}")
-    if isinstance(event, (Lz4ElfRequired, Lz4PairingRequired)):
-        return JournalEntry(logging.INFO, f"LZ4 {type(event).__name__}: {event.entry_path}")
-    if isinstance(event, Lz4Ready):
-        check = event.plan.check
-        return JournalEntry(logging.INFO, f"LZ4 listo: {event.plan.source.path} "
-                                          f"(compatible: {check.compatible.value}, "
-                                          f"errores: {list(check.errors)}, "
-                                          f"avisos: {list(check.warnings)})")
-    if isinstance(event, Lz4Rejected):
-        return JournalEntry(logging.WARNING, f"LZ4 rechazado: {list(event.check.errors)}")
-    if isinstance(event, Lz4Started):
-        request = event.request
-        return JournalEntry(logging.INFO, f"LZ4 iniciado: {request.source.path} → "
-                                          f"{request.output_path} (nivel {request.level}, "
-                                          f"verificar {request.verify}, "
-                                          f"borrar original {request.remove_source})")
-    if isinstance(event, Lz4Finished):
-        status = event.status
-        return _outcome(status.state is Lz4JobState.DONE,
-                        f"LZ4 {status.state.value}: {status.dest} ({status.code}) "
-                        f"{status.message}".rstrip())
-    if isinstance(event, Lz4Failed):
-        return JournalEntry(logging.WARNING, f"LZ4: {event.message}")
     return None
 
 

@@ -44,7 +44,6 @@ class ExplorerCallbacks:
         on_upload_folder (Callable[[], None]): Menú "Subir a la PS5…" → "Carpeta…".
         on_delete (Callable[[], None]): Botón "Eliminar".
         on_convert (Callable[[], None]): Botón "Comprimir y reemplazar".
-        on_lz4 (Callable[[], None]): Botón "Comprimir LZ4 en la PS5".
     """
 
     on_connect: Callable[[], None]
@@ -62,7 +61,6 @@ class ExplorerCallbacks:
     on_upload_folder: Callable[[], None]
     on_delete: Callable[[], None]
     on_convert: Callable[[], None]
-    on_lz4: Callable[[], None]
 
 
 class ExplorerView(ttk.Frame):
@@ -103,7 +101,7 @@ class ExplorerView(ttk.Frame):
         self.transfers.pack(side="bottom", fill="x", pady=(m.px(12), 0))
         self._actions = ActionBar(self, theme, {
             "download": callbacks.on_download, "convert": callbacks.on_convert,
-            "lz4": callbacks.on_lz4, "upload": callbacks.on_upload,
+            "upload": callbacks.on_upload,
             "upload_folder": callbacks.on_upload_folder, "delete": callbacks.on_delete})
         self._actions.pack(side="bottom", fill="x", pady=(m.px(10), 0))
         self._path = PathBar(self, theme, PS5_FAVORITE_PATHS,

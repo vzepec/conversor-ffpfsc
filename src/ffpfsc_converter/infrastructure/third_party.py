@@ -45,7 +45,7 @@ def installed(relative: str, root: Path | None = None) -> Path | None:
     """Devuelve un archivo o carpeta de terceros si el instalador lo dejó.
 
     Args:
-        relative (str): Ruta dentro de ``third_party/`` (por ejemplo ``config.E2A_INSTALLED_ELF``).
+        relative (str): Ruta dentro de ``third_party/`` (por ejemplo ``config.AMPR_RUNTIME_FILE``).
         root (Path | None): Carpeta de terceros; ``None`` usa :func:`third_party_dir`.
 
     Returns:
