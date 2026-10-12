@@ -66,6 +66,10 @@ src/ffpfsc_converter/
 │   │   ├── console.py     #   fs.volumes y fs.freespace
 │   │   ├── jobs.py        #   job.run/status/cancel: borrado recursivo y CRC32
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
+│   ├── exfat2ampr/        # Cliente de exfat2ampr: LZ4 (AMPR) en la PS5 (API en __init__.py)
+│   │   ├── client.py, transport.py  # E2aClient sobre HTTP/1.0 + JSON (urllib), E2aHttpError
+│   │   ├── parsing.py     #   JSON de la API → modelos de domain/lz4.py
+│   │   └── elf_loader.py  #   send_elf: envía el ELF al cargador de la PS5 (puerto 9021)
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
 │   ├── release_feed.py    # Última versión publicada (API pública de GitHub)
 │   ├── app_log.py         # Registro en archivo rotativo (carpeta «registros»)
@@ -97,6 +101,8 @@ src/ffpfsc_converter/
 │   ├── remote_storage.py  # StorageMonitor: espacio libre de interno, USB y ampliado
 │   ├── remote_upload.py   #   subida a .part con REST, verificación y renombre
 │   ├── remote_changes.py  # RemoteChanges: eliminar y subir desde el explorador
+│   ├── lz4_remote.py      # Lz4Remote: compresión LZ4 dentro de la PS5 con exfat2ampr
+│   ├── lz4_*.py           #   flows, engine, watch, tracking, plan, deps, settings, messages
 │   ├── pipeline/          # "Comprimir y reemplazar en la PS5"
 │   │   ├── runner.py      #   orquesta las etapas; reintento manual sin repetir lo hecho
 │   │   ├── stages.py      #   descargar, preparar, comprimir y limpiar

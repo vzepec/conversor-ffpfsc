@@ -149,3 +149,10 @@ LZ4_PRESETS: tuple[CompressionPreset, ...] = (
     CompressionPreset("Máximo (LZ4 HC 12, lento)", "Máximo", 12),
 )
 DEFAULT_LZ4_PRESET = LZ4_PRESETS[1]
+#: Cada cuánto se pregunta si exfat2ampr ya responde tras enviarlo al cargador de ELF.
+E2A_START_POLL_SECONDS = 1.0
+#: Segundos tras ``/api/start`` en los que un resultado terminado del mismo juego aún
+#: puede ser el de la conversión anterior (exfat2ampr lo conserva hasta la siguiente).
+E2A_STALE_GRACE_SECONDS = 5.0
+#: Segundos de espera al enviar ``exfat2ampr.elf`` al cargador de ELF de la PS5.
+ELF_SEND_TIMEOUT_SECONDS = 15

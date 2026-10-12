@@ -143,11 +143,14 @@ class Lz4Plan:
         source (Lz4Source): Juego elegido.
         check (Lz4Check): Comprobación previa contra el destino sugerido.
         destinations (tuple[Lz4Destination, ...]): Unidades de la PS5 (con su espacio).
+        dest_base (str): Destino sugerido (``base`` de una de ``destinations``) contra el
+            que se hizo ``check``.
     """
 
     source: Lz4Source
     check: Lz4Check
     destinations: tuple[Lz4Destination, ...]
+    dest_base: str = ""
 
 
 @dataclass(frozen=True)
