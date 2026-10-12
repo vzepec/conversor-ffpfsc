@@ -111,7 +111,7 @@ class MainView:
         texts = ttk.Frame(head, style="TFrame")
         texts.pack(side="left")
         ttk.Label(texts, text="Convertir", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(texts, text="Comprime juegos a .ffpfsc para ShadowMount+",
+        ttk.Label(texts, text="Comprime juegos a .ffpfsc o LZ4 para ShadowMount+",
                   style="Muted.TLabel").pack(anchor="w")
         icon_button(head, self._theme, "Abrir carpeta de salida", "folder",
                     callbacks.on_open_output, style="Ghost.TButton", role="muted").pack(

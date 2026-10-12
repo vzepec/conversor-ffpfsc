@@ -5,6 +5,10 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Cambiado
+- Capturas del README actualizadas con el selector de formato y la etiqueta LZ4; el subtítulo
+  de Convertir menciona LZ4.
+
 ## [1.7.0] - 2026-10-12
 
 ### Cambiado

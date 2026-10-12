@@ -14,9 +14,9 @@
 
 <br/>
 
-<img src="docs/assets/convertir.png" alt="Pestaña Convertir con dos juegos en la cola" width="820"/>
+<img src="docs/assets/convertir.png" alt="Pestaña Convertir con el formato LZ4 elegido y tres juegos en la cola" width="820"/>
 <br/><br/>
-<img src="docs/assets/ps5.png" alt="Pestaña PS5 con las unidades, los archivos y las transferencias" width="820"/>
+<img src="docs/assets/ps5.png" alt="Pestaña PS5 con las unidades, los archivos (uno ya en LZ4) y las transferencias" width="820"/>
 
 <br/>
 
