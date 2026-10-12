@@ -3,43 +3,24 @@ from __future__ import annotations
 
 import tkinter as tk
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from tkinter import ttk
 
 from ffpfsc_converter.domain.remote import DownloadJob, DownloadResult
 from ffpfsc_converter.formatting import format_eta
 from ffpfsc_converter.ui.explorer import presenters
+from ffpfsc_converter.ui.explorer.transfer_header import TransferActions, TransferHeader
 from ffpfsc_converter.ui.explorer.transfer_presenters import (
-    destination_text,
     download_result_status,
     transfer_progress,
 )
 from ffpfsc_converter.ui.explorer.transfer_row import TransferRow
 from ffpfsc_converter.ui.theme import ThemeManager
-from ffpfsc_converter.ui.widgets.basics import icon_button
 from ffpfsc_converter.ui.widgets.scroll_frame import ScrollFrame
 
 #: Alto máximo de la lista (píxeles lógicos); con más filas aparece la barra de desplazamiento.
 _MAX_LIST_HEIGHT = 220
 _SCROLL_DELAY_MS = 60
-
-
-@dataclass(frozen=True)
-class TransferActions:
-    """Acciones del encabezado del panel.
-
-    Attributes:
-        change_destination (Callable[[], None]): Enlace "Cambiar".
-        open_destination (Callable[[], None]): Enlace "Abrir".
-        retry_failed (Callable[[], None]): Botón "Reintentar fallidas".
-        cancel (Callable[[], None]): Botón "Cancelar".
-    """
-
-    change_destination: Callable[[], None]
-    open_destination: Callable[[], None]
-    retry_failed: Callable[[], None]
-    cancel: Callable[[], None]
 
 
 class TransferPanel(ttk.Frame):
@@ -58,37 +39,12 @@ class TransferPanel(ttk.Frame):
         self._theme = theme
         self._rows: dict[str, TransferRow] = {}
         self._listeners: list[Callable[[int], None]] = []
-        self._build_header(actions)
+        self._header = TransferHeader(self, theme, actions)
+        self._header.pack(fill="x")
+        self._separator = ttk.Separator(self)
         self._list = ScrollFrame(self, theme)
         self._list.pack_propagate(False)
         self._list.inner.bind("<Configure>", lambda _e: self._fit_height(), add="+")
-
-    def _build_header(self, actions: TransferActions) -> None:
-        """Crea el título, la carpeta de descargas y los botones.
-
-        Args:
-            actions (TransferActions): Acciones del encabezado.
-        """
-        m, theme = self._theme.metrics, self._theme
-        head = ttk.Frame(self, style="Surface.TFrame", padding=(m.px(10), m.px(6)))
-        head.pack(fill="x")
-        self._title = ttk.Label(head, style="CardBold.TLabel")
-        self._title.pack(side="left")
-        self._cancel = icon_button(head, theme, "Cancelar", "stop", actions.cancel,
-                                   style="Card.SmallDanger.TButton", role="bad")
-        self._cancel.pack(side="right")
-        self._retry = icon_button(head, theme, "Reintentar fallidas", "retry",
-                                  actions.retry_failed, style="Card.Small.TButton")
-        self._retry.pack(side="right", padx=(0, m.px(8)))
-        for text, command in (("Abrir", actions.open_destination),
-                              ("Cambiar", actions.change_destination)):
-            ttk.Button(head, text=text, style="Card.Link.TButton", cursor="hand2",
-                       command=command).pack(side="right", padx=(m.px(8), m.px(8)))
-        self._destination = ttk.Label(head, style="CardSmall.TLabel")
-        self._destination.pack(side="right", padx=(m.px(12), 0))
-        self._separator = ttk.Separator(self)
-        self.set_running(False)
-        self.set_retry_enabled(False)
         self.refresh()
 
     def add_listener(self, listener: Callable[[int], None]) -> None:
@@ -105,7 +61,7 @@ class TransferPanel(ttk.Frame):
         Args:
             folder (Path | None): Carpeta elegida, o ``None`` si aún no hay.
         """
-        self._destination.configure(text=destination_text(folder, Path.home()))
+        self._header.set_destination(folder)
 
     def set_running(self, running: bool) -> None:
         """Habilita "Cancelar" solo mientras hay descargas.
@@ -113,7 +69,7 @@ class TransferPanel(ttk.Frame):
         Args:
             running (bool): ``True`` si hay descargas en curso.
         """
-        self._cancel.state(["!disabled"] if running else ["disabled"])
+        self._header.set_running(running)
 
     def set_retry_enabled(self, enabled: bool) -> None:
         """Habilita "Reintentar fallidas" solo si hay transferencias fallidas.
@@ -121,7 +77,7 @@ class TransferPanel(ttk.Frame):
         Args:
             enabled (bool): ``True`` si hay algo que reintentar.
         """
-        self._retry.state(["!disabled"] if enabled else ["disabled"])
+        self._header.set_retry_enabled(enabled)
 
     def add_job(self, job: DownloadJob) -> None:
         """Agrega una descarga.
@@ -225,10 +181,24 @@ class TransferPanel(ttk.Frame):
         """
         self.set_state(job.id, *download_result_status(result))
 
+    def remove_finished(self) -> list[str]:
+        """Quita las filas que ya no están en cola ni en curso.
+
+        Returns:
+            list[str]: Identificadores de las filas quitadas.
+        """
+        finished = [row_id for row_id, row in self._rows.items() if not row.is_active]
+        for row_id in finished:
+            self._rows.pop(row_id).destroy()
+        if not self._rows:
+            self._list.pack_forget()
+            self._separator.pack_forget()
+        self.refresh()
+        return finished
+
     def refresh(self) -> None:
         """Actualiza el contador del título y avisa cuántas siguen activas."""
-        self._title.configure(text=f"Transferencias · {len(self._rows)}" if self._rows
-                              else "Transferencias")
         active = sum(1 for row in self._rows.values() if row.is_active)
+        self._header.show_counts(len(self._rows), len(self._rows) - active)
         for listener in self._listeners:
             listener(active)

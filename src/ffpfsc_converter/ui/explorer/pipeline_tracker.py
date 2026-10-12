@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from ffpfsc_converter.domain.pipeline import PipelineResult, PipelineStage
 from ffpfsc_converter.formatting import format_eta
@@ -18,22 +19,39 @@ from ffpfsc_converter.ui.explorer.transfer_presenters import (
     pipeline_step_text,
 )
 from ffpfsc_converter.ui.explorer.transfer_row import TransferRow
+from ffpfsc_converter.ui.presenters import SKIP_VERIFY_TEXT
+
+
+@dataclass(frozen=True)
+class PipelineRowActions:
+    """Botones de la fila del pipeline.
+
+    Attributes:
+        cancel (Callable[[], None]): Cancelar.
+        retry (Callable[[], None]): Reintentar tras un fallo.
+        skip_verify (Callable[[], None]): Saltar la verificación LZ4 en curso.
+    """
+
+    cancel: Callable[[], None]
+    retry: Callable[[], None]
+    skip_verify: Callable[[], None]
 
 
 class PipelineTracker:
     """Refleja el avance de un "comprimir y reemplazar" en su fila."""
 
-    def __init__(self, panel: TransferPanel, name: str,
-                 actions: tuple[Callable[[], None], Callable[[], None]]) -> None:
+    def __init__(self, panel: TransferPanel, name: str, actions: PipelineRowActions) -> None:
         """Agrega la fila del juego al panel.
 
         Args:
             panel (TransferPanel): Panel de transferencias.
             name (str): Nombre de la carpeta o imagen que se reemplaza.
-            actions (tuple[Callable[[], None], Callable[[], None]]): Cancelar y reintentar.
+            actions (PipelineRowActions): Cancelar, reintentar y saltar la verificación.
         """
         self._panel = panel
-        self._on_cancel, self._on_retry = actions
+        self._on_cancel, self._on_retry = actions.cancel, actions.retry
+        self._on_skip = actions.skip_verify
+        self._can_skip = False
         self._row_id = uuid.uuid4().hex
         panel.add_row(self._row_id, name, "replace")
         self._row().set_subtitle("Comprimir y reemplazar")
@@ -61,12 +79,29 @@ class PipelineTracker:
         self._row().set_progress(pipeline_progress(percent, detail), "", format_eta(eta))
         self._panel.refresh()
 
+    def set_skippable(self, can_skip: bool) -> None:
+        """Muestra «Saltar verificación» solo mientras se verifica un LZ4.
+
+        Args:
+            can_skip (bool): ``True`` durante la verificación LZ4.
+        """
+        if can_skip == self._can_skip:
+            return
+        self._can_skip = can_skip
+        self._row().set_secondary(SKIP_VERIFY_TEXT if can_skip else "", self._skip)
+
+    def _skip(self) -> None:
+        """Pide saltar la verificación y oculta el botón."""
+        self.set_skippable(False)
+        self._on_skip()
+
     def finish(self, result: PipelineResult) -> None:
         """Muestra el resultado y ofrece reintentar si no terminó bien.
 
         Args:
             result (PipelineResult): Resultado del pipeline.
         """
+        self.set_skippable(False)
         row = self._row()
         row.set_state(*pipeline_result_status(result), active=False)
         if result.succeeded:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ffpfsc_converter.domain.lz4 import Lz4Compat
 from ffpfsc_converter.domain.models import (
     ConversionJob,
     ConversionResult,
@@ -108,3 +109,27 @@ def test_performance_shows_its_own_estimate() -> None:
     assert jp.size_lines(job, 3, performance=True) == ("1000.0 B →", "≈ 400.0 B",
                                                         "−60% estimado")
     assert jp.queue_summary([job], 3, performance=True) == "1 juego  ·  1000.0 B → ≈ 400.0 B"
+
+
+def test_lz4_sizes_and_problems(tmp_path: Path) -> None:
+    """Con LZ4 se muestra su estimación o, si no sirve, el motivo en pocas palabras."""
+    game = tmp_path / "juego"
+    game.mkdir()
+    job = ConversionJob(game, game, tmp_path / "juego.ffpfsc", size=1000, lz4_estimates={1: 400},
+                        lz4_compat=Lz4Compat.YES)
+    assert jp.size_lines(job, 3, lz4=True) == ("1000.0 B →", "≈ 400.0 B", "−60% estimado")
+    job.lz4_compat = Lz4Compat.NO
+    assert jp.size_lines(job, 3, lz4=True)[2] == jp.LZ4_INCOMPATIBLE_TEXT
+    assert jp.queue_summary([job], 3, lz4=True) == "1 juego  ·  1000.0 B → ≈ 1000.0 B"
+    image = tmp_path / "juego.exfat"
+    image.write_bytes(b"x")
+    assert jp.lz4_problem(ConversionJob(image, image, tmp_path / "x.ffpfsc")) == jp.LZ4_IMAGE_TEXT
+
+
+def test_lz4_estimate_text() -> None:
+    """Muestra el peso LZ4 estimado con su ahorro, o que aún se está analizando."""
+    job = _job(size=1000)
+    assert jp.lz4_estimate_text(job, 3) == "analizando…"
+    job.lz4_estimates = {1: 400, 9: 300}
+    assert jp.lz4_estimate_text(job, 3) == "≈ 400.0 B (−60%)"  # Máxima velocidad = LZ4 rápido
+    assert jp.lz4_estimate_text(job, 6) == "≈ 300.0 B (−70%)"  # Equilibrado = LZ4 HC 9

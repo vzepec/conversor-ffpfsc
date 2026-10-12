@@ -1,6 +1,7 @@
 """Reintento manual de las transferencias que fallaron tras los reintentos automáticos."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -60,6 +61,17 @@ class RetryActions:
             self._uploads.pop(upload_id, None)
         elif origin is not None:
             self._uploads[upload_id] = origin
+        self._refresh_button()
+
+    def forget(self, row_ids: Iterable[str]) -> None:
+        """Olvida transferencias fallidas cuyas filas se quitaron (ya no se reintentan).
+
+        Args:
+            row_ids (Iterable[str]): Filas quitadas del panel.
+        """
+        for row_id in row_ids:
+            self._downloads.pop(row_id, None)
+            self._uploads.pop(row_id, None)
         self._refresh_button()
 
     def retry_failed(self) -> None:

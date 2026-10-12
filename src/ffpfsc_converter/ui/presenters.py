@@ -18,6 +18,8 @@ from ffpfsc_converter.formatting import format_size
 
 RUNNING_TEXT = "Convirtiendo…"
 PENDING_TEXT = "analizando…"
+#: Botón que salta la verificación LZ4 en curso (Convertir y pestaña PS5).
+SKIP_VERIFY_TEXT = "Saltar verificación"
 
 
 def version_text(version: str = __version__) -> str:

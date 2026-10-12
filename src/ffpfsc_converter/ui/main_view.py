@@ -42,6 +42,7 @@ class ViewCallbacks:
         on_open_output (Callable[[], None]): Botón "Abrir carpeta de salida".
         on_upload_all (Callable[[], None]): Botón "Subir completados a la PS5".
         on_upload_row (Callable[[str], None]): Botón "Subir a la PS5" de una fila.
+        on_skip_verify (Callable[[str], None]): Botón "Saltar verificación" de una fila.
     """
 
     on_paths: Callable[[list[Path]], None]
@@ -55,6 +56,7 @@ class ViewCallbacks:
     on_open_output: Callable[[], None]
     on_upload_all: Callable[[], None]
     on_upload_row: Callable[[str], None]
+    on_skip_verify: Callable[[str], None]
 
 
 class MainView:
@@ -94,7 +96,8 @@ class MainView:
                     style="Ghost.TButton", role="muted").pack(side="right")
         self._build_footer(callbacks)
         self._build_log()
-        self.table = JobList(self._root, theme, callbacks.on_upload_row)
+        self.table = JobList(self._root, theme, callbacks.on_upload_row,
+                             callbacks.on_skip_verify)
         self.table.pack(fill="both", expand=True)
 
     def _build_header(self, callbacks: ViewCallbacks) -> None:

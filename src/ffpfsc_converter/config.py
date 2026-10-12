@@ -6,6 +6,7 @@ ajustable, agrégalo en este archivo con un comentario que explique su origen.
 from __future__ import annotations
 
 from ffpfsc_converter.domain.models import CompressionPreset
+from ffpfsc_converter.domain.third_party import ThirdPartyAsset
 
 APP_TITLE = "Conversor FFPFSC (PS5)"
 #: Nombre de la clase de la ventana en Linux; Tk lo publica como ``Conversor-ffpfsc``
@@ -108,6 +109,8 @@ PS5_FAVORITE_PATHS = (
 )
 #: Carpeta inicial al conectar (la que vigila ShadowMount+).
 PS5_START_PATH = "/data/homebrew"
+#: Carpeta donde se instalan los juegos en cada unidad de la PS5.
+PS5_GAMES_FOLDER = "homebrew"
 #: Porcentaje de uso a partir del cual la barra de una unidad de la PS5 se pinta en ámbar.
 STORAGE_WARN_PERCENT = 85
 #: Puerto del helper de ps5upload (protocolo AVA1), usado para iniciar el FTP.
@@ -120,3 +123,75 @@ PAIRING_CODE_TIMEOUT_SECONDS = 55
 PIPELINE_WORK_DIR_NAME = "ffpfsc-temporal"
 #: Esperas (s) antes de cada reintento automático tras un corte de conexión.
 RETRY_DELAYS_SECONDS = (3.0, 10.0, 20.0)
+
+# --------------------------------------------------------------- LZ4 (PC)
+#: Sufijo de la carpeta LZ4 que se crea junto a donde iría el ``.ffpfsc``.
+LZ4_SEPARATE_NAME_SUFFIX = "-LZ4"
+
+# ------------------------------------------------- archivos de terceros (LZ4)
+#: Carpeta (junto a la app, fuera de Git) donde el instalador deja los archivos de terceros.
+THIRD_PARTY_DIR_NAME = "third_party"
+#: Bloque de lectura al descargar y al calcular el SHA-256.
+THIRD_PARTY_CHUNK_BYTES = 1024 * 1024
+#: Segundos de espera de red de cada descarga.
+THIRD_PARTY_TIMEOUT_SECONDS = 60
+_AMPR_RELEASE = "https://github.com/drakmor/ampr_emu/releases/download/0.4.2.1"
+#: Lo que descarga el instalador (GPL-3.0; desde su página oficial y con su huella): de
+#: ampr_emu, el empaquetador en Python (LZ4 en el PC) y la biblioteca que el juego
+#: convertido carga para leer sus paquetes.
+THIRD_PARTY_ASSETS: tuple[ThirdPartyAsset, ...] = (
+    ThirdPartyAsset(
+        "libSceAmpr.sprx (ampr_emu 0.4.2.1)", f"{_AMPR_RELEASE}/libSceAmpr.sprx",
+        "69e6c4d5e4f5fb83c9e01815db5861c4c75734acbf4595cafa50d4c218116d1a",
+        "ampr_emu/libSceAmpr.sprx"),
+    ThirdPartyAsset(
+        "herramientas de ampr_emu 0.4.2.1", f"{_AMPR_RELEASE}/ampr-emu-0.4.2.1-fix.zip",
+        "9f146f58767f3200a7b619be25d1c32bf3418186e9de4266f81a94d14922d13b",
+        "ampr_emu/python-tools", "ampr-pack-tools-windows-x64/python-tools/"),
+)
+#: Rutas (dentro de ``third_party/``) que usa la app.
+AMPR_RUNTIME_FILE = "ampr_emu/libSceAmpr.sprx"
+AMPR_TOOLS_DIR = "ampr_emu/python-tools"
+#: Scripts de ampr_emu (dentro de ``AMPR_TOOLS_DIR``) y archivos que generan.
+AMPR_INDEX_SCRIPT = "build_ampr_index.py"
+AMPR_PACK_SCRIPT = "ampr_pack.py"
+AMPR_INDEX_FILE = "ampr_emu.index"
+AMPR_ASSETS_INDEX = "ampr_assets.index"
+#: Carpeta del juego donde va la biblioteca que lee los paquetes LZ4.
+AMPR_FAKELIB_DIR = "fakelib"
+#: Perfil genérico (sin trazas del juego), con las reglas de exfat2ampr/Lazy_AMPR: queda
+#: sin comprimir lo que el juego puede leer sin pasar por libSceAmpr (ejecutables, mmap),
+#: lo ya comprimido (vídeo, audio, archivos) y los archivos en la raíz del juego.
+AMPR_LOOSE_EXTENSIONS = frozenset({
+    ".elf", ".self", ".prx", ".sprx", ".bin", ".dat", ".json", ".xml", ".utoc",
+    ".mp4", ".webm", ".mkv", ".bk2", ".bik", ".usm", ".ogg", ".opus", ".mp3", ".at9",
+    ".wem", ".zip", ".7z", ".rar", ".crc", ".runtime", ".index", ".pak"})
+AMPR_LOOSE_TOP_DIRS = frozenset({
+    "sce_module", "sce_sys", "system", "fakelib", "mods", "save", "trophy2", "uds",
+    "_duplex_", "decrypted", "movie", "movies", "video", "videos", "cinematic", "cutscene"})
+AMPR_LOOSE_NAMES = frozenset({"eboot.bin", "ampr_emu.index", "ampr_commands.bin", "apr_emu.log"})
+AMPR_LOOSE_PREFIXES = ("movie", "soundbank", "wem")
+#: Carpetas de audio: se leen en trozos pequeños y al azar (bloques de 16 KiB).
+AMPR_AUDIO_TOP_DIRS = frozenset({"audio", "sound", "sounds", "sfx", "music", "voice", "voices",
+                                 "vo"})
+#: Niveles LZ4 hasta este valor usan el modo rápido; desde el siguiente, HC.
+LZ4_FAST_MAX_LEVEL = 4
+#: Carpetas temporales de la conversión LZ4 en el PC (dentro de la carpeta de destino).
+LZ4_WORK_SUFFIX = ".lz4-temporal"
+#: Fase de la verificación LZ4 (distinta de la de MkPFS: solo esta se puede saltar).
+LZ4_VERIFY_PHASE = "verify-lz4"
+LZ4_PARTIAL_SUFFIX = ".parcial"
+LZ4_BACKUP_SUFFIX = ".anterior"
+#: Estimación del peso LZ4: bloques de 64 KiB muestreados (~32 MB), comprimidos con cada nivel.
+LZ4_ESTIMATE_SAMPLE_BLOCKS = 512
+#: Nivel LZ4 de cada modo de la vista Convertir (nivel zlib → LZ4): rápido, HC 9 y HC 12.
+LZ4_LEVEL_BY_PRESET = {3: 1, 6: 9, 9: 12}
+#: Si durante el empaquetado LZ4 el disco de destino baja de esto, se detiene y limpia.
+LZ4_MIN_FREE_BYTES = 2 * 1024**3
+#: Reglas de ampr_pack para bloques de lectura mixta (para estimar el peso real): un bloque
+#: va comprimido solo si ahorra ≥ 8 KiB y ≥ 12,5 %; los comprimidos se alinean a 64 B y no
+#: cruzan el borde de una página de 64 KiB (los crudos ocupan una página entera).
+AMPR_IO_PAGE_BYTES = 64 * 1024
+AMPR_CHUNK_ALIGN_BYTES = 64
+AMPR_MIN_SAVINGS_BYTES = 8 * 1024
+AMPR_MIN_SAVINGS_RATIO = 0.125

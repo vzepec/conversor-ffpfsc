@@ -5,6 +5,45 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Cambiado
+- README reescrito para usuarios no técnicos: qué hace, qué necesitas, instalación,
+  uso paso a paso, `.ffpfsc` o LZ4 (experimental) y preguntas frecuentes. Lo técnico
+  (tecnologías, componentes, arquitectura y desarrollo) pasa a
+  [docs/TECHNICAL.md](docs/TECHNICAL.md).
+- En Convertir, al elegir el formato LZ4 se oculta «Rendimiento en la PS5» (solo aplica a
+  `.ffpfsc`) con una animación breve, y vuelve a aparecer al elegir `.ffpfsc`.
+- **Verificación completa también en LZ4** (Convertir y «Comprimir y reemplazar»):
+  activada por defecto; al apagarla se omite la comparación final con el original y la
+  conversión termina antes. Cada formato recuerda su propio valor. La comprobación con
+  CRC32 al subir a la PS5 sigue siendo obligatoria.
+- **Saltar verificación** (Convertir y «Comprimir y reemplazar»): mientras se verifica un
+  juego LZ4, su fila muestra ese botón; omite solo la comprobación y el juego queda listo
+  (no lo cancela ni lo borra). En la PS5, la subida verificada con CRC32 se mantiene.
+- El peso estimado en LZ4 depende del modo: «Máxima velocidad» usa LZ4 rápido, que
+  comprime menos que HC, y antes se estimaba siempre con HC (quedaba por debajo del real).
+- **Limpiar** en el panel de Transferencias (sección PS5): quita lo que ya terminó, falló o
+  se canceló, y deja lo que sigue en cola o en curso.
+- La sección PS5 reconoce los juegos ya comprimidos en LZ4 (etiqueta **LZ4**) y no deja
+  volver a comprimirlos con «Comprimir y reemplazar».
+
+### Añadido (experimental)
+- **Formato LZ4 en la vista Convertir** (en este equipo): selector «Formato»; la cola
+  indica si cada juego es compatible y su peso estimado en LZ4, y la conversión usa
+  las herramientas de [ampr_emu](https://github.com/drakmor/ampr_emu) 0.4.2.1
+  (perfil genérico, verificación byte a byte contra el original) y deja una carpeta
+  `<juego>-LZ4`. Solo carpetas de juego; el original nunca se modifica.
+- **Subir carpetas a la PS5**: «Subir a la PS5… → Carpeta…» en la sección PS5 y «Subir a
+  la PS5» para los juegos convertidos a LZ4 en Convertir. La carpeta va primero a
+  `<nombre>.part/` (cada archivo verificado, con reintentos y reanudación) y se publica
+  con su nombre al final; nunca sobrescribe una carpeta existente.
+- **LZ4 en «Comprimir y reemplazar»** (sección PS5): selector «Formato» en la ventana
+  de compresión, solo para carpetas de juegos compatibles. La carpeta LZ4 se sube a
+  `<nombre>.part/`, se verifica archivo por archivo con CRC32 y ocupa el lugar del
+  original con el mismo nombre. Guía: [docs/LZ4.md](docs/LZ4.md).
+- Los instaladores descargan lo necesario de ampr_emu en
+  `third_party/` (fuera de Git) desde sus páginas oficiales, con su SHA-256
+  comprobado. Sin internet avisan y siguen. Nueva dependencia: `lz4`.
+
 ## [1.6.0] - 2026-10-11
 
 ### Añadido
@@ -122,93 +161,7 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Guía para publicar versiones como *Releases* de GitHub (`docs/DEVELOPMENT.md`) y
   capturas nuevas en el README.
 
-## [1.2.0] - 2026-10-10
+## Versiones anteriores
 
-### Añadido
-- La versión de la aplicación se muestra en el título de la ventana y a la
-  derecha de la línea de estado.
-- Soporte **beta** para Windows 10/11: `instalar.bat`/`instalar.ps1` (entorno virtual y
-  accesos directos en Escritorio y menú Inicio) y `abrir.bat`.
-- Guía de instalación para Linux y Windows (`docs/INSTALLATION.md`).
-- Pestaña **PS5**: explorador de archivos de la consola con el payload de ps5upload
-  y descarga de archivos y carpetas completas (progreso, velocidad, cancelación,
-  reanudación con `.part` y `REST`, verificación de tamaño y de espacio libre).
-- Cliente mínimo del protocolo AVA1 de ps5upload (Noise XX, emparejamiento CPace
-  con el código de la consola, `ftp.start`), verificado con sus vectores oficiales.
-- El FTP de la PS5 se inicia en solo lectura y con credenciales aleatorias.
-- Ajustes persistentes (IP, puerto, carpeta de descargas) y guía `docs/PS5.md`.
-- **Comprimir y reemplazar** un juego de la PS5 (carpeta, `.exfat` o `.ffpkg`):
-  descarga, ventana de compresión con estimación, compresión con MkPFS, subida
-  verificada como `.part`, borrado del original y publicación del `.ffpfsc`.
-- **Subir** archivos a la PS5 (con reanudación) y **eliminar** archivos y carpetas
-  (con el borrado protegido del helper).
-- El FTP solo tiene permiso de escritura mientras dura una operación.
-- **Tiempo restante (ETA)** y porcentaje en compresiones, descargas, subidas y en
-  "comprimir y reemplazar".
-- Ventana de "comprimir y reemplazar" simplificada a 3 pasos: Descarga,
-  Compresión y Reemplazo.
-- Carpeta `payload/` con el helper de ps5upload 6.4.0 y su guía de carga.
-- Reintentos automáticos (hasta 3) ante cortes de conexión en descargas y subidas,
-  y reintento manual: "Reintentar fallidas" en el panel de transferencias y
-  "Reintentar" en "comprimir y reemplazar" (sin volver a comprimir ni a borrar).
-- ETA más estable: velocidad promedio de 30 s y cuenta regresiva entre recálculos.
-- Botón **Subir a la PS5** en la pestaña Convertir para los juegos ya comprimidos;
-  conecta si hace falta (o explica cómo vincular la PS5) y sube cuando se conecta.
-- La pestaña **PS5** muestra el espacio libre del almacenamiento interno, de cada USB
-  conectado y del almacenamiento ampliado, y lo actualiza tras borrar, subir o reemplazar.
-
-### Cambiado
-- La cancelación termina el árbol de procesos con `taskkill /T` en Windows y
-  con `SIGTERM` al grupo en Linux/macOS.
-- "Abrir carpeta de salida" usa el Explorador en Windows y `open` en macOS.
-- Los diálogos abren en la carpeta Escritorio o Desktop (también en OneDrive).
-
-### Corregido
-- Tras cancelar "comprimir y reemplazar", el botón "Cerrar" quedaba deshabilitado.
-- Una subida reanudada podía mezclar dos archivos distintos si se volvía a
-  comprimir con otras opciones; ahora se comparan los últimos bytes antes de reanudar.
-- Cancelar una transferencia esperaba al servidor; ahora la conexión se corta al instante.
-
-## [1.1.0] - 2026-10-09
-
-### Añadido
-- Rules de Claude Code en `.claude/rules/`: documentación en español neutro,
-  límite de 250 líneas por archivo, código limpio y buenas prácticas.
-- `tools/check_standards.py`: verifica el límite de líneas y que toda función
-  tenga docstring con `Args`, `Returns`, `Yields` y `Raises`; se ejecuta en `pytest`.
-- Tests del verificador y de la comprobación de espacio libre.
-
-### Cambiado
-- Todas las funciones y métodos documentados con descripción breve, parámetros,
-  retorno y excepciones.
-- `ui/app.py` dividido en `main_view.py`, `options_panel.py`, `job_table.py`,
-  `dialogs.py` y `event_handlers.py`; `app.py` queda como controlador.
-- `infrastructure/mkpfs_adapter.py` convertido en subpaquete (`command`,
-  `output`, `process`, `metadata`) con la misma API pública.
-
-## [1.0.0] - 2026-10-09
-
-### Añadido
-- Paquete `ffpfsc_converter` con arquitectura en capas (`domain`, `infrastructure`,
-  `services`, `ui`).
-- Suite de tests con pytest (descubrimiento, metadatos, estimación, adaptador
-  MkPFS, cola de conversión y textos de la UI).
-- Configuración de `ruff`, `pyproject.toml` y comando `ffpfsc-converter`.
-- Documentación: README, arquitectura, guía de uso y guía de desarrollo.
-- Skills de Claude Code para arquitectura, código limpio y buenas prácticas.
-- `instalar.sh --dev` instala también las herramientas de desarrollo.
-
-### Cambiado
-- `conversor.py` (archivo único) se reemplaza por el paquete; `abrir.sh` ahora
-  ejecuta `python -m ffpfsc_converter` y es portable (no tiene rutas fijas).
-- Los eventos entre hilos son dataclasses tipadas en lugar de tuplas.
-- El estado del trabajo (`JobState`) se separa del texto mostrado.
-
-### Corregido
-- La estimación y el resultado mostraban `−-35%` cuando el archivo crecía;
-  ahora se muestra `+35%`.
-
-## [0.1.0] - 2026-10-09
-
-- Primera versión funcional: interfaz Tkinter con arrastrar y soltar,
-  estimación de tamaño y conversión con MkPFS.
+Los cambios de la 1.2.0 y anteriores están en
+[docs/CHANGELOG_HISTORICO.md](docs/CHANGELOG_HISTORICO.md).

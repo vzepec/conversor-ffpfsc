@@ -14,6 +14,7 @@ from ffpfsc_converter.services.preflight import SpaceCheck
 from ffpfsc_converter.ui.presenters import format_size
 
 _IMAGE_FILETYPES = [("Imágenes de juego", "*.exfat *.ffpkg *.ffpfsc"), ("Todos", "*")]
+_ELF_FILETYPES = [("Payload de la PS5", "*.elf"), ("Todos", "*")]
 
 
 def _initial_dir() -> str:
@@ -172,6 +173,17 @@ def ask_upload_files() -> list[Path]:
     files = filedialog.askopenfilenames(title="Archivos a subir a la PS5",
                                         initialdir=_initial_dir())
     return [Path(f) for f in files]
+
+
+def ask_upload_folder() -> Path | None:
+    """Pide la carpeta de este equipo que se subirá completa a la PS5.
+
+    Returns:
+        Path | None: Carpeta elegida, o ``None`` si canceló.
+    """
+    folder = filedialog.askdirectory(title="Carpeta a subir a la PS5", mustexist=True,
+                                     initialdir=_initial_dir())
+    return Path(folder) if folder else None
 
 
 def confirm_warning(message: str) -> bool:

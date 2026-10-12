@@ -39,8 +39,8 @@ class ReplacePlan:
 
     Attributes:
         original (RemoteEntry): Carpeta o imagen original que se reemplaza.
-        remote_final (str): Ruta definitiva del ``.ffpfsc`` en la PS5.
-        remote_part (str): Ruta temporal durante la subida (``.ffpfsc.part``).
+        remote_final (str): Ruta definitiva del ``.ffpfsc`` o de la carpeta LZ4 en la PS5.
+        remote_part (str): Ruta temporal durante la subida (termina en ``.part``).
         final_exists (bool): ``True`` si ya hay un archivo con el nombre definitivo.
     """
 
@@ -55,7 +55,7 @@ class PipelineChoice:
     """Lo que el usuario eligió en la ventana de compresión.
 
     Attributes:
-        options (ConversionOptions): Nivel, núcleos y verificación.
+        options (ConversionOptions): Formato, nivel, núcleos y verificación.
         delete_local (bool): ``True`` para borrar los archivos temporales al terminar bien.
     """
 
@@ -72,7 +72,7 @@ class PipelineResult:
         cancelled (bool): ``True`` si el usuario lo canceló.
         message (str): Resumen o causa del error.
         original_size (int): Tamaño del original en la PS5.
-        final_size (int): Tamaño del ``.ffpfsc`` subido.
+        final_size (int): Bytes subidos (``.ffpfsc`` o carpeta LZ4).
     """
 
     succeeded: bool

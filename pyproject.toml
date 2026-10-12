@@ -16,6 +16,7 @@ dependencies = [
     "darkdetect>=0.7",   # seguir el tema claro/oscuro del sistema (ya lo instala MkPFS)
     "zlib-ng>=0.5",
     "tkinterdnd2>=0.4",
+    "lz4>=4.3.2",        # empaquetador de ampr_emu (compresión LZ4 en el PC)
 ]
 
 [project.optional-dependencies]

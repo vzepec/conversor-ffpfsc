@@ -1,4 +1,4 @@
-"""Operaciones que modifican la PS5 desde el explorador: eliminar y subir archivos.
+"""Operaciones que modifican la PS5 desde el explorador: eliminar y subir archivos o carpetas.
 
 Ambas corren en un hilo de fondo. El borrado lo ejecuta el helper (``job.run``
 DELETE), que protege raíces, carpetas de primer nivel y puntos de montaje. La
@@ -30,6 +30,7 @@ from ffpfsc_converter.services.console_access import (
 )
 from ffpfsc_converter.services.launch_errors import describe_launch_error
 from ffpfsc_converter.services.remote_client import ClientFactory
+from ffpfsc_converter.services.remote_folder_upload import UploadHooks, upload_folder
 from ffpfsc_converter.services.remote_upload import (
     part_path,
     publish_with_retries,
@@ -70,12 +71,12 @@ class RemoteChanges:
 
     def upload(self, host: str, port: int, files: Sequence[Path], remote_dir: str,
                ids: Sequence[str] | None = None) -> list[str]:
-        """Sube archivos locales a una carpeta de la PS5.
+        """Sube archivos o carpetas locales a una carpeta de la PS5.
 
         Args:
             host (str): Dirección de la PS5.
             port (int): Puerto FTP.
-            files (Sequence[Path]): Archivos locales.
+            files (Sequence[Path]): Archivos o carpetas locales (una carpeta es una sola fila).
             remote_dir (str): Carpeta remota de destino.
             ids (Sequence[str] | None): Filas a reutilizar (reintento manual); ``None`` = nuevas.
 
@@ -180,14 +181,16 @@ class RemoteChanges:
     ) -> None:
         """Sube un archivo como ``.part`` (con reintentos), lo verifica y lo publica.
 
+        Una carpeta se sube completa en ``<nombre>.part/`` y se publica al final.
+
         Args:
             target (ConsoleTarget): FTP con escritura.
             upload_id (str): Identificador de la fila.
-            local (Path): Archivo local.
+            local (Path): Archivo o carpeta local.
             remote_dir (str): Carpeta remota.
         """
         final = join_remote(remote_dir, local.name)
-        if self._is_already_uploaded(target, local, final):
+        if not local.is_dir() and self._is_already_uploaded(target, local, final):
             self._emit(UploadFinished(upload_id, True, f"{final} (ya estaba en la PS5)"))
             return
 
@@ -202,10 +205,15 @@ class RemoteChanges:
             reason = describe_launch_error(exc, target.host, "subir").splitlines()[0]
             self._emit(TransferRetrying(upload_id, attempt, max_attempts, reason))
 
-        size = upload_with_retries(
-            self._factory, target, local, part_path(final),
+        hooks = UploadHooks(
             lambda d, t, s, e: self._emit(UploadProgress(upload_id, local.name, d, t, s, e)),
             self._cancel.is_set, on_retry)
+        if local.is_dir():
+            final = upload_folder(self._factory, target, local, remote_dir, hooks)
+            self._emit(UploadFinished(upload_id, True, final))
+            return
+        size = upload_with_retries(self._factory, target, local, part_path(final),
+                                   hooks.progress, hooks.should_cancel, on_retry)
         publish_with_retries(self._factory, target, part_path(final), final, size,
                              self._cancel.is_set, on_retry)
         self._emit(UploadFinished(upload_id, True, final))

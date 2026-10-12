@@ -28,7 +28,9 @@ El instalador:
 
 1. Instala `python3-tk` y `python3-venv` con `apt` si faltan (pide tu contraseña).
 2. Crea `.venv/` e instala el conversor y sus dependencias.
-3. Crea el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú.
+3. Descarga los componentes de LZ4 (ampr_emu) en `third_party/`,
+   comprobando su SHA-256. Son opcionales: sin internet avisa y sigue.
+4. Crea el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú.
 
 En distribuciones sin `apt`, instala antes los equivalentes de `python3-tk` y
 `python3-venv` con tu gestor de paquetes.
@@ -58,7 +60,8 @@ Haz doble clic en **`instalar.bat`**. El instalador:
 
 1. Comprueba que hay Python 3.10+ con tkinter.
 2. Crea `.venv\` e instala el conversor y sus dependencias.
-3. Crea el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú Inicio.
+3. Descarga los componentes de LZ4 en `third_party\` (opcionales; ver Linux).
+4. Crea el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú Inicio.
 
 `instalar.bat` ejecuta `instalar.ps1` con `-ExecutionPolicy Bypass` solo para
 ese proceso; no cambia la política de ejecución del sistema.

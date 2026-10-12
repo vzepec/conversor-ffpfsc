@@ -29,12 +29,14 @@ class PipelineProgress:
         percent (float): Porcentaje de la etapa (0-100).
         detail (str): Texto de progreso (bytes, velocidad, fase de MkPFS…).
         eta_seconds (float | None): Tiempo restante estimado; ``None`` si aún no se sabe.
+        can_skip (bool): ``True`` mientras se verifica un LZ4 (se puede saltar).
     """
 
     stage: PipelineStage
     percent: float
     detail: str
     eta_seconds: float | None = None
+    can_skip: bool = False
 
 
 @dataclass(frozen=True)
@@ -43,11 +45,14 @@ class PipelineOptionsRequired:
 
     Attributes:
         job (ConversionJob): Juego descargado y analizado (con estimaciones).
-        plan (ReplacePlan): Qué se reemplazará en la PS5.
+        plan (ReplacePlan): Qué se reemplazará en la PS5 con un ``.ffpfsc``.
+        lz4_plan (ReplacePlan | None): Lo mismo con una carpeta LZ4; ``None`` si el
+            original es una imagen.
     """
 
     job: ConversionJob
     plan: ReplacePlan
+    lz4_plan: ReplacePlan | None = None
 
 
 @dataclass(frozen=True)

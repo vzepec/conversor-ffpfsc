@@ -1,7 +1,6 @@
 """Datos de presentación de la vista PS5: tarjetas, etiquetas, ruta y estados. Funciones puras."""
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -9,10 +8,10 @@ from pathlib import PurePosixPath
 from ffpfsc_converter.config import IMAGE_EXTENSIONS, OUTPUT_EXTENSION, STORAGE_WARN_PERCENT
 from ffpfsc_converter.domain.remote import RemoteEntry, StorageVolume
 from ffpfsc_converter.formatting import format_size
+from ffpfsc_converter.services.pipeline.plan import is_convertible
+from ffpfsc_converter.services.remote_games import looks_like_game
 from ffpfsc_converter.ui.explorer.presenters import volume_name
 
-_TITLE_ID = re.compile(r"[A-Z]{4}\d{5}")
-_GAMES_FOLDER = "homebrew"
 _INTERNAL, _USB, _EXTENDED = "/data", "/mnt/usb", "/mnt/ext"
 #: Ranuras que siempre se muestran: (nombre, punto de montaje, icono).
 _EMPTY_SLOTS = (("Interno", _INTERNAL, "drive"), ("USB", f"{_USB}0", "usb"),
@@ -79,12 +78,14 @@ def entry_badge(entry: RemoteEntry) -> Badge | None:
         entry (RemoteEntry): Elemento de la carpeta abierta.
 
     Returns:
-        Badge | None: «Juego» (carpeta con Title ID o dentro de ``homebrew``),
-        «Comprimido» (``.ffpfsc``), «Imagen» (``.exfat``/``.ffpkg``) o ``None``.
+        Badge | None: «LZ4» (juego ya comprimido en LZ4), «Juego» (carpeta con Title ID
+        o dentro de ``homebrew``), «Comprimido» (``.ffpfsc``), «Imagen»
+        (``.exfat``/``.ffpkg``) o ``None``.
     """
+    if entry.is_lz4:
+        return Badge("LZ4", "ok")
     if entry.is_dir:
-        in_games = PurePosixPath(entry.path).parent.name == _GAMES_FOLDER
-        return Badge("Juego", "wait") if in_games or _TITLE_ID.search(entry.name) else None
+        return Badge("Juego", "wait") if looks_like_game(entry) else None
     suffix = PurePosixPath(entry.name).suffix.lower()
     if suffix == OUTPUT_EXTENSION:
         return Badge("Comprimido", "ok")
@@ -192,7 +193,6 @@ def action_states(connected: bool, writing: bool,
     """
     usable = connected and not writing
     one = len(selected) == 1
-    convertible = one and (selected[0].is_dir
-                           or PurePosixPath(selected[0].name).suffix.lower() in IMAGE_EXTENSIONS)
+    convertible = one and is_convertible(selected[0])
     return ActionStates(download=usable and bool(selected), convert=usable and convertible,
                         upload=usable, delete=usable and bool(selected))

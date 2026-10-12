@@ -2,7 +2,7 @@
 
 La sección **PS5** permite navegar por los archivos de una PS5 con el payload
 de [ps5upload](https://github.com/phantomptr/ps5upload) cargado, descargar
-archivos o carpetas completas, subir archivos, eliminar y **comprimir y
+archivos o carpetas completas, subir archivos o carpetas, eliminar y **comprimir y
 reemplazar** un juego directamente en la consola.
 
 ## Requisitos
@@ -62,7 +62,11 @@ sequenceDiagram
   el espacio libre permite escribir otra ruta. **Accesos rápidos ▾** ofrece
   `/data/homebrew` (la carpeta que vigila ShadowMount+), `/mnt/usb0`, `/mnt/ext0`…
 - Cada elemento lleva una etiqueta: **Juego** (carpeta con Title ID o dentro de
-  `homebrew`), **Comprimido** (`.ffpfsc`) o **Imagen** (`.exfat`/`.ffpkg`).
+  `homebrew`), **LZ4** (juego ya comprimido en LZ4), **Comprimido** (`.ffpfsc`) o
+  **Imagen** (`.exfat`/`.ffpkg`). Para reconocer un juego LZ4 la app revisa por dentro
+  las carpetas de juego (busca `ampr_assets.index`) justo después de mostrarlas; si
+  abres otra carpeta antes, deja de revisar. Un juego LZ4 no se puede **Comprimir y
+  reemplazar** (ya está comprimido).
 - Bajo la tarjeta de conexión, una tarjeta por **unidad** muestra el espacio usado
   y libre: el almacenamiento interno, cada USB y el ampliado (M.2 o USB ampliado);
   la barra se vuelve ámbar con poco espacio. Se consulta al helper (`fs.volumes`)
@@ -95,20 +99,24 @@ Selecciona **una** carpeta de juego o imagen `.exfat`/`.ffpkg` y pulsa
 1. **Descarga** el juego a `<carpeta de descargas>/ffpfsc-temporal/` (reanudable) y
    **comprueba con CRC32** que cada archivo es idéntico al de la PS5 (la consola
    calcula el suyo mientras este equipo calcula el propio).
-2. **Analiza** el juego y abre la ventana de compresión: modo (con peso
-   estimado), núcleos, rendimiento en la PS5, verificación completa y si borrar los
-   temporales al final.
+2. **Analiza** el juego y abre la ventana de compresión: formato (`.ffpfsc` o, solo
+   con carpetas, **LZ4 experimental**), modo (con peso estimado), núcleos,
+   rendimiento en la PS5, verificación completa y si borrar los temporales al final.
    Esa ventana muestra exactamente qué se subirá y qué se borrará.
-3. **Comprime** a `.ffpfsc` con MkPFS (comprueba antes el espacio de este equipo).
+3. **Comprime** a `.ffpfsc` con MkPFS, o a una carpeta LZ4 con ampr_emu (comprueba
+   antes el espacio de este equipo).
 4. **Comprueba el espacio** de la PS5 (`fs.freespace` del helper).
-5. **Sube** el archivo como `Juego.ffpfsc.part` y **verifica** su tamaño y su CRC32.
-   Si algo no coincide, borra el `.part` y se detiene sin tocar el original.
+5. **Sube** el archivo como `Juego.ffpfsc.part` (o la carpeta LZ4 a `Juego.part/`) y
+   **verifica** el tamaño y el CRC32 de cada archivo. Si algo no coincide, lo borra y
+   se detiene sin tocar el original.
 6. Recién entonces **borra el original** en la PS5.
-7. **Publica** el archivo renombrándolo a `Juego.ffpfsc` (misma carpeta).
+7. **Publica** el resultado renombrándolo a `Juego.ffpfsc` (misma carpeta) o, con LZ4,
+   a `Juego`: la carpeta LZ4 ocupa el lugar del original con el mismo nombre
+   (ver [LZ4.md](LZ4.md#comprimir-y-reemplazar-en-la-ps5)).
 8. Vuelve el FTP a **solo lectura** y, si lo elegiste, borra los temporales.
 
 El avance se sigue en una fila del **panel de Transferencias**, junto a las
-descargas y subidas: indica el paso (*Paso 2 de 3 · Comprimiendo a .ffpfsc*, de
+descargas y subidas: indica el paso (*Paso 2 de 3 · Comprimiendo*, de
 *Descarga → Compresión → Reemplazo*), una barra con el **porcentaje**, la
 velocidad y el **tiempo restante** estimado. El botón **Cancelar** de la fila lo
 detiene en cualquier momento; si falla o se cancela, la misma fila ofrece
@@ -151,14 +159,21 @@ Si cancelas o falla, al volver a intentarlo con el mismo juego:
 - Si sigue fallando:
   - en el panel de transferencias, **Reintentar fallidas** vuelve a encolar
     las descargas y subidas fallidas o canceladas (en sus mismas filas);
+  - **Limpiar** quita del panel lo que ya terminó (bien, con error o cancelado) y deja
+    lo que sigue en cola o en curso; lo quitado ya no se reintenta;
   - en "comprimir y reemplazar", **Reintentar** retoma sin repetir lo hecho:
     no vuelve a comprimir si ya estaba comprimido ni a borrar el original si ya
     se había borrado.
 
 ## Subir y eliminar
 
-- **Subir archivo…** sube archivos de este equipo a la carpeta abierta (como
-  `.part`, verificados y luego renombrados; una subida cortada se reanuda).
+- **Subir a la PS5… → Archivos…** sube archivos de este equipo a la carpeta abierta
+  (como `.part`, verificados y luego renombrados; una subida cortada se reanuda).
+- **Subir a la PS5… → Carpeta…** sube una carpeta completa (por ejemplo, un juego
+  convertido a LZ4 en el PC) en una sola fila. Va primero a `<nombre>.part/`, archivo por
+  archivo con la misma verificación, y solo al final se renombra a `<nombre>`: un corte
+  nunca deja en `homebrew` una carpeta a medias, y al reintentar se saltan los archivos
+  ya completos. Si ya existe una carpeta con ese nombre, no se sobrescribe.
 - **Eliminar** borra en la PS5 los elementos seleccionados, tras confirmar con
   la lista exacta de rutas. Lo ejecuta el helper, que **se niega** a borrar raíces,
   carpetas de primer nivel (`/data`, `/mnt/usb0`) y puntos de montaje.
@@ -189,4 +204,4 @@ En `~/.config/ffpfsc-converter/` (Linux) o `%APPDATA%\ffpfsc-converter\` (Window
 | Windows: falla una descarga o compresión con rutas muy largas | Los juegos tienen carpetas profundas. Usa una carpeta de descargas corta (por ejemplo `D:\PS5`) o activa las [rutas largas de Windows](https://learn.microsoft.com/es-es/windows/win32/fileio/maximum-file-path-limitation). |
 | Windows: el firewall pregunta por la app | Basta permitirla en redes privadas. La app solo abre conexiones salientes hacia la PS5 (9120 y el FTP en modo pasivo). |
 | Transferencias de ~10 MB/s | Es el límite de la red, no de la app (medido: 9 MB/s con 1 conexión y 10 MB/s con 4). Conecta la PS5 **y** este equipo por cable a un router o switch gigabit. |
-| *El original ya se borró…* | La subida falló tras borrar (solo en el modo "borrar primero"): sube el `.ffpfsc` de la carpeta temporal con **Subir archivo…**. |
+| *El original ya se borró…* | La subida falló tras borrar (solo en el modo "borrar primero"): sube el `.ffpfsc` de la carpeta temporal con **Subir a la PS5… → Archivos…**. |

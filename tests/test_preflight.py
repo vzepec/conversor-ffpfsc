@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from ffpfsc_converter.config import FREE_SPACE_MARGIN
-from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
+from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions, OutputFormat
 from ffpfsc_converter.services import preflight
 
 
@@ -42,3 +42,16 @@ def test_performance_uses_its_own_estimate(tmp_path: Path, monkeypatch: pytest.M
     job.performance_estimates = {3: 1200}
     check = preflight.check_free_space(job, ConversionOptions(3, 1, False, threshold_gain=20))
     assert check == preflight.SpaceCheck(1000, int(1200 * FREE_SPACE_MARGIN))
+
+
+def test_lz4_on_the_same_disk_only_needs_the_packs(tmp_path: Path,
+                                                    monkeypatch: pytest.MonkeyPatch) -> None:
+    """Con LZ4 en el mismo disco, lo suelto se enlaza: solo cuenta el peso de los paquetes."""
+    monkeypatch.setattr(preflight, "free_space", lambda _d: 1000)
+    job = _job(tmp_path, 5000, {})
+    job.lz4_estimates, job.lz4_loose_bytes = {1: 3000, 9: 3000, 12: 3000}, 2500
+    options = ConversionOptions(9, 1, False, output_format=OutputFormat.LZ4)
+    check = preflight.check_free_space(job, options)
+    assert check == preflight.SpaceCheck(1000, int(500 * FREE_SPACE_MARGIN))
+    monkeypatch.setattr(preflight, "same_device", lambda _a, _b: False)
+    assert preflight.check_free_space(job, options).needed == int(3000 * FREE_SPACE_MARGIN)

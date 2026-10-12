@@ -6,37 +6,58 @@ from collections.abc import Iterable
 from pathlib import PurePosixPath
 
 from ffpfsc_converter.config import IMAGE_EXTENSIONS, OUTPUT_EXTENSION
+from ffpfsc_converter.domain.models import OutputFormat
 from ffpfsc_converter.domain.pipeline import ReplacePlan, SpaceStrategy
 from ffpfsc_converter.domain.remote import RemoteEntry
 from ffpfsc_converter.infrastructure.ftp import join_remote
 from ffpfsc_converter.services.remote_upload import part_path
 
 
-def is_convertible(entry: RemoteEntry) -> bool:
-    """Indica si un elemento de la PS5 se puede comprimir a ``.ffpfsc``.
+def can_use_lz4(entry: RemoteEntry) -> bool:
+    """Indica si un elemento de la PS5 se puede reemplazar por una carpeta LZ4.
 
     Args:
         entry (RemoteEntry): Elemento remoto.
 
     Returns:
-        bool: ``True`` para carpetas y para imágenes ``.exfat``/``.ffpkg``.
+        bool: ``True`` solo para carpetas (una imagen no se puede revisar por dentro).
     """
+    return entry.is_dir
+
+
+def is_convertible(entry: RemoteEntry) -> bool:
+    """Indica si un elemento de la PS5 se puede comprimir y reemplazar.
+
+    Args:
+        entry (RemoteEntry): Elemento remoto.
+
+    Returns:
+        bool: ``True`` para carpetas (salvo las ya comprimidas en LZ4) y para imágenes
+        ``.exfat``/``.ffpkg``.
+    """
+    if entry.is_lz4:
+        return False
     return entry.is_dir or PurePosixPath(entry.name).suffix.lower() in IMAGE_EXTENSIONS
 
 
-def build_replace_plan(entry: RemoteEntry, siblings: Iterable[str]) -> ReplacePlan:
-    """Calcula dónde se subirá el ``.ffpfsc`` que reemplaza a un elemento.
+def build_replace_plan(entry: RemoteEntry, siblings: Iterable[str],
+                       output_format: OutputFormat = OutputFormat.FFPFSC) -> ReplacePlan:
+    """Calcula dónde se subirá el juego comprimido que reemplaza a un elemento.
 
-    El archivo nuevo queda en la misma carpeta que el original, con su nombre
-    (sin extensión, si era una imagen) y extensión ``.ffpfsc``.
+    Un ``.ffpfsc`` queda en la misma carpeta que el original, con su nombre (sin
+    extensión, si era una imagen). Una carpeta LZ4 ocupa el lugar del original con el
+    mismo nombre, así las rutas que ya usaba la PS5 siguen sirviendo.
 
     Args:
         entry (RemoteEntry): Carpeta o imagen original.
         siblings (Iterable[str]): Nombres que hay en la misma carpeta remota.
+        output_format (OutputFormat): ``.ffpfsc`` o LZ4 (solo para carpetas).
 
     Returns:
         ReplacePlan: Rutas definitiva y temporal, y si el nombre ya está ocupado.
     """
+    if output_format is OutputFormat.LZ4:
+        return ReplacePlan(entry, entry.path, part_path(entry.path), False)
     base = entry.name if entry.is_dir else PurePosixPath(entry.name).stem
     final_name = base + OUTPUT_EXTENSION
     final = join_remote(posixpath.dirname(entry.path) or "/", final_name)
@@ -50,7 +71,7 @@ def choose_strategy(
 
     Args:
         usable (int): Bytes que se pueden escribir en el disco de destino.
-        upload_size (int): Tamaño del ``.ffpfsc``.
+        upload_size (int): Bytes a subir.
         already_uploaded (int): Bytes de una subida anterior que se reanudará.
         original_size (int): Lo que libera borrar el original.
 

@@ -1,8 +1,8 @@
 """Orquestador del pipeline "comprimir y reemplazar en la PS5" (un hilo de fondo).
 
-Etapas: descargar → analizar → (ventana de compresión) → comprimir → espacio →
-subir ``.part`` → verificar → borrar original → renombrar → FTP en solo lectura →
-limpiar. Las transferencias se reintentan solas tras un corte; si aun así falla,
+Etapas: descargar → analizar → (ventana de compresión) → comprimir (``.ffpfsc`` o
+LZ4) → espacio → subir ``.part`` → verificar → borrar original → renombrar → FTP en
+solo lectura → limpiar. Las transferencias se reintentan solas tras un corte; si aun así falla,
 :meth:`Ps5ConversionPipeline.retry` retoma sin repetir lo ya hecho (no vuelve a
 comprimir ni a borrar el original). Ante cualquier fallo los archivos locales se conservan.
 """
@@ -14,12 +14,8 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from ffpfsc_converter.domain.events import EventSink
-from ffpfsc_converter.domain.pipeline import (
-    PipelineAttempt,
-    PipelineChoice,
-    PipelineResult,
-    ReplacePlan,
-)
+from ffpfsc_converter.domain.models import OutputFormat
+from ffpfsc_converter.domain.pipeline import PipelineAttempt, PipelineChoice, PipelineResult
 from ffpfsc_converter.domain.pipeline_events import (
     PipelineConfirmRequired,
     PipelineFinished,
@@ -31,9 +27,14 @@ from ffpfsc_converter.formatting import format_size
 from ffpfsc_converter.infrastructure.ftp import FTP_ERRORS, FtpClient
 from ffpfsc_converter.services.console_access import ConsoleAccess, restore_notifier
 from ffpfsc_converter.services.launch_errors import describe_launch_error
+from ffpfsc_converter.services.lz4_local_files import planned_output
 from ffpfsc_converter.services.pipeline import stages
-from ffpfsc_converter.services.pipeline.compress import Compressor, compress_job
-from ffpfsc_converter.services.pipeline.plan import build_replace_plan
+from ffpfsc_converter.services.pipeline.compress import (
+    CompressControl,
+    Compressor,
+    compress_job,
+)
+from ffpfsc_converter.services.pipeline.plan import build_replace_plan, can_use_lz4
 from ffpfsc_converter.services.pipeline.replace import ReplaceContext, replace_on_console
 from ffpfsc_converter.services.pipeline.reporter import PipelineReporter
 from ffpfsc_converter.services.remote_client import ClientFactory
@@ -65,6 +66,7 @@ class Ps5ConversionPipeline:
         self._factory, self._compressor = client_factory, compressor
         self._answers: queue.Queue[object] = queue.Queue()
         self._cancel = threading.Event()
+        self._skip = threading.Event()
         self._reporter = PipelineReporter(emit)
         self.busy = False
         self.last: PipelineAttempt | None = None
@@ -115,6 +117,20 @@ class Ps5ConversionPipeline:
         """
         self._answers.put(value)
 
+    def skip_verification(self) -> None:
+        """Pide saltar la verificación LZ4 en curso: el juego sigue al reemplazo sin comprobarse."""
+        self._skip.set()
+
+    def _take_skip(self) -> bool:
+        """Consume el pedido de saltar la verificación.
+
+        Returns:
+            bool: ``True`` si se había pedido (una sola vez por pedido).
+        """
+        requested = self._skip.is_set()
+        self._skip.clear()
+        return requested
+
     def cancel(self) -> None:
         """Pide cancelar; las etapas largas se detienen y los archivos locales se conservan."""
         self._cancel.set()
@@ -135,8 +151,8 @@ class Ps5ConversionPipeline:
         except (*FTP_ERRORS, ValueError, ConverterError) as exc:
             message = describe_launch_error(exc, target.host, "completar el reemplazo")
             if attempt.original_deleted:
-                message += ("\n\nEl original ya se borró en la PS5; el .ffpfsc sigue en "
-                            f"{attempt.work_dir}.")
+                message += ("\n\nEl original ya se borró en la PS5; el juego comprimido sigue "
+                            f"en {attempt.work_dir}.")
             result = PipelineResult(False, False, f"{message}\n\n{_RETRY_HINT}")
         finally:
             self.busy = False
@@ -156,13 +172,14 @@ class Ps5ConversionPipeline:
             DownloadCancelledError: Si se cancela.
             ConverterError: Si una etapa falla.
         """
-        plan = build_replace_plan(attempt.entry, attempt.siblings)
-        if attempt.job is None or not attempt.job.output.is_file():
-            self._download_and_compress(attempt, target, plan)
+        if not _is_compressed(attempt):
+            self._download_and_compress(attempt, target)
         job, choice = attempt.job, attempt.choice
         assert job is not None and choice is not None
+        output = planned_output(job, choice.options)
+        plan = build_replace_plan(attempt.entry, attempt.siblings, choice.options.output_format)
         ctx = ReplaceContext(
-            self._access, self._factory, target.host, target.port, plan, job.output,
+            self._access, self._factory, target.host, target.port, plan, output,
             attempt.original_size, self._reporter.stage, self._reporter.report, self._confirm,
             self._cancel.is_set, restore_notifier(self._emit, target.host, target.port),
             self._reporter.retry, original_deleted=attempt.original_deleted)
@@ -171,35 +188,38 @@ class Ps5ConversionPipeline:
         finally:
             attempt.original_deleted = ctx.original_deleted
         if choice.delete_local:
-            stages.cleanup_stage(job, attempt.work_dir, self._reporter)
+            stages.cleanup_stage(job, output, attempt.work_dir, self._reporter)
         self.last = None  # terminado: no queda nada que reintentar
         saved = f"{format_size(attempt.original_size)} → {format_size(size)}"
         return PipelineResult(True, False, f"{plan.remote_final} ({saved})",
                               attempt.original_size, size)
 
-    def _download_and_compress(self, attempt: PipelineAttempt, target: ConsoleTarget,
-                               plan: ReplacePlan) -> None:
+    def _download_and_compress(self, attempt: PipelineAttempt, target: ConsoleTarget) -> None:
         """Descarga, pide las opciones y comprime; guarda el avance en el intento.
 
         Args:
             attempt (PipelineAttempt): Intento a completar.
             target (ConsoleTarget): FTP de solo lectura.
-            plan (ReplacePlan): Plan de reemplazo, para la ventana de compresión.
 
         Raises:
             DownloadCancelledError: Si se cancela o se cierra la ventana sin elegir.
         """
+        stages.ensure_not_lz4(self._factory, target, attempt.entry)
         download = stages.download_stage(self._factory, target, attempt.entry, attempt.work_dir,
                                          self._reporter, self._cancel.is_set)
         attempt.original_size = download.total_bytes
         stages.verify_download_stage(self._access, target.host, download, self._reporter,
                                      self._cancel.is_set)
         job = stages.prepare_stage(download.local_path, attempt.work_dir, self._reporter)
-        self._emit(PipelineOptionsRequired(job, plan))
+        entry, siblings = attempt.entry, attempt.siblings
+        lz4_plan = (build_replace_plan(entry, siblings, OutputFormat.LZ4)
+                    if can_use_lz4(entry) else None)
+        self._emit(PipelineOptionsRequired(job, build_replace_plan(entry, siblings), lz4_plan))
         choice = self._answers.get()
         if not isinstance(choice, PipelineChoice):
             raise DownloadCancelledError()
-        stages.compress_stage(job, choice, self._compressor, self._reporter, self._cancel.is_set)
+        stages.compress_stage(job, choice, self._compressor, self._reporter,
+                              CompressControl(self._cancel.is_set, self._take_skip))
         attempt.job, attempt.choice = job, choice
 
     def _confirm(self, message: str) -> bool:
@@ -213,3 +233,17 @@ class Ps5ConversionPipeline:
         """
         self._emit(PipelineConfirmRequired(message))
         return self._answers.get() is True
+
+
+def _is_compressed(attempt: PipelineAttempt) -> bool:
+    """Indica si un intento anterior ya dejó el juego comprimido (no hay que repetirlo).
+
+    Args:
+        attempt (PipelineAttempt): Intento a revisar.
+
+    Returns:
+        bool: ``True`` si existe el ``.ffpfsc`` o la carpeta LZ4 elegidos.
+    """
+    if attempt.job is None or attempt.choice is None:
+        return False
+    return planned_output(attempt.job, attempt.choice.options).exists()

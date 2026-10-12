@@ -8,22 +8,24 @@ from __future__ import annotations
 
 import queue
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from ffpfsc_converter.config import PS5_START_PATH
 from ffpfsc_converter.domain.events import EventSink
-from ffpfsc_converter.domain.remote import ConsoleTarget
+from ffpfsc_converter.domain.remote import ConsoleTarget, RemoteEntry
 from ffpfsc_converter.domain.remote_events import (
     FtpLoginRefused,
     RemoteConnected,
     RemoteDisconnected,
     RemoteError,
     RemoteListing,
+    RemoteLz4Found,
 )
 from ffpfsc_converter.infrastructure.ftp import FTP_ERRORS, FtpClient
 from ffpfsc_converter.infrastructure.ftp.errors import is_login_refused
 from ffpfsc_converter.services.remote_client import ClientFactory, RemoteClient
 from ffpfsc_converter.services.remote_errors import describe_error, is_connection_lost
+from ffpfsc_converter.services.remote_games import mark_lz4_games
 
 _NOT_CONNECTED = "No hay conexión con la PS5. Pulsa «Conectar»."
 
@@ -143,6 +145,24 @@ class RemoteBrowser:
                 self._drop()
             return
         self._emit(RemoteListing(path, tuple(entries)))
+        self._find_lz4(client, path, entries)
+
+    def _find_lz4(self, client: RemoteClient, path: str, entries: Sequence[RemoteEntry]) -> None:
+        """Revisa las carpetas de juego y avisa cuáles ya están en LZ4 (best effort).
+
+        Se detiene si llega otra orden (por ejemplo, abrir otra carpeta) para no demorarla.
+
+        Args:
+            client (RemoteClient): Cliente conectado.
+            path (str): Carpeta listada.
+            entries (Sequence[RemoteEntry]): Su contenido.
+        """
+        try:
+            marked = mark_lz4_games(client, entries, lambda: not self._commands.empty())
+        except FTP_ERRORS:  # sin la marca solo se pierde un aviso; el error real llegará solo
+            return
+        if marked is not None:
+            self._emit(RemoteLz4Found(path, marked))
 
     def _drop(self, notify: bool = True) -> None:
         """Cierra la sesión actual, si existe.

@@ -12,15 +12,15 @@ from pathlib import Path
 
 from ffpfsc_converter.config import PRESETS
 from ffpfsc_converter.domain.events import Event, EventSink, JobProgress, LogMessage
-from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
+from ffpfsc_converter.domain.models import ConversionJob, OutputFormat
 from ffpfsc_converter.errors import ConverterError
 from ffpfsc_converter.infrastructure.system import open_in_file_manager
 from ffpfsc_converter.services.analysis import start_analysis
 from ffpfsc_converter.services.conversion import ConversionRunner
 from ffpfsc_converter.services.discovery import create_job, output_path_for
-from ffpfsc_converter.services.preflight import check_free_space
 from ffpfsc_converter.ui import dialogs, presenters
 from ffpfsc_converter.ui import job_presenters as jp
+from ffpfsc_converter.ui.convert_checks import confirm_start
 from ffpfsc_converter.ui.convert_upload import ConvertedUploader
 from ffpfsc_converter.ui.event_handlers import ViewUpdater
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
@@ -89,6 +89,7 @@ class ConvertController:
             on_open_output=self.open_output,
             on_upload_all=lambda: self._uploader.upload_all(),
             on_upload_row=lambda row_id: self._uploader.upload_ids({row_id}),
+            on_skip_verify=self.skip_verification,
         )
 
     def handle(self, event: Event) -> None:
@@ -184,10 +185,20 @@ class ConvertController:
             dialogs.show_info("Agrega primero una carpeta de juego.")
             return
         options = self.view.options.conversion_options()
-        if not all(self._confirm_job(job, options) for job in pending):
+        ready = confirm_start(pending, options)
+        if not ready:
             return
         self.view.set_running(True)
-        self.runner.start(pending, options)
+        self.runner.start(ready, options)
+
+    def skip_verification(self, row_id: str) -> None:
+        """Salta la verificación LZ4 en curso; el juego queda listo sin comprobarlo.
+
+        Args:
+            row_id (str): Fila del juego que se está verificando.
+        """
+        self.view.table.set_skip(row_id, False)
+        self.runner.skip_verification()
 
     def cancel(self) -> None:
         """Pide cancelar la conversión en curso."""
@@ -198,7 +209,7 @@ class ConvertController:
         """Actualiza el resumen de la cola, el contador lateral y los botones de subida."""
         options = self.view.options
         self.view.set_summary(jp.queue_summary(self.jobs, options.selected_preset().level,
-                                               options.is_performance()))
+                                               options.is_performance(), self._is_lz4()))
         self._on_queue_changed(len(self.jobs))
         self._uploader.refresh()
 
@@ -210,25 +221,19 @@ class ConvertController:
         """
         return [j for j in self.jobs if j.is_queued]
 
-    def _confirm_job(self, job: ConversionJob, options: ConversionOptions) -> bool:
-        """Pide confirmación si se va a sobrescribir o si puede faltar espacio.
-
-        Args:
-            job (ConversionJob): Trabajo a comprobar.
-            options (ConversionOptions): Opciones elegidas (nivel y rendimiento).
-
-        Returns:
-            bool: ``True`` si se puede convertir el trabajo.
-        """
-        if job.output.exists() and not dialogs.confirm_overwrite(job.output):
-            return False
-        space = check_free_space(job, options)
-        return space is None or space.is_enough or dialogs.confirm_low_space(space)
-
     def _refresh_estimates(self) -> None:
         """Actualiza el peso estimado de cada fila al cambiar el modo o el rendimiento."""
         options = self.view.options
         level, performance = options.selected_preset().level, options.is_performance()
         for job in self.jobs:
-            self.view.table.set_sizes(job.id, jp.size_lines(job, level, performance))
+            self.view.table.set_sizes(job.id, jp.size_lines(job, level, performance,
+                                                            self._is_lz4()))
         self.refresh_queue()
+
+    def _is_lz4(self) -> bool:
+        """Indica si el formato elegido es LZ4.
+
+        Returns:
+            bool: ``True`` con «LZ4 (experimental)».
+        """
+        return self.view.options.output_format() is OutputFormat.LZ4

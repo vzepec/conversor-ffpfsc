@@ -60,12 +60,13 @@ sola ante cortes. Más detalles en [PS5.md](PS5.md).
 
 | Opción | Efecto |
 |--------|--------|
+| **Formato** | `.ffpfsc` (recomendado) o **LZ4 (experimental)**, ver [LZ4.md](LZ4.md). Con LZ4 se oculta **Rendimiento en la PS5**, que solo aplica a `.ffpfsc`. |
 | **Máxima velocidad (nivel 3)** | Recomendado. Casi la misma compresión que el nivel 9 en mucho menos tiempo. |
 | **Equilibrado (nivel 6)** | Algo más pequeño, algo más lento. |
 | **Máxima compresión (nivel 9)** | El más pequeño; puede tardar varias veces más. |
 | **Núcleos** | Por defecto todos (**−** / **+**). Bájalo si quieres seguir usando el equipo mientras convierte. |
 | **Guardar en** | Por defecto junto al juego original. |
-| **Verificación completa** | Relee y comprueba cada bloque al terminar. Más lento, máxima seguridad. Sin marcarla se verifica solo la estructura. |
+| **Verificación completa** | Relee y comprueba cada bloque al terminar. Más lento, máxima seguridad. Sin marcarla se verifica solo la estructura. En LZ4 viene activada y compara el resultado con el original; cada formato recuerda su valor. |
 | **Rendimiento en la PS5** | Solo comprime los bloques que se reducen al menos un 20 %; el resto (texturas y audio que el juego ya trae comprimidos) queda sin comprimir, así la consola descomprime menos al cargar. El `.ffpfsc` pesa algo más (el peso estimado de la cola lo refleja). Recomendado para juegos grandes. |
 
 Mientras convierte o transfiere con la PS5, **el equipo no se suspende**. Al

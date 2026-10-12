@@ -46,6 +46,19 @@ class RemoteListing:
 
 
 @dataclass(frozen=True)
+class RemoteLz4Found:
+    """Se encontraron juegos ya comprimidos en LZ4 en la carpeta abierta.
+
+    Attributes:
+        path (str): Carpeta revisada.
+        entries (tuple[RemoteEntry, ...]): Su contenido, con ``is_lz4`` marcado.
+    """
+
+    path: str
+    entries: tuple[RemoteEntry, ...]
+
+
+@dataclass(frozen=True)
 class RemoteError:
     """Falló una operación del explorador.
 
@@ -192,6 +205,7 @@ RemoteEvent = (
     RemoteConnected
     | RemoteDisconnected
     | RemoteListing
+    | RemoteLz4Found
     | RemoteError
     | PairingCodeRequired
     | StorageUpdated

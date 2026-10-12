@@ -45,7 +45,8 @@ def apply_widget_styles(style: ttk.Style, images: RoundedImages, p: Palette, f: 
                     borderwidth=0)
     style.configure("Seg.Toolbutton", foreground=p.muted, font=f.small_bold,
                     padding=(m.px(10), m.px(5)), anchor="center", focuscolor=p.surface2)
-    style.map("Seg.Toolbutton", foreground=[("selected", p.text), ("active", p.text)])
+    style.map("Seg.Toolbutton", foreground=[("disabled", p.line), ("selected", p.text),
+                                            ("active", p.text)])
     set_corner_color(style, "Seg.Toolbutton", p.surface2)
     style.configure("TSeparator", background=p.line)
 

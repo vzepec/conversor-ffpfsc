@@ -11,6 +11,9 @@ from ffpfsc_converter.ui.theme import ThemeManager
 _PILLS = {"wait": "PillWait", "run": "PillRun", "ok": "PillOk", "warn": "PillWarn",
           "bad": "PillBad"}
 _SPEED_W, _ETA_W, _DETAIL_W = 92, 120, 380
+#: Peso de las columnas del nombre y del estado (comparten el ancho sobrante).
+_NAME_WEIGHT, _STATUS_WEIGHT = 13, 14
+_PAD_X, _MIN_DETAIL_W = 14, 120
 
 
 class TransferRow(ttk.Frame):
@@ -32,19 +35,20 @@ class TransferRow(ttk.Frame):
         m = self._m = theme.metrics
         self._theme = theme
         super().__init__(parent, style="Surface.TFrame")
-        body = ttk.Frame(self, style="Surface.TFrame", padding=(m.px(14), m.px(9)))
+        body = ttk.Frame(self, style="Surface.TFrame", padding=(m.px(_PAD_X), m.px(9)))
         body.pack(fill="x")
         ttk.Separator(self).pack(fill="x")
-        for column, weight in ((0, 13), (1, 14)):
+        for column, weight in ((0, _NAME_WEIGHT), (1, _STATUS_WEIGHT)):
             body.columnconfigure(column, weight=weight, uniform="transfer")
         body.columnconfigure(2, minsize=m.px(_SPEED_W))
         body.columnconfigure(3, minsize=m.px(_ETA_W))
         self._body = body
         self._name = ttk.Label(body, text=f" {name}", image=theme.icons.get(icon, 16, "muted"),
                                compound="left", style="Card.TLabel")
-        self._name.grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, m.px(14)))
+        self._name.grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, m.px(_PAD_X)))
         self._subtitle = ttk.Label(body, style="CardSmall.TLabel")
         self._action: ttk.Button | None = None
+        self._secondary: ttk.Button | None = None
         self._label = ttk.Label(body, style="CardSmall.TLabel")
         self._label.grid(row=0, column=1, sticky="w")
         self._bar = ttk.Progressbar(body, maximum=100, style="Thin.Horizontal.TProgressbar")
@@ -55,6 +59,7 @@ class TransferRow(ttk.Frame):
         self._eta = ttk.Label(body, style="CardSmall.TLabel", anchor="e")
         self._eta.grid(row=0, column=3, rowspan=2, sticky="e")
         self._bar_pad = m.px(5)
+        body.bind("<Configure>", lambda _e: self._fit_detail(), add="+")
         self.is_active = True
         self.set_state("wait", "En cola")
 
@@ -99,6 +104,19 @@ class TransferRow(ttk.Frame):
         self._speed.configure(text="—")
         self._eta.configure(text="—")
 
+    def _fit_detail(self) -> None:
+        """Ajusta el ancho del detalle a su columna para que el texto no quede cortado.
+
+        Se calcula con el ancho de la fila (no con el de la columna) porque un detalle
+        más ancho que la columna la ensancharía y empujaría la velocidad fuera de la fila.
+        """
+        m = self._m
+        free = (self._body.winfo_width() - m.px(3 * _PAD_X) - m.px(_SPEED_W) - m.px(_ETA_W))
+        share = free * _STATUS_WEIGHT // (_NAME_WEIGHT + _STATUS_WEIGHT)
+        width = min(max(share, m.px(_MIN_DETAIL_W)), m.px(_DETAIL_W))
+        if width != int(self._detail.cget("wraplength")):
+            self._detail.configure(wraplength=width)
+
     def set_subtitle(self, text: str) -> None:
         """Muestra una línea bajo el nombre (por ejemplo, el paso del reemplazo).
 
@@ -133,6 +151,27 @@ class TransferRow(ttk.Frame):
         self._action.state(["!disabled"])
         self._eta.grid(row=0, column=3, rowspan=1, sticky="se")
         self._action.grid(row=1, column=3, sticky="ne", pady=(self._m.px(4), 0))
+
+    def set_secondary(self, text: str, command: Callable[[], None]) -> None:
+        """Muestra un segundo botón (por ejemplo «Saltar verificación»); texto vacío lo oculta.
+
+        Va bajo la velocidad, a la izquierda del botón principal.
+
+        Args:
+            text (str): Texto del botón.
+            command (Callable[[], None]): Acción.
+        """
+        if not text:
+            if self._secondary is not None:
+                self._secondary.grid_remove()
+            self._speed.grid(row=0, column=2, rowspan=2, sticky="e")
+            return
+        if self._secondary is None:
+            self._secondary = ttk.Button(self._body, takefocus=False, style="Card.Small.TButton")
+        self._secondary.configure(text=text, command=command)
+        self._speed.grid(row=0, column=2, rowspan=1, sticky="se")
+        self._secondary.grid(row=1, column=2, sticky="ne", pady=(self._m.px(4), 0),
+                             padx=(0, self._m.px(8)))
 
     def disable_action(self, text: str) -> None:
         """Deshabilita el botón de la fila mientras se atiende (por ejemplo, «Cancelando…»).

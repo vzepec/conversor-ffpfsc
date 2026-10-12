@@ -84,3 +84,20 @@ class DownloadCancelledError(ConverterError):
     def __init__(self) -> None:
         """Crea el error con un mensaje para el usuario."""
         super().__init__("Descarga cancelada")
+
+
+class RemoteFolderExistsError(ConverterError):
+    """Ya hay una carpeta con ese nombre en el destino de la PS5 (no se sobrescribe).
+
+    Attributes:
+        path (str): Ruta remota que ya existe.
+    """
+
+    def __init__(self, path: str) -> None:
+        """Crea el error con un mensaje para el usuario.
+
+        Args:
+            path (str): Ruta remota que ya existe.
+        """
+        super().__init__(f"Ya existe {path} en la PS5. Bórrala o elige otra carpeta.")
+        self.path = path

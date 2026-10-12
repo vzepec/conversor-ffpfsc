@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from ffpfsc_converter.domain.lz4 import Lz4Compat
+
 
 @dataclass(frozen=True)
 class CompressionPreset:
@@ -71,22 +73,31 @@ class FileEntry:
     size: int
 
 
+class OutputFormat(Enum):
+    """Formato de salida de la vista Convertir."""
+
+    FFPFSC = "ffpfsc"  # imagen .ffpfsc (zlib, MkPFS): sirve para cualquier juego
+    LZ4 = "lz4"        # carpeta AMPR LZ4 (ampr_emu): solo juegos que usan libSceAmpr
+
+
 @dataclass(frozen=True)
 class ConversionOptions:
     """Parámetros elegidos por el usuario para una tanda de conversiones.
 
     Attributes:
-        compression_level (int): Nivel de compresión zlib (1-9).
+        compression_level (int): Nivel zlib (1-9) con ``.ffpfsc``; nivel LZ4 (1-12) con LZ4.
         cpu_count (int): Núcleos que puede usar MkPFS.
         full_verify (bool): ``True`` para verificar cada bloque al terminar.
         threshold_gain (int): Ganancia mínima (en %) para guardar comprimido un bloque;
             ``0`` = comprimir todo lo que se reduzca (lo predeterminado de MkPFS).
+        output_format (OutputFormat): ``.ffpfsc`` o carpeta LZ4.
     """
 
     compression_level: int
     cpu_count: int
     full_verify: bool
     threshold_gain: int = 0
+    output_format: OutputFormat = OutputFormat.FFPFSC
 
     @property
     def is_performance(self) -> bool:
@@ -161,6 +172,12 @@ class ConversionJob:
             «Rendimiento en la PS5».
         state (JobState): Estado actual en la cola.
         id (str): Identificador único, usado también como fila de la tabla.
+        lz4_compat (Lz4Compat | None): Si el juego admite LZ4 (usa ``libSceAmpr``);
+            ``None`` mientras se analiza.
+        lz4_estimates (dict[int, int]): Peso estimado de la carpeta LZ4 por nivel LZ4
+            (vacío mientras se estima).
+        lz4_loose_bytes (int): Parte de ``lz4_estimates`` que queda sin empaquetar (en el
+            mismo disco se enlaza y no ocupa espacio extra).
         already_compressed (bool): ``True`` si se agregó un ``.ffpfsc`` ya hecho: no se
             convierte y queda listo para subir a la PS5.
     """
@@ -172,6 +189,9 @@ class ConversionJob:
     size: int = 0
     estimates: dict[int, int] = field(default_factory=dict)
     performance_estimates: dict[int, int] = field(default_factory=dict)
+    lz4_compat: Lz4Compat | None = None
+    lz4_estimates: dict[int, int] = field(default_factory=dict)
+    lz4_loose_bytes: int = 0
     state: JobState = JobState.QUEUED
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     already_compressed: bool = False

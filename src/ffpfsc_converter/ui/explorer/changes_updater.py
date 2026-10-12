@@ -122,14 +122,15 @@ class ChangesUpdater:
         """
         if self._ctl.modify.tracker is not None:
             self._ctl.modify.tracker.set_progress(event.percent, event.detail, event.eta_seconds)
+            self._ctl.modify.tracker.set_skippable(event.can_skip)
 
     def _on_options(self, event: PipelineOptionsRequired) -> None:
         """Muestra la ventana de compresión y entrega la elección al pipeline.
 
         Args:
-            event (PipelineOptionsRequired): Juego analizado y plan de reemplazo.
+            event (PipelineOptionsRequired): Juego analizado y planes de reemplazo.
         """
-        choice = CompressDialog(self._ctl.view, self._ctl.theme, event.job, event.plan).ask()
+        choice = CompressDialog(self._ctl.view, self._ctl.theme, event).ask()
         self._ctl.modify.pipeline.answer(choice)
 
     def _on_confirm(self, event: PipelineConfirmRequired) -> None:

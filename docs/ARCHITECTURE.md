@@ -42,8 +42,9 @@ src/ffpfsc_converter/
 ├── domain/
 │   ├── models.py          # ConversionJob, GameInfo, ConversionOptions, JobState…
 │   ├── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
-│   ├── remote.py          # ConsoleTarget, RemoteEntry, DownloadJob… (vista PS5)
-│   ├── remote_events.py   # RemoteListing, FtpReady, DownloadProgress…
+│   ├── remote*.py         # Vista PS5: ConsoleTarget, RemoteEntry…; eventos RemoteListing, FtpReady…
+│   ├── lz4.py             # Lz4Compat: si un juego admite LZ4 (AMPR)
+│   ├── third_party.py     # ThirdPartyAsset: archivo de terceros fijado (URL + SHA-256)
 │   └── update.py          # ReleaseInfo y UpdateAvailable (aviso de versión nueva)
 ├── infrastructure/
 │   ├── mkpfs_adapter/     # Todo lo relativo a MkPFS (API pública en __init__.py)
@@ -52,13 +53,10 @@ src/ffpfsc_converter/
 │   │   ├── process.py     #   PackProcess: lanzar, leer y terminar (POSIX y Windows)
 │   │   ├── lifeline.py    #   MkPFS muere con la app (Job Object / PR_SET_PDEATHSIG)
 │   │   └── metadata.py    #   metadatos y lectura de imágenes exFAT
-│   ├── ftp/               # Cliente FTP (ftplib) para el FTP del helper de ps5upload
-│   │   ├── client.py      #   FtpClient: conectar, listar (CWD + MLSD), recorrer, descargar
-│   │   ├── listing.py     #   MLSD/LIST → RemoteEntry; valida nombres (sin ../)
-│   │   └── errors.py      #   clasificación de errores de ftplib y de red
+│   ├── ftp/               # Cliente FTP (ftplib): client.py (listar, recorrer, descargar),
+│   │                      #   listing.py (MLSD/LIST → RemoteEntry) y errors.py
 │   ├── ava1/              # Cliente mínimo del protocolo AVA1 (puerto 9120)
-│   │   ├── frames.py      #   cabecera CRC32C y sellado ChaCha20-Poly1305
-│   │   ├── codec.py       #   codificación de mensajes del esquema
+│   │   ├── frames.py, codec.py  # cabecera CRC32C, sellado ChaCha20-Poly1305 y mensajes
 │   │   ├── noise.py       #   handshake Noise_XX_25519_ChaChaPoly_BLAKE2b
 │   │   ├── keys.py        #   claves de carril, compromiso y PAKE CPace (Elligator2)
 │   │   ├── handshake.py   #   pasos 1-4 del handshake y validación del Welcome
@@ -66,6 +64,8 @@ src/ffpfsc_converter/
 │   │   ├── console.py     #   fs.volumes y fs.freespace
 │   │   ├── jobs.py        #   job.run/status/cancel: borrado recursivo y CRC32
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
+│   ├── ampr_tools/        # ampr_emu (LZ4 en el PC): comandos y salida de sus scripts
+│   ├── third_party.py     # third_party/: ubicación, descarga y verificación SHA-256
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
 │   ├── release_feed.py    # Última versión publicada (API pública de GitHub)
 │   ├── app_log.py         # Registro en archivo rotativo (carpeta «registros»)
@@ -82,7 +82,7 @@ src/ffpfsc_converter/
 │   ├── preflight.py       # Comprobación de espacio libre
 │   ├── conversion.py      # ConversionRunner: cola secuencial con cancelación
 │   ├── ftp_launcher.py    # FtpLauncher: FTP activo → listo; si no, AVA1 + ftp.start
-│   ├── remote_browser.py  # RemoteBrowser: navegar en un hilo propio
+│   ├── remote_browser.py, remote_games.py  # navegar en un hilo propio; juegos y juegos LZ4
 │   ├── downloads.py       # DownloadRunner: cola de descargas con su propia sesión
 │   ├── remote_download.py #   descargar un elemento: espacio, transferencia y reintentos
 │   ├── retry.py           # Reintentos automáticos ante fallos transitorios
@@ -97,10 +97,14 @@ src/ffpfsc_converter/
 │   ├── remote_storage.py  # StorageMonitor: espacio libre de interno, USB y ampliado
 │   ├── remote_upload.py   #   subida a .part con REST, verificación y renombre
 │   ├── remote_changes.py  # RemoteChanges: eliminar y subir desde el explorador
+│   ├── remote_folder_*.py # subida de carpetas: archivos, staging .part/ y renombre final
+│   ├── lz4_local*.py, skip_switch.py  # LZ4 en el PC: pasos, archivos, orquestación y «saltar»
+│   ├── ampr_profile.py, ampr_compat.py, lz4_estimator.py  # perfil, compatibilidad, peso
 │   ├── pipeline/          # "Comprimir y reemplazar en la PS5"
 │   │   ├── runner.py      #   orquesta las etapas; reintento manual sin repetir lo hecho
 │   │   ├── stages.py      #   descargar, preparar, comprimir y limpiar
 │   │   ├── replace.py     #   espacio, subida, borrado del original y renombre
+│   │   ├── payload.py     #   lo que se sube: .ffpfsc (archivo) o carpeta LZ4
 │   │   ├── compress.py    #   compresión con ConversionRunner
 │   │   ├── plan.py        #   decisiones puras: convertible, nombres, estrategia de espacio
 │   │   └── reporter.py    #   etapas y progreso → eventos
@@ -114,8 +118,9 @@ src/ffpfsc_converter/
     ├── window.py          # Crea la ventana: escala, clase/ID del sistema, tema e icono
     ├── shell.py           # AppShell: barra lateral (navegación, estado de la PS5, tema)
     ├── main_view.py       # MainView + ViewCallbacks: vista Convertir
-    ├── options_panel.py   # Modo, núcleos, verificación, rendimiento y destino
-    ├── job_list.py        # Filas de la cola (ficha, tamaños, estado, «Subir a la PS5»)
+    ├── options_panel.py   # Formato, modo, núcleos, verificación y rendimiento
+    ├── destination_row.py # Línea «Guardar en»: carpeta de destino
+    ├── job_list.py, job_row.py  # Cola y cada fila (ficha, tamaños, estado y su botón)
     ├── job_presenters.py  # Textos puros de las filas y del resumen de la cola
     ├── convert_upload.py  # Subida a la PS5 de los juegos convertidos
     ├── dialogs.py, upload_dialog.py  # Selectores de archivos y mensajes
@@ -132,16 +137,16 @@ src/ffpfsc_converter/
     │   ├── round_styles.py, widget_styles.py  # botones, tarjetas, píldoras, campos y barras
     │   └── manager.py     #   ThemeManager: aplica, guarda y cambia el tema en vivo
     ├── widgets/           # Segmented, Stepper, Tile, StatusDot, DropZone, ScrollFrame,
-    │                      # FlowFrame (opciones en varias líneas si no caben),
+    │                      # FlowFrame (opciones en varias líneas), RevealBox (mostrar/ocultar animado),
     │                      # Modal (base de los diálogos) y ajuste de textos
     └── explorer/          # Vista PS5
         ├── view.py        #   ExplorerView: compone las piezas de la vista
         ├── connection_bar.py  # tarjeta de conexión (IP, puerto, modo del FTP)
         ├── drives.py      #   tarjetas de unidades con barra de uso
         ├── path_bar.py    #   ruta con tramos clicables y accesos rápidos
-        ├── file_list.py   #   lista de archivos dibujada en un lienzo
+        ├── file_list.py, badge_painter.py  # lista dibujada en un lienzo y sus etiquetas
         ├── action_bar.py  #   acciones sobre la selección
-        ├── transfer_panel.py, transfer_row.py  # descargas y subidas
+        ├── transfer_panel.py, transfer_header.py, transfer_row.py  # descargas y subidas
         ├── controller.py  #   ExplorerController: acciones → servicios
         ├── updater.py     #   ExplorerUpdater: eventos remotos → vista
         ├── connection_updater.py  # conexión, emparejamiento, errores y reconexión
@@ -226,6 +231,7 @@ sequenceDiagram
 | Icono dibujado en código (`app_icon.py`) | Una sola fuente para la ventana y la barra lateral; `tools/make_icon.py` genera `assets/icon.png` y `assets/icon.ico` para los accesos directos. |
 | Avance de MkPFS limitado a 4 por segundo y presupuesto de 40 ms por ciclo en la UI | MkPFS redibuja su barra cientos o miles de veces por segundo; reenviar cada redibujo congelaba la ventana (sobre todo en Windows). |
 | Cliente AVA1 verificado con los vectores oficiales | `tests/vectors/ava1` fija cada byte del protocolo; un cambio que lo rompa falla en `pytest`. |
+| LZ4 al reemplazar: la carpeta usa el nombre del original | Las rutas que ya usaba la PS5 siguen sirviendo; se sube a `<nombre>.part/`, se verifica cada archivo y solo entonces se borra el original y se renombra. |
 
 ## Cómo extender
 

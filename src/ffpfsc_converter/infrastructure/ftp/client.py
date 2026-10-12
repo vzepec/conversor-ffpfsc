@@ -206,6 +206,23 @@ class FtpClient:
         """
         self._session().rename(source, destination)
 
+    def make_dir(self, remote_path: str) -> None:
+        """Crea una carpeta remota; si ya existe, no hace nada.
+
+        Args:
+            remote_path (str): Ruta de la carpeta (su carpeta padre debe existir).
+
+        Raises:
+            ftplib.Error: Si no se puede crear y tampoco existe.
+            OSError: Si se pierde la conexión.
+        """
+        session = self._session()
+        try:
+            session.mkd(remote_path)
+        except ftplib.error_perm:
+            session.cwd(remote_path)  # ya existía: entrar confirma que es una carpeta
+            session.cwd("/")
+
     def _session(self) -> ftplib.FTP:
         """Obtiene la sesión abierta.
 

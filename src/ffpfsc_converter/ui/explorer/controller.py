@@ -71,7 +71,9 @@ class ExplorerController:
             on_cancel_downloads=self.cancel_downloads,
             on_open_destination=self.open_destination,
             on_retry_failed=lambda: self.retry.retry_failed(),
+            on_clear_transfers=lambda: self.retry.forget(self.view.transfers.remove_finished()),
             on_upload=lambda: self.modify.upload_files(),
+            on_upload_folder=lambda: self.modify.upload_folder(),
             on_delete=lambda: self.modify.delete_selected(),
             on_convert=lambda: self.modify.convert_selected(),
         ))

@@ -34,6 +34,8 @@ class RemoteEntry:
         is_dir (bool): ``True`` si es una carpeta.
         size (int): Tamaño en bytes (``0`` en carpetas).
         modified (str): Fecha de modificación ``AAAAMMDDhhmmss``; vacía si se desconoce.
+        is_lz4 (bool): ``True`` si es una carpeta de juego ya comprimida en LZ4 (se sabe
+            tras revisarla por dentro).
     """
 
     name: str
@@ -41,6 +43,7 @@ class RemoteEntry:
     is_dir: bool
     size: int = 0
     modified: str = ""
+    is_lz4: bool = False
 
 
 @dataclass(frozen=True)

@@ -44,6 +44,9 @@ $Target = if ($Dev) { "${AppDir}[dev]" } else { $AppDir }
 & $VenvPython -m pip install -q --upgrade -e $Target
 if ($LASTEXITCODE -ne 0) { throw "Falló la instalación de dependencias." }
 
+# Componentes de LZ4 (ampr_emu): opcionales; sin internet se avisa y sigue.
+& $VenvPython (Join-Path $AppDir "tools\fetch_third_party.py")
+
 # Accesos directos en el Escritorio y en el menú Inicio. Se puede arrastrar un
 # juego sobre el acceso directo para abrir la app con ese juego en la cola.
 $Shell = New-Object -ComObject WScript.Shell
