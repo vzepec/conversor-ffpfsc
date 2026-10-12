@@ -8,7 +8,7 @@
 
 **Carpeta de juego · `.exfat` · `.ffpkg` &nbsp;→&nbsp; `.ffpfsc` o LZ4 (experimental)**
 
-[![Versión](https://img.shields.io/badge/versión-1.6.0-6366f1?style=for-the-badge)](CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-1.7.0-6366f1?style=for-the-badge)](CHANGELOG.md)
 [![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#-instalación)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#-instalación)
 

@@ -5,6 +5,8 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.7.0] - 2026-10-12
+
 ### Cambiado
 - README reescrito para usuarios no técnicos: qué hace, qué necesitas, instalación,
   uso paso a paso, `.ffpfsc` o LZ4 (experimental) y preguntas frecuentes. Lo técnico
