@@ -9,13 +9,14 @@ from tkinter import ttk
 
 from ffpfsc_converter.config import (
     DEFAULT_PRESET,
-    LZ4_LEVEL_BY_PRESET,
     PERFORMANCE_THRESHOLD_GAIN,
     PRESETS,
 )
 from ffpfsc_converter.domain.models import CompressionPreset, ConversionOptions, OutputFormat
 from ffpfsc_converter.infrastructure.settings_store import load_settings
+from ffpfsc_converter.services.lz4_local_files import lz4_options
 from ffpfsc_converter.ui import dialogs
+from ffpfsc_converter.ui import job_presenters as jp
 from ffpfsc_converter.ui.preferences import convert_from, save_convert, save_output_format
 from ffpfsc_converter.ui.theme import ThemeManager
 from ffpfsc_converter.ui.widgets.basics import Segmented
@@ -25,7 +26,6 @@ from ffpfsc_converter.ui.widgets.stepper import Stepper
 
 _PRESETS_BY_LABEL = {p.label: p for p in PRESETS}
 _DEFAULT_OUTPUT_TEXT = "Junto a cada juego"
-_FORMATS = [(OutputFormat.FFPFSC.value, ".ffpfsc"), (OutputFormat.LZ4.value, "LZ4 (experimental)")]
 
 
 class OptionsPanel(ttk.Frame):
@@ -86,7 +86,7 @@ class OptionsPanel(ttk.Frame):
         flow = FlowFrame(self, gap=m.px(26), line_gap=m.px(10))
         flow.grid(row=0, column=0, sticky="ew")
         modes = [(p.label, p.short_label) for p in PRESETS]
-        self._field(flow, "FORMATO", lambda box: Segmented(box, self._format_var, _FORMATS,
+        self._field(flow, "FORMATO", lambda box: Segmented(box, self._format_var, jp.FORMAT_CHOICES,
                                                            on_preset_changed))
         self._field(flow, "MODO", lambda box: Segmented(box, self._preset_var, modes,
                                                         on_preset_changed))
@@ -187,8 +187,7 @@ class OptionsPanel(ttk.Frame):
         """
         level, output_format = self.selected_preset().level, self.output_format()
         if output_format is OutputFormat.LZ4:
-            return ConversionOptions(LZ4_LEVEL_BY_PRESET[level], self.cpu_count(),
-                                     self.full_verify(), output_format=output_format)
+            return lz4_options(level, self.cpu_count())
         return ConversionOptions(
             compression_level=level,
             cpu_count=self.cpu_count(),

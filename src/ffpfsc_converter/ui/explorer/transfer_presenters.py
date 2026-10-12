@@ -87,7 +87,7 @@ def pipeline_step_text(stage: PipelineStage) -> str:
         stage (PipelineStage): Etapa interna actual.
 
     Returns:
-        str: Por ejemplo ``"Paso 2 de 3 · Comprimiendo a .ffpfsc"``.
+        str: Por ejemplo ``"Paso 2 de 3 · Comprimiendo"``.
     """
     step = STEP_OF_STAGE[stage]
     return f"Paso {step + 1} de {len(PIPELINE_STEPS)} · {STAGE_NAMES[stage]}"

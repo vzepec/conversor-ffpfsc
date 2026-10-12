@@ -43,11 +43,14 @@ class PipelineOptionsRequired:
 
     Attributes:
         job (ConversionJob): Juego descargado y analizado (con estimaciones).
-        plan (ReplacePlan): Qué se reemplazará en la PS5.
+        plan (ReplacePlan): Qué se reemplazará en la PS5 con un ``.ffpfsc``.
+        lz4_plan (ReplacePlan | None): Lo mismo con una carpeta LZ4; ``None`` si el
+            original es una imagen.
     """
 
     job: ConversionJob
     plan: ReplacePlan
+    lz4_plan: ReplacePlan | None = None
 
 
 @dataclass(frozen=True)

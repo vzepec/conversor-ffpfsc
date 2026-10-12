@@ -13,11 +13,12 @@ from pathlib import Path
 
 from ffpfsc_converter.config import (
     AMPR_INDEX_FILE,
+    LZ4_LEVEL_BY_PRESET,
     LZ4_PARTIAL_SUFFIX,
     LZ4_SEPARATE_NAME_SUFFIX,
     LZ4_WORK_SUFFIX,
 )
-from ffpfsc_converter.domain.models import ConversionJob
+from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions, OutputFormat
 from ffpfsc_converter.infrastructure.ampr_tools import PackPaths
 from ffpfsc_converter.services.ampr_profile import AUDIO_LIST, COMPRESS_LIST, AmprProfile
 
@@ -64,6 +65,33 @@ def lz4_output_path(job: ConversionJob) -> Path:
         Path: ``<carpeta de salida>/<nombre>-LZ4``.
     """
     return job.output.with_name(f"{job.output.stem}{LZ4_SEPARATE_NAME_SUFFIX}")
+
+
+def planned_output(job: ConversionJob, options: ConversionOptions) -> Path:
+    """Calcula dónde quedará el resultado según el formato.
+
+    Args:
+        job (ConversionJob): Trabajo.
+        options (ConversionOptions): Opciones elegidas.
+
+    Returns:
+        Path: ``.ffpfsc`` o carpeta ``-LZ4``.
+    """
+    return lz4_output_path(job) if options.output_format is OutputFormat.LZ4 else job.output
+
+
+def lz4_options(preset_level: int, cpu_count: int) -> ConversionOptions:
+    """Arma las opciones de una conversión LZ4 a partir del modo elegido.
+
+    Args:
+        preset_level (int): Nivel del modo (el mismo que usa ``.ffpfsc``).
+        cpu_count (int): Núcleos a usar.
+
+    Returns:
+        ConversionOptions: Formato LZ4 con su nivel equivalente.
+    """
+    return ConversionOptions(LZ4_LEVEL_BY_PRESET[preset_level], cpu_count, False,
+                             output_format=OutputFormat.LZ4)
 
 
 def workspace_for(job: ConversionJob) -> Lz4Workspace:

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ffpfsc_converter.domain.pipeline import PipelineResult, PipelineStage
+from ffpfsc_converter.domain.pipeline import PipelineResult, PipelineStage, ReplacePlan
 from ffpfsc_converter.domain.remote import DownloadResult, RemoteEntry, StorageVolume
 from ffpfsc_converter.ui.explorer import transfer_presenters as tp
 from ffpfsc_converter.ui.explorer import view_presenters as vp
+from ffpfsc_converter.ui.explorer.presenters import replace_summary
 from ffpfsc_converter.ui.widgets.text_fit import elide
 
 GB = 1024**3
@@ -112,7 +113,7 @@ def test_elide() -> None:
 
 def test_pipeline_row_texts() -> None:
     """Describe el paso, limita el porcentaje y resume el resultado del reemplazo."""
-    assert tp.pipeline_step_text(PipelineStage.COMPRESS) == "Paso 2 de 3 · Comprimiendo a .ffpfsc"
+    assert tp.pipeline_step_text(PipelineStage.COMPRESS) == "Paso 2 de 3 · Comprimiendo"
     assert tp.pipeline_step_text(PipelineStage.DOWNLOAD).startswith("Paso 1 de 3")
     assert tp.pipeline_progress(101.4, "1 GB de 1 GB") == (100.0, "100% · 1 GB de 1 GB")
     assert tp.pipeline_progress(5, "").text == "5%"
@@ -120,3 +121,16 @@ def test_pipeline_row_texts() -> None:
         "ok", "✓ Reemplazado", "listo")
     assert tp.pipeline_result_status(PipelineResult(False, True, "x")).kind == "warn"
     assert tp.pipeline_result_status(PipelineResult(False, False, "falló")).kind == "bad"
+
+
+def test_replace_summary_shows_exact_paths() -> None:
+    """El resumen nombra las rutas exactas; con LZ4 la carpeta ocupa el lugar del original."""
+    game = RemoteEntry("Juego", "/data/homebrew/Juego", True)
+    ffpfsc = ReplacePlan(game, "/data/homebrew/Juego.ffpfsc", "/data/homebrew/Juego.ffpfsc.part",
+                         True)
+    text = replace_summary(ffpfsc, is_lz4=False)
+    assert "/data/homebrew/Juego.ffpfsc" in text and "BORRARÁ" in text
+    assert "Ya existe" in text and text.endswith("antes de continuar.")
+    lz4 = ReplacePlan(game, game.path, game.path + ".part", False)
+    assert replace_summary(lz4, is_lz4=True).startswith(
+        "La carpeta LZ4 reemplazará a /data/homebrew/Juego ")

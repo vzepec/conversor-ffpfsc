@@ -43,7 +43,7 @@ src/ffpfsc_converter/
 │   ├── models.py          # ConversionJob, GameInfo, ConversionOptions, JobState…
 │   ├── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
 │   ├── remote*.py         # Vista PS5: ConsoleTarget, RemoteEntry…; eventos RemoteListing, FtpReady…
-│   ├── lz4*.py, app_events.py  # LZ4 en la PS5 (modelos, eventos); AppEvent: todo lo que recibe la ventana
+│   ├── lz4.py             # Lz4Compat: si un juego admite LZ4 (AMPR)
 │   ├── third_party.py     # ThirdPartyAsset: archivo de terceros fijado (URL + SHA-256)
 │   └── update.py          # ReleaseInfo y UpdateAvailable (aviso de versión nueva)
 ├── infrastructure/
@@ -64,8 +64,6 @@ src/ffpfsc_converter/
 │   │   ├── console.py     #   fs.volumes y fs.freespace
 │   │   ├── jobs.py        #   job.run/status/cancel: borrado recursivo y CRC32
 │   │   └── trust.py       #   identidad de la app y consolas emparejadas
-│   ├── exfat2ampr/        # Cliente de exfat2ampr (LZ4 en la PS5): client.py/transport.py
-│   │                      #   (HTTP + JSON), parsing.py y elf_loader.py (envío al puerto 9021)
 │   ├── ampr_tools/        # ampr_emu (LZ4 en el PC): comandos y salida de sus scripts
 │   ├── third_party.py     # third_party/: ubicación, descarga y verificación SHA-256
 │   ├── settings_store.py  # Ajustes en JSON (~/.config o %APPDATA%)
@@ -99,14 +97,14 @@ src/ffpfsc_converter/
 │   ├── remote_storage.py  # StorageMonitor: espacio libre de interno, USB y ampliado
 │   ├── remote_upload.py   #   subida a .part con REST, verificación y renombre
 │   ├── remote_changes.py  # RemoteChanges: eliminar y subir desde el explorador
-│   ├── lz4_remote.py      # Lz4Remote: compresión LZ4 dentro de la PS5 con exfat2ampr
-│   ├── lz4_*.py           #   flows, engine, watch, tracking, plan, deps, settings, messages
+│   ├── remote_folder_*.py # subida de carpetas: archivos, staging .part/ y renombre final
 │   ├── lz4_local*.py      # LZ4 en el PC: pasos (steps), archivos (files) y orquestación
 │   ├── ampr_profile.py, ampr_compat.py, lz4_estimator.py  # perfil, compatibilidad, peso
 │   ├── pipeline/          # "Comprimir y reemplazar en la PS5"
 │   │   ├── runner.py      #   orquesta las etapas; reintento manual sin repetir lo hecho
 │   │   ├── stages.py      #   descargar, preparar, comprimir y limpiar
 │   │   ├── replace.py     #   espacio, subida, borrado del original y renombre
+│   │   ├── payload.py     #   lo que se sube: .ffpfsc (archivo) o carpeta LZ4
 │   │   ├── compress.py    #   compresión con ConversionRunner
 │   │   ├── plan.py        #   decisiones puras: convertible, nombres, estrategia de espacio
 │   │   └── reporter.py    #   etapas y progreso → eventos
@@ -155,7 +153,6 @@ src/ffpfsc_converter/
         ├── retry_actions.py    # "Reintentar fallidas"
         ├── pipeline_tracker.py  # fila de "comprimir y reemplazar" en Transferencias
         ├── compress_dialog.py, pairing_dialog.py  # diálogos
-        ├── lz4_*.py, elf_dialog.py  # LZ4 en la PS5: acciones, eventos, ventana, fila y textos
         └── presenters.py, view_presenters.py, transfer_presenters.py  # textos puros
 ```
 
@@ -233,7 +230,7 @@ sequenceDiagram
 | Icono dibujado en código (`app_icon.py`) | Una sola fuente para la ventana y la barra lateral; `tools/make_icon.py` genera `assets/icon.png` y `assets/icon.ico` para los accesos directos. |
 | Avance de MkPFS limitado a 4 por segundo y presupuesto de 40 ms por ciclo en la UI | MkPFS redibuja su barra cientos o miles de veces por segundo; reenviar cada redibujo congelaba la ventana (sobre todo en Windows). |
 | Cliente AVA1 verificado con los vectores oficiales | `tests/vectors/ava1` fija cada byte del protocolo; un cambio que lo rompa falla en `pytest`. |
-| LZ4: la pausa `paused_game` no cierra el seguimiento | exfat2ampr la reanuda solo al cerrar el juego; la fila espera con «Cancelar» y sin «Reanudar» (ver [LZ4.md](LZ4.md)). |
+| LZ4 al reemplazar: la carpeta usa el nombre del original | Las rutas que ya usaba la PS5 siguen sirviendo; se sube a `<nombre>.part/`, se verifica cada archivo y solo entonces se borra el original y se renombra. |
 
 ## Cómo extender
 

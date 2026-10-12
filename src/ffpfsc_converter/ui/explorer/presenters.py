@@ -4,7 +4,7 @@ from __future__ import annotations
 import posixpath
 import re
 
-from ffpfsc_converter.domain.pipeline import PipelineStage
+from ffpfsc_converter.domain.pipeline import PipelineStage, ReplacePlan
 from ffpfsc_converter.domain.remote import (
     RemoteEntry,
     StorageVolume,
@@ -32,12 +32,12 @@ STAGE_NAMES = {
     PipelineStage.DOWNLOAD: "Descargando de la PS5",
     PipelineStage.VERIFY_DOWNLOAD: "Comprobando la descarga (CRC32)",
     PipelineStage.ANALYZE: "Analizando el juego",
-    PipelineStage.COMPRESS: "Comprimiendo a .ffpfsc",
+    PipelineStage.COMPRESS: "Comprimiendo",
     PipelineStage.CHECK_SPACE: "Comprobando el espacio de la PS5",
     PipelineStage.UPLOAD: "Subiendo",
     PipelineStage.VERIFY_UPLOAD: "Comprobando la subida (CRC32)",
     PipelineStage.DELETE_ORIGINAL: "Borrando el original en la PS5",
-    PipelineStage.RENAME: "Publicando el .ffpfsc",
+    PipelineStage.RENAME: "Publicando el juego comprimido",
     PipelineStage.RESTORE_FTP: "Volviendo el FTP a solo lectura",
     PipelineStage.CLEANUP: "Borrando archivos temporales",
 }
@@ -158,3 +158,25 @@ def volume_name(volume: StorageVolume) -> str:
         return f"USB {index + 1}"
     name = "M.2" if volume.device.startswith(_NVME_PREFIX) else "USB ampliado"
     return name if index == 0 else f"{name} {index + 1}"
+
+
+def replace_summary(plan: ReplacePlan, is_lz4: bool) -> str:
+    """Explica qué pasará en la PS5 al comprimir y reemplazar.
+
+    Args:
+        plan (ReplacePlan): Qué se borra y dónde se sube.
+        is_lz4 (bool): ``True`` si se reemplaza por una carpeta LZ4.
+
+    Returns:
+        str: Líneas con las rutas exactas y el aviso de cerrar el juego.
+    """
+    if is_lz4:
+        lines = [f"La carpeta LZ4 reemplazará a {plan.original.path} cuando se compruebe "
+                 "que se subió bien."]
+    else:
+        lines = [f"Se subirá {plan.remote_final} y, una vez verificado, se BORRARÁ de la "
+                 f"PS5: {plan.original.path}"]
+        if plan.final_exists:
+            lines.append(f"Ya existe {plan.remote_final}: se reemplazará.")
+    lines.append("Cierra el juego en la PS5 antes de continuar.")
+    return "\n".join(lines)

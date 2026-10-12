@@ -15,15 +15,6 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   vuelven a aparecer al elegir `.ffpfsc`.
 
 ### Añadido (experimental)
-- **Comprimir LZ4 en la PS5…** (sección PS5): convierte el juego seleccionado al
-  formato AMPR LZ4 dentro de la consola con
-  [exfat2ampr](https://github.com/ViiNCENZO10/exfat2ampr) 1.45, que no viene incluido:
-  la app pide el `exfat2ampr.elf` una vez y lo envía al cargador de ELF (9021) cuando
-  hace falta, se empareja con el código de la notificación y muestra el avance en
-  Transferencias con Cancelar y Reanudar. Si abres en la PS5 el juego que se
-  convierte, la fila indica que se reanudará sola al cerrarlo. Textos cortos y sin
-  jerga; el detalle técnico queda en Registros. Su autor no lo probó en consola:
-  conserva el original hasta probar el juego. Guía: [docs/LZ4.md](docs/LZ4.md).
 - **Formato LZ4 en la vista Convertir** (en este equipo): selector «Formato»; la cola
   indica si cada juego es compatible y su peso estimado en LZ4, y la conversión usa
   las herramientas de [ampr_emu](https://github.com/drakmor/ampr_emu) 0.4.2.1
@@ -33,7 +24,11 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   la PS5» para los juegos convertidos a LZ4 en Convertir. La carpeta va primero a
   `<nombre>.part/` (cada archivo verificado, con reintentos y reanudación) y se publica
   con su nombre al final; nunca sobrescribe una carpeta existente.
-- Los instaladores descargan `exfat2ampr.elf` y lo necesario de ampr_emu en
+- **LZ4 en «Comprimir y reemplazar»** (sección PS5): selector «Formato» en la ventana
+  de compresión, solo para carpetas de juegos compatibles. La carpeta LZ4 se sube a
+  `<nombre>.part/`, se verifica archivo por archivo con CRC32 y ocupa el lugar del
+  original con el mismo nombre. Guía: [docs/LZ4.md](docs/LZ4.md).
+- Los instaladores descargan lo necesario de ampr_emu en
   `third_party/` (fuera de Git) desde sus páginas oficiales, con su SHA-256
   comprobado. Sin internet avisan y siguen. Nueva dependencia: `lz4`.
 

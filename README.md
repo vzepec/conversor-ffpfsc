@@ -55,13 +55,12 @@ una PS5 con jailbreak.
 | **Qué es** | Una imagen comprimida que ShadowMount+ monta como cualquier juego | Una carpeta con los recursos del juego empaquetados en LZ4 |
 | **Juegos** | Todos | Solo los compatibles (la app te lo indica) |
 | **Para qué** | Ahorrar espacio | Que el juego cargue más rápido, aunque ahorre menos |
-| **Dónde se comprime** | En tu PC | En tu PC o directamente en la PS5 |
+| **Dónde se comprime** | En tu PC | En tu PC |
 
 > [!WARNING]
-> **LZ4 es experimental.** Usa herramientas de otros proyectos
-> ([ampr_emu](https://github.com/drakmor/ampr_emu) y
-> [exfat2ampr](https://github.com/ViiNCENZO10/exfat2ampr)) que todavía están en pruebas, y
-> un juego convertido podría no arrancar. **Conserva el original** hasta comprobar que el
+> **LZ4 es experimental.** Usa las herramientas de
+> [ampr_emu](https://github.com/drakmor/ampr_emu), que todavía están en pruebas, y un juego
+> convertido podría no arrancar. **Conserva el original** hasta comprobar que el
 > convertido funciona. Guía: **[docs/LZ4.md](docs/LZ4.md)**.
 
 ---
@@ -142,8 +141,7 @@ rápido.
 
 **¿Se borra o se modifica mi juego original?**
 No. Para comprimir, la app solo lo lee. Nunca borra un juego por su cuenta: solo cuando tú
-lo pides (**Eliminar**, **Comprimir y reemplazar** o la opción de borrar el original de LZ4),
-siempre con confirmación y mostrando la ruta exacta. Al reemplazar, primero comprueba que la
+lo pides (**Eliminar** o **Comprimir y reemplazar**), siempre con confirmación y mostrando la ruta exacta. Al reemplazar, primero comprueba que la
 copia comprimida esté bien.
 
 **¿Cuánto tarda?**
@@ -170,7 +168,7 @@ Sí: aparece un botón verde en la barra lateral.
 |:----------|:---------|
 | [📖 Guía de uso](docs/USER_GUIDE.md) | Todas las opciones de la pestaña Convertir y preguntas frecuentes |
 | [🎮 Pestaña PS5](docs/PS5.md) | Conectar la consola, descargar, subir, borrar y comprimir y reemplazar |
-| [🧪 LZ4 (experimental)](docs/LZ4.md) | Comprimir en LZ4 en el PC o en la PS5 |
+| [🧪 LZ4 (experimental)](docs/LZ4.md) | Comprimir en LZ4 y reemplazar juegos de la PS5 en LZ4 |
 | [📦 Instalación](docs/INSTALLATION.md) | Pasos detallados y solución de problemas |
 | [📝 Novedades](CHANGELOG.md) | Qué cambió en cada versión |
 | [🛠️ Información técnica](docs/TECHNICAL.md) | Para desarrolladores: arquitectura, componentes y cómo contribuir |
@@ -182,8 +180,7 @@ Sí: aparece un botón verde en la barra lateral.
 - **[MkPFS](https://github.com/PSBrew/MkPFS)** de PSBrew: el motor que crea los `.ffpfsc`.
 - **[ps5upload](https://github.com/phantomptr/ps5upload)** de PhantomPtr: el payload de la PS5
   que usa la pestaña PS5.
-- **[ampr_emu](https://github.com/drakmor/ampr_emu)** de drakmor y
-  **[exfat2ampr](https://github.com/ViiNCENZO10/exfat2ampr)** de V-10: el formato LZ4 (AMPR).
+- **[ampr_emu](https://github.com/drakmor/ampr_emu)** de drakmor: el formato LZ4 (AMPR).
 - **[zlib-ng](https://github.com/zlib-ng/zlib-ng)** y **[tkinterdnd2](https://github.com/Eliav2/tkinterdnd2)**.
 
 > [!IMPORTANT]

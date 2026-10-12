@@ -15,6 +15,7 @@ from ffpfsc_converter.services.analysis import analyze_job
 from ffpfsc_converter.services.console_access import ConsoleAccess
 from ffpfsc_converter.services.discovery import create_job
 from ffpfsc_converter.services.integrity import FilePair, IntegrityError, verify_files
+from ffpfsc_converter.services.lz4_local_files import planned_output
 from ffpfsc_converter.services.pipeline.compress import Compressor
 from ffpfsc_converter.services.pipeline.reporter import PipelineReporter
 from ffpfsc_converter.services.preflight import check_free_space
@@ -84,7 +85,7 @@ def prepare_stage(local: Path, work_dir: Path, reporter: PipelineReporter) -> Co
 
     Args:
         local (Path): Carpeta o imagen descargada.
-        work_dir (Path): Carpeta local de trabajo (destino del ``.ffpfsc``).
+        work_dir (Path): Carpeta local de trabajo (destino del juego comprimido).
         reporter (PipelineReporter): Publica la etapa.
 
     Returns:
@@ -108,31 +109,33 @@ def compress_stage(job: ConversionJob, choice: PipelineChoice, compressor: Compr
         should_cancel (Callable[[], bool]): Devuelve ``True`` si hay que cancelar.
 
     Raises:
-        NotEnoughSpaceError: Si no cabe el ``.ffpfsc`` en este equipo.
+        NotEnoughSpaceError: Si no cabe el juego comprimido en este equipo.
         DownloadCancelledError: Si se canceló.
-        ConverterError: Si MkPFS falla.
+        ConverterError: Si la compresión falla.
     """
     space = check_free_space(job, choice.options)
     if space is not None and not space.is_enough:
         raise NotEnoughSpaceError(space.needed, free_space(job.output.parent))
-    reporter.stage(PipelineStage.COMPRESS, job.output.name)
+    reporter.stage(PipelineStage.COMPRESS, planned_output(job, choice.options).name)
     result = compressor(job, choice.options, reporter.on_compress, should_cancel)
     if result.cancelled or should_cancel():
         raise DownloadCancelledError()
     if not result.succeeded:
-        raise ConverterError(f"MkPFS no pudo comprimir el juego ({result.message}).")
+        raise ConverterError(f"No se pudo comprimir el juego ({result.message}).")
 
 
-def cleanup_stage(job: ConversionJob, work_dir: Path, reporter: PipelineReporter) -> None:
-    """Borra la descarga y el ``.ffpfsc`` locales (solo tras un reemplazo exitoso).
+def cleanup_stage(job: ConversionJob, output: Path, work_dir: Path,
+                  reporter: PipelineReporter) -> None:
+    """Borra la descarga y el juego comprimido locales (solo tras un reemplazo exitoso).
 
     Args:
-        job (ConversionJob): Trabajo cuyo origen y salida se borran.
+        job (ConversionJob): Trabajo cuyo origen se borra.
+        output (Path): ``.ffpfsc`` o carpeta LZ4 local.
         work_dir (Path): Carpeta de trabajo (se borra si queda vacía).
         reporter (PipelineReporter): Publica la etapa.
     """
     reporter.stage(PipelineStage.CLEANUP, str(work_dir))
     remove_path(job.source)
-    remove_path(job.output)
+    remove_path(output)
     with contextlib.suppress(OSError):
         work_dir.rmdir()  # solo si quedó vacía

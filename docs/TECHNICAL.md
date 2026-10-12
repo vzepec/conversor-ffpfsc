@@ -8,7 +8,7 @@ Punto de entrada para desarrolladores. La guía para usuarios está en el
 | [🏗️ Arquitectura](ARCHITECTURE.md) | Capas, árbol de módulos, modelo de hilos, decisiones y cómo extender |
 | [🧑‍💻 Desarrollo](DEVELOPMENT.md) | Entorno, tests, multiplataforma, flujo de Git, publicar versiones, rules y skills |
 | [🎮 Pestaña PS5](PS5.md) | Protocolo AVA1, FTP de ps5upload, transferencias y reemplazo |
-| [🧪 LZ4](LZ4.md) | Formato AMPR, exfat2ampr (PS5) y ampr_emu (PC) |
+| [🧪 LZ4](LZ4.md) | Formato AMPR y ampr_emu (en el PC y al comprimir y reemplazar) |
 
 ## Tecnologías
 
@@ -25,13 +25,12 @@ Punto de entrada para desarrolladores. La guía para usuarios está en el
 | Componente | Versión | Cómo llega |
 |:--|:--|:--|
 | ps5upload (payload) | 6.4.0 | Incluido en [`payload/`](../payload/) |
-| exfat2ampr (`exfat2ampr.elf`) | 1.45 | Lo descarga el instalador en `third_party/` |
 | ampr_emu (herramientas en Python y `libSceAmpr.sprx`) | 0.4.2.1 | Lo descarga el instalador en `third_party/` |
 
 `tools/fetch_third_party.py` (lo llaman `instalar.sh` e `instalar.ps1`) descarga cada archivo
 desde su página oficial y comprueba el SHA-256 fijado en `config.THIRD_PARTY_ASSETS`;
-`third_party/` no se versiona. Son proyectos GPL-3.0: se ejecutan aparte, nunca se enlazan
-con el código de la app.
+`third_party/` no se versiona. ampr_emu se ejecuta aparte, nunca se enlaza con el código de
+la app.
 
 ## Arquitectura en una mirada
 
@@ -52,7 +51,7 @@ src/ffpfsc_converter/
 ├── config.py          # todas las constantes de negocio
 ├── errors.py          # errores con mensajes listos para el usuario
 ├── domain/            # modelos y eventos — Python puro
-├── infrastructure/    # MkPFS, FTP, AVA1, exfat2ampr, ampr_emu, disco y SO
+├── infrastructure/    # MkPFS, FTP, AVA1, ampr_emu, disco y SO
 ├── services/          # descubrir, analizar, estimar, convertir, transferir, LZ4
 └── ui/                # vistas, presentadores (textos), tema y widgets propios
 ```

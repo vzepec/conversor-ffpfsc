@@ -7,7 +7,7 @@ import pytest
 from conftest import FakeConsole
 from ffpfsc_converter.domain.pipeline_events import UploadFinished, UploadProgress
 from ffpfsc_converter.services.remote_changes import RemoteChanges
-from ffpfsc_converter.services.remote_folder_upload import folder_files, remote_dirs
+from ffpfsc_converter.services.remote_folder_files import folder_files, remote_dirs
 
 pytestmark = pytest.mark.filterwarnings("ignore:write permissions:RuntimeWarning")
 

@@ -95,20 +95,24 @@ Selecciona **una** carpeta de juego o imagen `.exfat`/`.ffpkg` y pulsa
 1. **Descarga** el juego a `<carpeta de descargas>/ffpfsc-temporal/` (reanudable) y
    **comprueba con CRC32** que cada archivo es idéntico al de la PS5 (la consola
    calcula el suyo mientras este equipo calcula el propio).
-2. **Analiza** el juego y abre la ventana de compresión: modo (con peso
-   estimado), núcleos, rendimiento en la PS5, verificación completa y si borrar los
-   temporales al final.
+2. **Analiza** el juego y abre la ventana de compresión: formato (`.ffpfsc` o, solo
+   con carpetas, **LZ4 experimental**), modo (con peso estimado), núcleos,
+   rendimiento en la PS5, verificación completa y si borrar los temporales al final.
    Esa ventana muestra exactamente qué se subirá y qué se borrará.
-3. **Comprime** a `.ffpfsc` con MkPFS (comprueba antes el espacio de este equipo).
+3. **Comprime** a `.ffpfsc` con MkPFS, o a una carpeta LZ4 con ampr_emu (comprueba
+   antes el espacio de este equipo).
 4. **Comprueba el espacio** de la PS5 (`fs.freespace` del helper).
-5. **Sube** el archivo como `Juego.ffpfsc.part` y **verifica** su tamaño y su CRC32.
-   Si algo no coincide, borra el `.part` y se detiene sin tocar el original.
+5. **Sube** el archivo como `Juego.ffpfsc.part` (o la carpeta LZ4 a `Juego.part/`) y
+   **verifica** el tamaño y el CRC32 de cada archivo. Si algo no coincide, lo borra y
+   se detiene sin tocar el original.
 6. Recién entonces **borra el original** en la PS5.
-7. **Publica** el archivo renombrándolo a `Juego.ffpfsc` (misma carpeta).
+7. **Publica** el resultado renombrándolo a `Juego.ffpfsc` (misma carpeta) o, con LZ4,
+   a `Juego`: la carpeta LZ4 ocupa el lugar del original con el mismo nombre
+   (ver [LZ4.md](LZ4.md#comprimir-y-reemplazar-en-la-ps5)).
 8. Vuelve el FTP a **solo lectura** y, si lo elegiste, borra los temporales.
 
 El avance se sigue en una fila del **panel de Transferencias**, junto a las
-descargas y subidas: indica el paso (*Paso 2 de 3 · Comprimiendo a .ffpfsc*, de
+descargas y subidas: indica el paso (*Paso 2 de 3 · Comprimiendo*, de
 *Descarga → Compresión → Reemplazo*), una barra con el **porcentaje**, la
 velocidad y el **tiempo restante** estimado. El botón **Cancelar** de la fila lo
 detiene en cualquier momento; si falla o se cancela, la misma fila ofrece
@@ -169,12 +173,6 @@ Si cancelas o falla, al volver a intentarlo con el mismo juego:
   carpetas de primer nivel (`/data`, `/mnt/usb0`) y puntos de montaje.
 - Para escribir, la app reinicia el FTP con permiso de escritura **solo mientras
   dura la operación** y luego lo vuelve a dejar en solo lectura.
-
-## Comprimir LZ4 en la PS5 (experimental)
-
-**Comprimir LZ4 en la PS5…** convierte la carpeta o imagen seleccionada al formato
-AMPR LZ4 **dentro de la consola** con exfat2ampr (no viene incluido). Requisitos,
-emparejamiento, opciones y riesgos: **[LZ4.md](LZ4.md)**.
 
 ## Datos que guarda la app
 

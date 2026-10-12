@@ -6,10 +6,9 @@ antes; luego, por cada juego, se confirma reemplazar la salida y el espacio libr
 from __future__ import annotations
 
 from collections.abc import Sequence
-from pathlib import Path
 
 from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions, OutputFormat
-from ffpfsc_converter.services.lz4_local_files import lz4_output_path
+from ffpfsc_converter.services.lz4_local_files import planned_output
 from ffpfsc_converter.services.preflight import check_free_space
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui import job_presenters as jp
@@ -34,19 +33,6 @@ def confirm_start(jobs: Sequence[ConversionJob],
     if not all(_confirm_job(job, options) for job in ready):
         return []
     return ready
-
-
-def planned_output(job: ConversionJob, options: ConversionOptions) -> Path:
-    """Calcula dónde quedará el resultado según el formato.
-
-    Args:
-        job (ConversionJob): Trabajo.
-        options (ConversionOptions): Opciones elegidas.
-
-    Returns:
-        Path: ``.ffpfsc`` o carpeta ``-LZ4``.
-    """
-    return lz4_output_path(job) if options.output_format is OutputFormat.LZ4 else job.output
 
 
 def _lz4_ready(jobs: list[ConversionJob]) -> list[ConversionJob]:

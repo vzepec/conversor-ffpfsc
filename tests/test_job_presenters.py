@@ -124,3 +124,11 @@ def test_lz4_sizes_and_problems(tmp_path: Path) -> None:
     image = tmp_path / "juego.exfat"
     image.write_bytes(b"x")
     assert jp.lz4_problem(ConversionJob(image, image, tmp_path / "x.ffpfsc")) == jp.LZ4_IMAGE_TEXT
+
+
+def test_lz4_estimate_text() -> None:
+    """Muestra el peso LZ4 estimado con su ahorro, o que aún se está analizando."""
+    job = _job(size=1000)
+    assert jp.lz4_estimate_text(job) == "analizando…"
+    job.lz4_estimate = 400
+    assert jp.lz4_estimate_text(job) == "≈ 400.0 B (−60%)"

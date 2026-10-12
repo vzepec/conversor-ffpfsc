@@ -28,7 +28,7 @@ El instalador:
 
 1. Instala `python3-tk` y `python3-venv` con `apt` si faltan (pide tu contraseña).
 2. Crea `.venv/` e instala el conversor y sus dependencias.
-3. Descarga los componentes de LZ4 (exfat2ampr y ampr_emu) en `third_party/`,
+3. Descarga los componentes de LZ4 (ampr_emu) en `third_party/`,
    comprobando su SHA-256. Son opcionales: sin internet avisa y sigue.
 4. Crea el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú.
 

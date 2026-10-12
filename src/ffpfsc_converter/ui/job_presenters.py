@@ -9,10 +9,11 @@ from ffpfsc_converter.domain.models import (
     ConversionJob,
     ConversionResult,
     GameInfo,
+    OutputFormat,
     ProgressUpdate,
 )
 from ffpfsc_converter.formatting import PHASE_NAMES, format_eta, format_size
-from ffpfsc_converter.ui.presenters import savings_text
+from ffpfsc_converter.ui.presenters import PENDING_TEXT, savings_text
 
 _SEPARATOR = "  ·  "
 #: Píldora y detalle de un ``.ffpfsc`` agregado ya comprimido.
@@ -20,6 +21,10 @@ READY_LABEL = "✓ Ya comprimido"
 READY_DETAIL = "Listo para subir a la PS5"
 LZ4_INCOMPATIBLE_TEXT = "No compatible con LZ4"
 LZ4_IMAGE_TEXT = "LZ4 solo con carpetas"
+LZ4_MISSING_TEXT = "Faltan componentes de LZ4: vuelve a instalar la app"
+#: Opciones del selector de formato: (valor de ``OutputFormat``, texto visible).
+FORMAT_CHOICES = ((OutputFormat.FFPFSC.value, ".ffpfsc"),
+                  (OutputFormat.LZ4.value, "LZ4 (experimental)"))
 
 
 class RowStatus(NamedTuple):
@@ -100,6 +105,20 @@ def size_lines(job: ConversionJob, level: int, performance: bool = False,
         return SizeText(format_size(job.size), "", "estimando…")
     return SizeText(f"{format_size(job.size)} →", f"≈ {format_size(estimate)}",
                     f"{savings_text(job.size, estimate)} estimado")
+
+
+def lz4_estimate_text(job: ConversionJob) -> str:
+    """Formatea el peso estimado de la carpeta LZ4 (no depende del modo).
+
+    Args:
+        job (ConversionJob): Trabajo analizado.
+
+    Returns:
+        str: Por ejemplo ``"≈ 80.2 GB (−21%)"``, o ``PENDING_TEXT`` si aún no hay estimación.
+    """
+    if job.lz4_estimate is None:
+        return PENDING_TEXT
+    return f"≈ {format_size(job.lz4_estimate)} ({savings_text(job.size, job.lz4_estimate)})"
 
 
 def lz4_problem(job: ConversionJob) -> str:
