@@ -14,9 +14,7 @@ from pathlib import Path
 from types import TracebackType
 
 from ffpfsc_converter.config import AUTO_CONNECT_DELAY_MS
-from ffpfsc_converter.domain.events import Event
-from ffpfsc_converter.domain.lz4_events import Lz4Event
-from ffpfsc_converter.domain.remote_events import RemoteEvent
+from ffpfsc_converter.domain.app_events import AppEvent
 from ffpfsc_converter.domain.update import UpdateAvailable
 from ffpfsc_converter.infrastructure.app_log import log_dir, setup_file_log
 from ffpfsc_converter.services.update_check import start_update_check
@@ -43,7 +41,7 @@ class MainWindow:
         self._log = setup_file_log(log_dir())
         self._window = create_window()
         self.root, self.theme = self._window.root, self._window.theme
-        self._events: queue.Queue[Event | RemoteEvent | Lz4Event] = queue.Queue()
+        self._events: queue.Queue[AppEvent] = queue.Queue()
         self._shell = AppShell(self.root, self.theme, presenters.version_text())
         self._shell.pack(fill="both", expand=True)
         convert_tab = self._shell.add_view("convert", "Convertir", "convert")
@@ -104,11 +102,11 @@ class MainWindow:
             pending = False
         self.root.after(1 if pending else theme.EVENT_POLL_MS, self._poll_events)
 
-    def _dispatch(self, event: Event | RemoteEvent | Lz4Event) -> None:
+    def _dispatch(self, event: AppEvent) -> None:
         """Entrega un evento a la vista que lo maneja.
 
         Args:
-            event (Event | RemoteEvent | Lz4Event): Evento publicado por un servicio.
+            event (AppEvent): Evento publicado por un servicio.
         """
         self._notifier.handle(event)
         entry = journal_line(event)

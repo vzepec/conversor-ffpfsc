@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ffpfsc_converter.config import E2A_START_TIMEOUT_SECONDS, ELF_LOADER_PORT
+from ffpfsc_converter.config import E2A_START_TIMEOUT_SECONDS
 from ffpfsc_converter.domain.lz4_events import (
     Lz4ElfRequired,
     Lz4EngineLaunched,
@@ -10,6 +10,7 @@ from ffpfsc_converter.domain.lz4_events import (
     Lz4PairingRequired,
     Lz4Ready,
 )
+from ffpfsc_converter.services.lz4_messages import LAUNCH_TIMEOUT_TEXT, NETWORK_ERROR_TEXT
 from lz4_fake_client import GAME, HOST, IMAGE, INTERNAL, TOKEN, USB, FakeEngine, make_harness
 
 _JOIN = 5
@@ -45,7 +46,7 @@ def test_engine_that_never_starts_fails(tmp_path: Path) -> None:
     harness.settings.save_elf_path(_elf(tmp_path))
     harness.remote.prepare(HOST, GAME.path).join(_JOIN)
     assert harness.kinds() == [Lz4EngineLaunched, Lz4Failed]
-    assert str(ELF_LOADER_PORT) in harness.events[-1].message  # type: ignore[attr-defined]
+    assert harness.events[-1].message == LAUNCH_TIMEOUT_TEXT  # type: ignore[attr-defined]
     assert harness.clock.now >= E2A_START_TIMEOUT_SECONDS
 
 
@@ -88,7 +89,7 @@ def test_blocked_pairing_fails_with_advice(tmp_path: Path) -> None:
     harness = make_harness(tmp_path, FakeEngine(tokens=set(), pair_status=429))
     harness.remote.pair(HOST, "123456", GAME.path).join(_JOIN)
     assert harness.kinds() == [Lz4Failed]
-    assert "espera un minuto" in harness.events[0].message  # type: ignore[attr-defined]
+    assert "Espera un minuto" in harness.events[0].message  # type: ignore[attr-defined]
 
 
 def test_unknown_game_fails(tmp_path: Path) -> None:
@@ -96,7 +97,7 @@ def test_unknown_game_fails(tmp_path: Path) -> None:
     harness = make_harness(tmp_path)
     harness.remote.prepare(HOST, "/data/homebrew/no-es-juego").join(_JOIN)
     assert harness.kinds() == [Lz4Failed]
-    assert "no reconoce" in harness.events[0].message  # type: ignore[attr-defined]
+    assert "No se puede comprimir" in harness.events[0].message  # type: ignore[attr-defined]
 
 
 def test_ready_plan_suggests_same_drive(tmp_path: Path) -> None:
@@ -123,4 +124,4 @@ def test_network_error_after_hello_fails(tmp_path: Path) -> None:
     harness = make_harness(tmp_path, FakeEngine(sources_error=TimeoutError()))
     harness.remote.prepare(HOST, GAME.path).join(_JOIN)
     assert harness.kinds() == [Lz4Failed]
-    assert HOST in harness.events[0].message  # type: ignore[attr-defined]
+    assert harness.events[0].message == NETWORK_ERROR_TEXT  # type: ignore[attr-defined]

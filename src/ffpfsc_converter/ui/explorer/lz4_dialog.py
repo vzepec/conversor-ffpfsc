@@ -6,6 +6,7 @@ from tkinter import ttk
 
 from ffpfsc_converter.config import DEFAULT_LZ4_PRESET, LZ4_PRESETS
 from ffpfsc_converter.domain.lz4 import Lz4Plan, Lz4Request
+from ffpfsc_converter.services.lz4_plan import output_name
 from ffpfsc_converter.ui.explorer.lz4_presenters import (
     ALREADY_EXISTS,
     LZ4_TITLE,
@@ -28,7 +29,7 @@ from ffpfsc_converter.ui.widgets.modal import Modal
 _PRESETS_BY_LABEL = {p.label: p for p in LZ4_PRESETS}
 _KEEP, _REMOVE = "keep", "remove"
 _ORIGINAL_OPTIONS = ((_KEEP, "Conservar el original"),
-                     (_REMOVE, "Borrar el original de la PS5 al terminar bien"))
+                     (_REMOVE, "Borrar el original al terminar"))
 _TEXT_WIDTH = 700
 _COLUMN_GAP = 24
 _COMPAT_STYLES = {"ok": "CardOk.TLabel", "warn": "CardWarn.TLabel", "bad": "CardBad.TLabel"}
@@ -111,7 +112,7 @@ class Lz4Dialog(Modal):
         """
         self._caption(parent, "DESTINO")
         if not self._targets:
-            ttk.Label(parent, text="Ninguna unidad de la PS5 admite escritura.",
+            ttk.Label(parent, text="No hay ninguna unidad donde guardar.",
                       style="CardBad.TLabel").pack(anchor="w")
             return
         box = ttk.Frame(parent, style="Card.SegBox.TFrame", padding=3)
@@ -128,15 +129,16 @@ class Lz4Dialog(Modal):
             body (tk.Misc): Columna derecha.
         """
         m = self.theme.metrics
-        self._caption(body, "MODO LZ4")
+        self._caption(body, "MODO")
         Segmented(body, self._preset, [(p.label, p.short_label) for p in LZ4_PRESETS],
                   self._refresh).pack(anchor="w")
         self._mode = ttk.Label(body, style="CardMuted.TLabel")
         self._mode.pack(anchor="w", pady=(m.px(4), 0))
         switch = self.theme.switch_style("surface")
         switches = [("  Verificar al terminar (más lento)", self._verify)]
-        if ALREADY_EXISTS in self._plan.check.warnings:
-            switches.append(("  Reemplazar la conversión anterior", self._overwrite))
+        plan = self._plan
+        if ALREADY_EXISTS in plan.check.warnings and not output_name(plan.source, plan.dest_base):
+            switches.append(("  Reemplazar el comprimido anterior", self._overwrite))
         for text, variable in switches:
             ttk.Checkbutton(body, text=text, variable=variable, style=switch,
                             command=self._refresh).pack(anchor="w", pady=(m.px(10), 0))
@@ -168,10 +170,12 @@ class Lz4Dialog(Modal):
         """
         if not self._dest.get():
             return None
+        source, dest = self._plan.source, self._dest.get()
         return Lz4Request(
-            source=self._plan.source, dest_base=self._dest.get(),
+            source=source, dest_base=dest,
             level=_PRESETS_BY_LABEL[self._preset.get()].level, verify=self._verify.get(),
-            remove_source=self._original.get() == _REMOVE, overwrite=self._overwrite.get())
+            remove_source=self._original.get() == _REMOVE, overwrite=self._overwrite.get(),
+            name=output_name(source, dest))
 
     def _refresh(self) -> None:
         """Actualiza el modo, los errores que aplican, el resumen y el botón de inicio."""
@@ -184,7 +188,7 @@ class Lz4Dialog(Modal):
             self._errors.pack(anchor="w", pady=(self.theme.metrics.px(10), 0), before=self._box)
         else:
             self._errors.pack_forget()
-        lines = (summary_lines(request, replaces_existing(check, checked, request.dest_base))
+        lines = (summary_lines(request, replaces_existing(check, checked, request))
                  if request is not None else [])
         self._summary.configure(text="\n".join(lines) or "No hay dónde guardar el juego.")
         can_start = request is not None and not errors

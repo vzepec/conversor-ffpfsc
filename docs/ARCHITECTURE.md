@@ -42,8 +42,8 @@ src/ffpfsc_converter/
 ├── domain/
 │   ├── models.py          # ConversionJob, GameInfo, ConversionOptions, JobState…
 │   ├── events.py          # Eventos servicio → UI (JobStarted, JobProgress…)
-│   ├── remote.py          # ConsoleTarget, RemoteEntry, DownloadJob… (vista PS5)
-│   ├── remote_events.py   # RemoteListing, FtpReady, DownloadProgress…
+│   ├── remote*.py         # Vista PS5: ConsoleTarget, RemoteEntry…; eventos RemoteListing, FtpReady…
+│   ├── lz4*.py, app_events.py  # LZ4 en la PS5 (modelos, eventos); AppEvent: todo lo que recibe la ventana
 │   └── update.py          # ReleaseInfo y UpdateAvailable (aviso de versión nueva)
 ├── infrastructure/
 │   ├── mkpfs_adapter/     # Todo lo relativo a MkPFS (API pública en __init__.py)
@@ -233,6 +233,7 @@ sequenceDiagram
 | Icono dibujado en código (`app_icon.py`) | Una sola fuente para la ventana y la barra lateral; `tools/make_icon.py` genera `assets/icon.png` y `assets/icon.ico` para los accesos directos. |
 | Avance de MkPFS limitado a 4 por segundo y presupuesto de 40 ms por ciclo en la UI | MkPFS redibuja su barra cientos o miles de veces por segundo; reenviar cada redibujo congelaba la ventana (sobre todo en Windows). |
 | Cliente AVA1 verificado con los vectores oficiales | `tests/vectors/ava1` fija cada byte del protocolo; un cambio que lo rompa falla en `pytest`. |
+| LZ4: la pausa `paused_game` no cierra el seguimiento | exfat2ampr la reanuda solo al cerrar el juego; la fila espera con «Cancelar» y sin «Reanudar» (ver [LZ4.md](LZ4.md)). |
 
 ## Cómo extender
 

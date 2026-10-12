@@ -114,6 +114,18 @@ class FakeE2aLogic:
         with self.lock:
             self.jobs.finish(state, code)
 
+    def open_game(self) -> None:
+        """Simula abrir en la PS5 el juego que se convierte: pausa con ``paused_game``."""
+        with self.lock:
+            self.jobs.finish("paused", "paused_game")
+
+    def close_game(self) -> None:
+        """Simula cerrar el juego: el motor reanuda solo la conversión que pausó por él."""
+        with self.lock:
+            job = self.jobs.current
+            if job is not None and job.state == "paused" and job.code == "paused_game":
+                self.jobs.resume(job.dest)
+
     def seed_result(self, game: FakeGame, state: str = "done", code: str = "") -> None:
         """Deja un resultado anterior visible en ``/api/state`` (como tras otra conversión)."""
         with self.lock:

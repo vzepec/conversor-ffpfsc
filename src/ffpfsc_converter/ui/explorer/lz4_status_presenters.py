@@ -7,49 +7,52 @@ from __future__ import annotations
 
 from ffpfsc_converter.domain.lz4 import Lz4JobState, Lz4Status
 from ffpfsc_converter.formatting import format_size
+from ffpfsc_converter.services.lz4_watch import resumes_by_itself
 from ffpfsc_converter.ui.explorer.lz4_presenters import CHECK_ERROR_CODES, check_error_text
 from ffpfsc_converter.ui.explorer.transfer_presenters import TransferProgress
 from ffpfsc_converter.ui.job_presenters import RowStatus
 
 ROW_SUBTITLE = "LZ4 en la PS5"
-WAITING_TEXT = "Esperando a ShadowMountPlus"
-CHECKING_TEXT = "Comprobando el destino…"
+WAITING_TEXT = "En espera"
+CHECKING_TEXT = "Comprobando…"
 STARTING_TEXT = "Iniciando…"
 RESUMING_TEXT = "Reanudando…"
 CANCELLING_TEXT = "Cancelando…"
 RESUME_TEXT = "Reanudar"
+GAME_PAUSE_TEXT = "En pausa: se reanudará al cerrar el juego"
+_WAITING_DETAIL = "Empezará sola en cuanto la PS5 pueda abrir la imagen."
+_UNKNOWN_RESULT = "Se detuvo por un error. Los detalles están en Registros."
+_PREPARING = "Preparando el juego"
+_CANT_PREPARE = "No se pudo terminar de preparar el juego."
 
 _PHASES = {
-    "starting": "Iniciando", "waiting": WAITING_TEXT, "mount": "Montando la imagen",
-    "cleanup": "Borrando la conversión anterior", "scan": "Analizando el juego",
-    "fakelib": "Instalando libSceAmpr", "index": "Escribiendo el índice AMPR",
-    "pack": "Comprimiendo (LZ4)", "copy": "Copiando archivos sueltos",
-    "verify": "Verificando cada bloque", "remove": "Borrando el original",
-    "unmount": "Liberando la imagen",
+    "starting": "Iniciando", "waiting": WAITING_TEXT, "mount": "Abriendo la imagen",
+    "cleanup": "Borrando la versión anterior", "scan": "Analizando el juego",
+    "fakelib": _PREPARING, "index": _PREPARING, "pack": "Comprimiendo",
+    "copy": "Copiando archivos", "verify": "Verificando", "remove": "Borrando el original",
+    "unmount": "Cerrando la imagen",
 }
+#: Resultados y pausas que se explican; ``done_fakelib`` y los códigos nuevos solo
+#: quedan en el registro (no piden nada al usuario o son demasiado técnicos).
 _RESULT_CODES = {
     "dest_create": "No se pudo crear la carpeta de destino.",
-    "dest_exists": "Ya hay una conversión en el destino; activa «Reemplazar la conversión "
-                   "anterior» para sobrescribirla.",
-    "dest_is_source": "El destino es la propia carpeta del juego: elige otra unidad.",
+    "dest_exists": "Ya estaba comprimido en el destino. Activa «Reemplazar».",
+    "dest_is_source": "El destino no puede ser la carpeta del juego. Elige otra unidad.",
     "dest_unavailable": "La unidad de destino ya no está disponible.",
-    "fakelib_failed": "No se pudo instalar libSceAmpr.sprx en el juego convertido.",
-    "index_failed": "No se pudo escribir el índice AMPR.",
-    "manifest_mismatch": "El juego cambió desde la pausa: no se puede reanudar; vuelve a "
-                         "empezar.",
+    "fakelib_failed": _CANT_PREPARE,
+    "index_failed": _CANT_PREPARE,
+    "manifest_mismatch": "El juego cambió desde la pausa. Vuelve a empezar.",
     "nothing_to_resume": "No hay nada que reanudar.",
-    "scan_failed": "No se pudo leer el juego de origen.",
-    "pack_failed": "Falló la compresión (el detalle está en el registro de exfat2ampr).",
-    "copy_failed": "Falló la copia de los archivos sueltos.",
-    "verify_failed": "La verificación encontró bloques dañados.",
+    "scan_failed": "No se pudo leer el juego.",
+    "pack_failed": "Falló la compresión.",
+    "copy_failed": "Falló la copia de archivos.",
+    "verify_failed": "La verificación encontró errores.",
     "smp_busy": "Cierra el juego o la aplicación abiertos en la PS5.",
-    "paused_user": "Se puede reanudar donde quedó.",
-    "paused_game": "Se abrió un juego: la conversión se reanuda sola al salir de él.",
-    "paused_dest": "Se desconectó el destino: conéctalo y reanuda.",
-    "paused_source": "Se desconectó el origen: conéctalo y reanuda.",
-    "paused_full": "El destino se llenó: libera espacio y reanuda.",
-    "done_fakelib": "El fakelib del juego estaba desactivado en ShadowMountPlus: se cambió a "
-                    "«Emuladores».",
+    "paused_user": "Pulsa «Reanudar» para seguir.",
+    "paused_game": "Se reanudará al cerrar el juego.",
+    "paused_dest": "Se desconectó el destino. Conéctalo y pulsa «Reanudar».",
+    "paused_source": "Se desconectó el origen. Conéctalo y pulsa «Reanudar».",
+    "paused_full": "El destino se llenó. Libera espacio y pulsa «Reanudar».",
 }
 
 
@@ -60,9 +63,9 @@ def job_name(status: Lz4Status) -> str:
         status (Lz4Status): Estado leído.
 
     Returns:
-        str: Nombre del juego, su Title ID o ``"exfat2ampr"`` si no se conoce.
+        str: Nombre del juego, su Title ID o ``"Compresión LZ4"`` si no se conoce.
     """
-    return status.title or status.title_id or "exfat2ampr"
+    return status.title or status.title_id or "Compresión LZ4"
 
 
 def phase_text(phase: str) -> str:
@@ -84,7 +87,7 @@ def row_subtitle(status: Lz4Status) -> str:
         status (Lz4Status): Estado leído.
 
     Returns:
-        str: Por ejemplo ``"LZ4 en la PS5 · Comprimiendo (LZ4)"``.
+        str: Por ejemplo ``"LZ4 en la PS5 · Comprimiendo"``.
     """
     phase = phase_text(status.phase)
     if not phase or status.waiting or not status.is_active:
@@ -108,6 +111,26 @@ def row_progress(status: Lz4Status) -> TransferProgress:
                                      f"{format_size(status.bytes_total)}")
 
 
+def waiting_status(status: Lz4Status) -> RowStatus | None:
+    """Describe una espera sin avance: montaje de la imagen o juego abierto en la PS5.
+
+    Con el juego abierto, exfat2ampr pausa la conversión y la reanuda solo al
+    cerrarlo, así que no se ofrece «Reanudar» (sigue «Cancelar»).
+
+    Args:
+        status (Lz4Status): Estado leído.
+
+    Returns:
+        RowStatus | None: Píldora de espera, o ``None`` si la conversión avanza.
+    """
+    if resumes_by_itself(status):
+        return RowStatus("wait", GAME_PAUSE_TEXT, "")
+    if status.waiting:
+        detail = code_text(status.code) if status.code else _WAITING_DETAIL
+        return RowStatus("wait", WAITING_TEXT, detail)
+    return None
+
+
 def queued_text(position: int) -> str:
     """Describe una conversión recién aceptada por exfat2ampr.
 
@@ -115,27 +138,26 @@ def queued_text(position: int) -> str:
         position (int): Lugar en la cola (``0`` = empieza ya).
 
     Returns:
-        str: ``"Iniciando…"`` o ``"En cola de exfat2ampr (N por delante)"``.
+        str: ``"Iniciando…"`` o ``"En cola (N por delante)"``.
     """
-    return STARTING_TEXT if position <= 0 else f"En cola de exfat2ampr ({position} por delante)"
+    return STARTING_TEXT if position <= 0 else f"En cola ({position} por delante)"
 
 
-def code_text(code: str, message: str) -> str:
-    """Traduce el código de resultado o de pausa de exfat2ampr.
+def code_text(code: str) -> str:
+    """Traduce el código de resultado o de pausa de exfat2ampr a una frase corta.
 
     Args:
         code (str): Por ejemplo ``"verify_failed"`` o ``"paused_full"``.
-        message (str): Detalle en inglés de exfat2ampr (respaldo para códigos desconocidos).
 
     Returns:
-        str: Explicación en español neutro.
+        str: Explicación en español neutro (una genérica si el código es desconocido; el
+        código y el detalle en inglés quedan en el registro).
     """
     if code in _RESULT_CODES:
         return _RESULT_CODES[code]
     if code in CHECK_ERROR_CODES:
         return check_error_text(code)
-    detail = message.strip() or code.strip() or "motivo desconocido"
-    return f"exfat2ampr se detuvo ({detail})."
+    return _UNKNOWN_RESULT
 
 
 def result_status(status: Lz4Status) -> RowStatus:
@@ -148,14 +170,12 @@ def result_status(status: Lz4Status) -> RowStatus:
         RowStatus: Tipo de píldora, texto y detalle.
     """
     if status.state is Lz4JobState.DONE:
-        extra = f" {code_text(status.code, '')}" if status.code == "done_fakelib" else ""
-        return RowStatus("ok", "✓ Comprimido", f"Quedó en {status.dest}.{extra}".strip())
+        return RowStatus("ok", "✓ Comprimido", f"Quedó en {status.dest}.")
     if status.state is Lz4JobState.CANCELLED:
-        return RowStatus("warn", "Cancelado", "exfat2ampr borró la carpeta a medias; el "
-                                              "original sigue intacto.")
+        return RowStatus("warn", "Cancelado", "El original sigue intacto.")
     if status.state is Lz4JobState.PAUSED:
-        return RowStatus("warn", "En pausa", code_text(status.code or "paused_user", ""))
-    return RowStatus("bad", "Error", code_text(status.code, status.message))
+        return RowStatus("warn", "En pausa", code_text(status.code or "paused_user"))
+    return RowStatus("bad", "Error", code_text(status.code))
 
 
 def failed_status(message: str) -> RowStatus:
@@ -209,5 +229,5 @@ def cancel_confirmation(dest: str) -> str:
         str: Pregunta con la ruta exacta que se borrará.
     """
     where = dest or "la carpeta de salida"
-    return (f"Si cancelas, exfat2ampr BORRARÁ de la PS5 la carpeta a medias:\n\n{where}\n\n"
-            "El juego original no se toca. ¿Cancelar la compresión?")
+    return (f"Se borrará lo comprimido hasta ahora:\n\n{where}\n\n"
+            "El original no se toca. ¿Cancelar la compresión?")

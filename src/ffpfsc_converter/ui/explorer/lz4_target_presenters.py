@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ffpfsc_converter.config import E2A_HTTP_PORT
 from ffpfsc_converter.domain.lz4 import Lz4Destination, Lz4Request
 from ffpfsc_converter.formatting import format_size
 
@@ -68,7 +67,7 @@ def summary_lines(request: Lz4Request, replaces: bool) -> list[str]:
     verb = "Se REEMPLAZARÁ" if replaces and request.overwrite else "Se creará"
     lines = [f"{verb} {request.output_path}"]
     if request.remove_source:
-        lines.append(f"Se BORRARÁ de la PS5 al terminar bien: {request.source.path}")
+        lines.append(f"Se BORRARÁ el original al terminar: {request.source.path}")
     else:
         lines.append(f"Se conserva el original: {request.source.path}")
     return lines
@@ -83,24 +82,20 @@ def remove_confirmation(request: Lz4Request) -> str:
     Returns:
         str: Pregunta con las rutas exactas.
     """
-    return (f"Cuando la conversión termine bien, exfat2ampr BORRARÁ de la PS5:\n\n"
-            f"{request.source.path}\n\nEl juego quedará solo en:\n{request.output_path}\n\n"
-            "Esta acción no se puede deshacer. ¿Continuar?")
+    return (f"Al terminar se BORRARÁ de la PS5:\n\n{request.source.path}\n\n"
+            f"El juego quedará solo en:\n{request.output_path}\n\n"
+            "No se puede deshacer. ¿Continuar?")
 
 
-def pairing_text(host: str, retry: bool) -> str:
-    """Explica dónde ver el código de emparejamiento de exfat2ampr.
+def pairing_text(retry: bool) -> str:
+    """Pide el código de emparejamiento de exfat2ampr.
 
     Args:
-        host (str): Dirección de la PS5.
         retry (bool): ``True`` si el código anterior fue incorrecto.
 
     Returns:
-        str: Instrucciones para la ventana de emparejamiento.
+        str: Instrucción breve para la ventana de emparejamiento.
     """
-    where = (f"La PS5 muestra una notificación de exfat2ampr con su dirección "
-             f"(http://{host}:{E2A_HTTP_PORT}/) y un código de 6 dígitos («code …»).")
     if retry:
-        return f"El código no era correcto.\n{where}\nEscríbelo de nuevo:"
-    return f"{where}\nEscríbelo aquí para vincular esta app (se recuerda):"
-
+        return "Código incorrecto. Escribe el de la notificación de la PS5:"
+    return "Escribe el código de 6 dígitos que muestra la notificación de la PS5:"

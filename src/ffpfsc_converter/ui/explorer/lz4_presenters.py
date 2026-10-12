@@ -15,45 +15,37 @@ LZ4_SHORT_TEXT = "LZ4…"
 LZ4_TITLE = "Comprimir LZ4 en la PS5"
 #: Aviso de ``/api/check`` cuando ya hay una conversión del juego en el destino.
 ALREADY_EXISTS = "already_exists"
-ENGINE_LAUNCHED_TEXT = "exfat2ampr se inició: mira la notificación de la PS5 con el código."
-SELECT_ONE_TEXT = "Selecciona UNA carpeta de juego o una imagen .exfat / .ffpkg."
-LZ4_BUSY_TEXT = "Ya hay una compresión LZ4 en curso en la PS5: espera a que termine."
-OVERWRITE_NEEDED_TEXT = ("Ya hay una conversión de este juego en el destino: activa «Reemplazar "
-                         "la conversión anterior» o elige otra unidad.")
-REPAIR_TEXT = ("exfat2ampr pidió emparejar la app de nuevo. Vuelve a elegir el juego y pulsa "
-               f"«{LZ4_ACTION_TEXT}»: se te pedirá el código.")
+ENGINE_LAUNCHED_TEXT = "Iniciando exfat2ampr en la PS5…"
+SELECT_ONE_TEXT = "Selecciona un solo juego (carpeta o imagen)."
+LZ4_BUSY_TEXT = "Ya hay una compresión en curso. Espera a que termine."
+OVERWRITE_NEEDED_TEXT = "Ya está comprimido en esta unidad. Activa «Reemplazar» o elige otra."
+REPAIR_TEXT = f"Hay que volver a emparejar. Pulsa «{LZ4_ACTION_TEXT}» otra vez."
 ELF_REQUIRED_TEXT = (
-    "exfat2ampr no responde en la PS5. La app puede cargarlo por ti, pero necesita el archivo "
-    "exfat2ampr.elf, que no viene incluido.\n\nDescárgalo de la página de exfat2ampr (enlace "
-    "abajo) y elígelo: la app lo recordará y lo enviará al cargador de ELF de la PS5 (etaHEN) "
-    "cuando haga falta.")
+    "Para comprimir en la PS5 hace falta exfat2ampr, que no viene con la app.\n\n"
+    "Descarga exfat2ampr.elf del enlace y elígelo. La app lo recordará.")
+_UNKNOWN_ERROR_TEXT = "No se puede comprimir este juego."
 
 _CHECK_ERRORS = {
-    "source_missing": "exfat2ampr ya no encuentra el juego en la PS5.",
-    "not_game": "exfat2ampr no reconoce un juego de PS5 en esa ruta.",
-    "not_ampr": "El juego no usa libSceAmpr: comprimirlo en LZ4 lo dañaría.",
-    "game_running": "El juego está abierto en la PS5: ciérralo antes de convertirlo.",
+    "source_missing": "El juego ya no está en la PS5.",
+    "not_game": "No es un juego de PS5.",
+    "not_ampr": "Este juego no es compatible.",
+    "game_running": "El juego está abierto en la PS5: ciérralo.",
     "dest_missing": "La unidad de destino no está conectada.",
-    "dest_readonly": "La unidad de destino no admite escritura.",
+    "dest_readonly": "No se puede escribir en la unidad de destino.",
     "space_insufficient": "No hay espacio suficiente en la unidad de destino.",
 }
 #: Códigos de error de ``/api/check`` (exfat2ampr usa los mismos al fallar una conversión).
 CHECK_ERROR_CODES = frozenset(_CHECK_ERRORS)
 #: Errores que dependen de la unidad elegida (con otra unidad pueden no aplicar).
 _DEST_ERRORS = frozenset({"dest_missing", "dest_readonly", "space_insufficient"})
+#: Avisos que se muestran; el resto (``fakelib_disabled``, ``ampr_unknown``, códigos
+#: nuevos…) no exige nada al usuario y solo queda en el registro.
 _CHECK_WARNINGS = {
-    "fakelib_disabled": "El fakelib del juego está desactivado en ShadowMountPlus: se cambiará "
-                        "a «Emuladores» para que cargue el emulador AMPR.",
-    "smp_wait_app": "Empezará cuando cierres la aplicación abierta en la PS5 (regla de "
-                    "ShadowMountPlus).",
-    "smp_wait_game": "Empezará cuando cierres el juego abierto en la PS5 (regla de "
-                     "ShadowMountPlus).",
-    "already_ampr": "El origen ya está en formato AMPR.",
-    "space_low": "Espacio justo: si la unidad se llena, la conversión queda en pausa.",
-    ALREADY_EXISTS: "Ya hay una conversión de este juego en el destino.",
+    "smp_wait_app": "Empezará cuando cierres la aplicación abierta en la PS5.",
+    "smp_wait_game": "Empezará cuando cierres el juego abierto en la PS5.",
+    "already_ampr": "Este juego ya está comprimido.",
+    "space_low": "Espacio justo: si se llena, la compresión se pausará.",
 }
-#: Avisos que ya explica otra parte de la ventana.
-_HIDDEN_WARNINGS = frozenset({"ampr_unknown", ALREADY_EXISTS})
 
 
 @dataclass(frozen=True)
@@ -72,16 +64,12 @@ class CompatInfo:
 
 
 _COMPAT = {
-    Lz4Compat.YES: CompatInfo("ok", "✓ Compatible: el juego usa libSceAmpr.", True),
+    Lz4Compat.YES: CompatInfo("ok", "✓ Compatible", True),
     Lz4Compat.UNKNOWN: CompatInfo(
-        "warn", "No se pudo comprobar la compatibilidad (eboot cifrado). Prueba el juego "
-                "antes de borrar el original.", True),
-    Lz4Compat.LATER: CompatInfo(
-        "warn", "La compatibilidad se comprobará al empezar, al montar la imagen. Si no es "
-                "compatible, exfat2ampr se detendrá sin tocar el original.", True),
-    Lz4Compat.NO: CompatInfo(
-        "bad", "No es compatible: el juego no usa libSceAmpr y comprimirlo lo dañaría. No se "
-               "puede convertir.", False),
+        "warn", "Compatibilidad sin confirmar: prueba el juego antes de borrar el original.",
+        True),
+    Lz4Compat.LATER: CompatInfo("warn", "La compatibilidad se comprobará al empezar.", True),
+    Lz4Compat.NO: CompatInfo("bad", "✗ No compatible", False),
 }
 
 
@@ -104,9 +92,9 @@ def check_error_text(code: str) -> str:
         code (str): Por ejemplo ``"game_running"``.
 
     Returns:
-        str: Motivo en español neutro (el código mismo si es desconocido).
+        str: Motivo en español neutro (uno genérico si el código es desconocido).
     """
-    return _CHECK_ERRORS.get(code, f"exfat2ampr no puede convertir el juego ({code}).")
+    return _CHECK_ERRORS.get(code, _UNKNOWN_ERROR_TEXT)
 
 
 def warning_lines(check: Lz4Check) -> list[str]:
@@ -116,25 +104,27 @@ def warning_lines(check: Lz4Check) -> list[str]:
         check (Lz4Check): Comprobación previa.
 
     Returns:
-        list[str]: Un texto por aviso, sin los que ya explica la compatibilidad.
+        list[str]: Un texto por aviso que le sirve al usuario (los demás se omiten).
     """
-    return [_CHECK_WARNINGS.get(code, f"Aviso de exfat2ampr: {code}.")
-            for code in check.warnings if code not in _HIDDEN_WARNINGS]
+    return [_CHECK_WARNINGS[code] for code in check.warnings if code in _CHECK_WARNINGS]
 
 
-def replaces_existing(check: Lz4Check, checked_dest: str, chosen_dest: str) -> bool:
-    """Indica si ya hay una conversión del juego en la unidad elegida.
+def replaces_existing(check: Lz4Check, checked_dest: str, request: Lz4Request) -> bool:
+    """Indica si ya hay una conversión del juego donde se guardará la nueva.
+
+    exfat2ampr comprueba ``<destino>/<TITLE_ID>``; si la salida usa otro nombre (porque
+    esa ruta es el propio original), su aviso no aplica.
 
     Args:
         check (Lz4Check): Comprobación previa.
         checked_dest (str): Destino contra el que se hizo la comprobación.
-        chosen_dest (str): Destino elegido en la ventana.
+        request (Lz4Request): Conversión elegida en la ventana.
 
     Returns:
-        bool: ``True`` si exfat2ampr avisó ``already_exists`` para ese mismo destino.
+        bool: ``True`` si exfat2ampr avisó ``already_exists`` para esa misma carpeta.
     """
-    return (ALREADY_EXISTS in check.warnings
-            and checked_dest.rstrip("/") == chosen_dest.rstrip("/"))
+    return (ALREADY_EXISTS in check.warnings and not request.name
+            and checked_dest.rstrip("/") == request.dest_base.rstrip("/"))
 
 
 def start_blockers(check: Lz4Check, checked_dest: str, request: Lz4Request) -> list[str]:
@@ -157,7 +147,7 @@ def start_blockers(check: Lz4Check, checked_dest: str, request: Lz4Request) -> l
     compat = compat_info(check.compatible)
     if not compat.can_start and not errors:
         errors.append(compat.text)
-    if replaces_existing(check, checked_dest, request.dest_base) and not request.overwrite:
+    if replaces_existing(check, checked_dest, request) and not request.overwrite:
         errors.append(OVERWRITE_NEEDED_TEXT)
     return errors
 
@@ -172,7 +162,7 @@ def rejection_text(check: Lz4Check) -> str:
         str: Encabezado y un motivo por línea.
     """
     reasons = "\n".join(f"• {check_error_text(code)}" for code in check.errors)
-    return f"exfat2ampr no puede iniciar la conversión:\n\n{reasons}"
+    return f"No se pudo empezar:\n\n{reasons}"
 
 
 def game_text(source: Lz4Source) -> str:
@@ -197,7 +187,7 @@ def size_text(check: Lz4Check) -> str:
         check (Lz4Check): Comprobación previa.
 
     Returns:
-        str: Por ejemplo ``"Juego: 48.0 GB · necesita ≈ 30.0 GB (hasta 48.0 GB)"``.
+        str: Por ejemplo ``"Ocupa 48.0 GB · necesita unos 30.0 GB libres"``.
     """
-    return (f"Juego: {format_size(check.source_bytes)} · necesita ≈ "
-            f"{format_size(check.need_typical)} (hasta {format_size(check.need_max)})")
+    return (f"Ocupa {format_size(check.source_bytes)} · necesita unos "
+            f"{format_size(check.need_typical)} libres")

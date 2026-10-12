@@ -22,7 +22,7 @@ from ffpfsc_converter.services.lz4_engine import build_plan, launch_engine, reac
 from ffpfsc_converter.services.lz4_messages import PAIR_BLOCKED_TEXT
 from ffpfsc_converter.services.lz4_plan import normalize_remote
 from ffpfsc_converter.services.lz4_tracking import FollowerRegistry
-from ffpfsc_converter.services.lz4_watch import WatchTarget
+from ffpfsc_converter.services.lz4_watch import WatchTarget, is_ongoing
 
 
 class Lz4Flows:
@@ -137,5 +137,5 @@ class Lz4Flows:
             status = client.state()
         except (OSError, E2aHttpError):
             return
-        if status.is_active:
+        if is_ongoing(status):
             self._followers.follow(host, client, WatchTarget(status.title_id))

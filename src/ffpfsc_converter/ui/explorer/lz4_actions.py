@@ -27,8 +27,8 @@ if TYPE_CHECKING:  # evita la importación circular con el controlador
     from ffpfsc_converter.ui.explorer.controller import ExplorerController
 
 _ENGINE_NAME = "exfat2ampr"
-_PREPARING_TEXT = "Preparando la compresión LZ4 en la PS5…"
-_PAIRING_TEXT = "Emparejando con exfat2ampr…"
+_PREPARING_TEXT = "Preparando la compresión…"
+_PAIRING_TEXT = "Emparejando…"
 
 
 class Lz4Actions:
@@ -106,7 +106,7 @@ class Lz4Actions:
         if not event.entry_path:
             dialogs.show_info(REPAIR_TEXT)
             return
-        message = pairing_text(event.host, event.retry)
+        message = pairing_text(event.retry)
         code = PairingDialog(self._ctl.view, self._ctl.theme, _ENGINE_NAME, message).ask()
         if not code:
             return
@@ -176,11 +176,14 @@ class Lz4Actions:
     def show_status(self, text: str) -> None:
         """Muestra un estado en la barra de conexión (si no hay una escritura en curso).
 
+        Se marca como operación en curso: es la única forma de que el texto se vea
+        (en la píldora de la conexión y en la tarjeta de la barra lateral).
+
         Args:
             text (str): Estado a mostrar.
         """
         if self._ctl.view.is_browsing_enabled:
-            self._ctl.view.connection.set_state(True, text)
+            self._ctl.view.connection.set_state(True, text, busy=True)
 
     def restore_status(self) -> None:
         """Vuelve a mostrar la conexión y la carpeta abierta en la barra de conexión."""

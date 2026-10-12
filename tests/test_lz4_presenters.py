@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 
+from ffpfsc_converter.config import E2A_PAUSED_GAME_CODE
 from ffpfsc_converter.domain.lz4 import (
     Lz4Check,
     Lz4Compat,
@@ -51,11 +53,12 @@ def test_compat_texts() -> None:
 
 
 def test_check_codes_are_translated() -> None:
-    """Traduce errores y avisos de /api/check; los desconocidos muestran el código."""
+    """Traduce errores y avisos de /api/check; los códigos técnicos o nuevos no se muestran."""
     assert "ciérralo" in lp.check_error_text("game_running")
-    assert "raro" in lp.check_error_text("raro")
-    lines = lp.warning_lines(_check(warnings=("space_low", "ampr_unknown", "nuevo")))
-    assert len(lines) == 2 and "pausa" in lines[0] and "nuevo" in lines[1]
+    assert lp.check_error_text("raro") == "No se puede comprimir este juego."
+    codes = ("space_low", "ampr_unknown", "fakelib_disabled", "nuevo")
+    assert lp.warning_lines(_check(warnings=codes)) == [
+        "Espacio justo: si se llena, la compresión se pausará."]
 
 
 def test_start_blockers_depend_on_destination() -> None:
@@ -76,8 +79,10 @@ def test_incompatible_game_cannot_start() -> None:
 def test_existing_output_needs_overwrite() -> None:
     """Si ya existe la conversión en el destino, hay que activar el reemplazo."""
     check = _check(warnings=(lp.ALREADY_EXISTS,))
-    assert lp.replaces_existing(check, "/data/homebrew", "/data/homebrew") is True
-    assert lp.replaces_existing(check, "/data/homebrew", "/mnt/usb0/homebrew") is False
+    assert lp.replaces_existing(check, "/data/homebrew", _request()) is True
+    assert lp.replaces_existing(check, "/data/homebrew", _request("/mnt/usb0/homebrew")) is False
+    renamed = replace(_request(), name="PPSA01234-LZ4")  # el aviso era por el propio original
+    assert lp.replaces_existing(check, "/data/homebrew", renamed) is False
     assert lp.start_blockers(check, "/data/homebrew", _request()) == [lp.OVERWRITE_NEEDED_TEXT]
     assert lp.start_blockers(check, "/data/homebrew", _request(overwrite=True)) == []
 
@@ -85,11 +90,11 @@ def test_existing_output_needs_overwrite() -> None:
 def test_rejection_and_game_texts() -> None:
     """Enumera los motivos del rechazo y resume el juego y su tamaño."""
     text = lp.rejection_text(_check(errors=("not_ampr", "dest_readonly")))
-    assert text.count("•") == 2 and "libSceAmpr" in text
+    assert text.count("•") == 2 and "no es compatible" in text and "libSceAmpr" not in text
     assert lp.game_text(_SOURCE) == "Astro Bot · PPSA01234 · versión 01.000"
     untitled = Lz4Source("/x", "image", "PPSA01234", "", "")
     assert lp.game_text(untitled) == "PPSA01234"
-    assert lp.size_text(_check()) == "Juego: 48.0 GB · necesita ≈ 30.0 GB (hasta 48.0 GB)"
+    assert lp.size_text(_check()) == "Ocupa 48.0 GB · necesita unos 30.0 GB libres"
 
 
 def test_destination_labels() -> None:
@@ -113,43 +118,42 @@ def test_summary_shows_exact_paths() -> None:
     assert keep[0] == "Se creará /data/homebrew/PPSA01234" and "conserva" in keep[1]
     remove = tp.summary_lines(_request(remove=True, overwrite=True), replaces=True)
     assert remove[0] == "Se REEMPLAZARÁ /data/homebrew/PPSA01234"
-    assert remove[1] == "Se BORRARÁ de la PS5 al terminar bien: /data/homebrew/PPSA01234"
+    assert remove[1] == "Se BORRARÁ el original al terminar: /data/homebrew/PPSA01234"
     question = tp.remove_confirmation(_request("/mnt/usb0/homebrew", remove=True))
     assert "/data/homebrew/PPSA01234" in question and "/mnt/usb0/homebrew/PPSA01234" in question
 
 
 def test_pairing_text() -> None:
-    """Indica dónde ver el código y avisa si el anterior fue incorrecto."""
-    assert "http://10.0.0.2:6972/" in tp.pairing_text("10.0.0.2", retry=False)
-    assert tp.pairing_text("10.0.0.2", retry=True).startswith("El código no era correcto")
+    """Pide el código de la notificación y avisa si el anterior fue incorrecto."""
+    assert "notificación de la PS5" in tp.pairing_text(retry=False)
+    assert tp.pairing_text(retry=True).startswith("Código incorrecto")
 
 
 def test_row_texts() -> None:
     """Prepara la fase, la barra y la cola de la fila."""
     running = Lz4Status(Lz4JobState.RUNNING, "pack", 42, 20 * GB, 48 * GB, title="Astro Bot")
-    assert sp.row_subtitle(running) == "LZ4 en la PS5 · Comprimiendo (LZ4)"
+    assert sp.row_subtitle(running) == "LZ4 en la PS5 · Comprimiendo"
     assert sp.row_subtitle(Lz4Status(Lz4JobState.DONE, "done")) == sp.ROW_SUBTITLE
     assert sp.row_progress(running) == (42.0, "42% · 20.0 GB de 48.0 GB")
     assert sp.row_progress(Lz4Status(Lz4JobState.RUNNING, percent=150)) == (100.0, "100%")
     assert sp.phase_text("nueva") == "nueva"
     assert sp.queued_text(0) == sp.STARTING_TEXT and "2 por delante" in sp.queued_text(2)
     assert sp.job_name(running) == "Astro Bot"
-    assert sp.job_name(Lz4Status(Lz4JobState.RUNNING)) == "exfat2ampr"
+    assert sp.job_name(Lz4Status(Lz4JobState.RUNNING)) == "Compresión LZ4"
 
 
 def test_result_status() -> None:
     """Resume el resultado: terminado, cancelado, en pausa o con error."""
     done = Lz4Status(Lz4JobState.DONE, code="done_fakelib", dest="/data/homebrew/PPSA01234")
     ok = sp.result_status(done)
-    assert ok.kind == "ok" and ok.detail.startswith("Quedó en /data/homebrew/PPSA01234.")
-    assert "Emuladores" in ok.detail
+    assert ok == ("ok", "✓ Comprimido", "Quedó en /data/homebrew/PPSA01234.")
     assert sp.result_status(Lz4Status(Lz4JobState.CANCELLED)).kind == "warn"
     paused = Lz4Status(Lz4JobState.PAUSED, code="paused_full", dest="/d/X", resumable=True)
-    assert sp.result_status(paused).detail == sp.code_text("paused_full", "")
+    assert sp.result_status(paused).detail == sp.code_text("paused_full")
     assert sp.can_resume(paused) and not sp.can_resume(done)
     failed = sp.result_status(Lz4Status(Lz4JobState.ERROR, code="not_ampr"))
-    assert failed.kind == "bad" and "libSceAmpr" in failed.detail
-    assert "disk on fire" in sp.code_text("raro", "disk on fire")
+    assert failed == ("bad", "Error", "Este juego no es compatible.")
+    assert "Registros" in sp.code_text("raro")
     assert sp.failed_status("\nSin red.\nMás") == ("bad", "Error", "Sin red.")
     assert "/d/X" in sp.cancel_confirmation("/d/X")
 
@@ -166,3 +170,14 @@ def test_finish_notification_and_journal() -> None:
     assert started is not None and "/data/homebrew/PPSA01234" in started.text
     pairing = journal_line(Lz4PairingRequired("h", "/data/homebrew/PPSA01234", retry=True))
     assert pairing is not None and pairing.level == logging.INFO
+
+
+def test_waiting_status() -> None:
+    """La pausa por el juego abierto y la espera del montaje se muestran como espera."""
+    game = Lz4Status(Lz4JobState.PAUSED, code=E2A_PAUSED_GAME_CODE, dest="/d/X", resumable=True)
+    assert sp.waiting_status(game) == ("wait", "En pausa: se reanudará al cerrar el juego", "")
+    mount = sp.waiting_status(Lz4Status(Lz4JobState.RUNNING, waiting=True, code="smp_busy"))
+    assert mount == ("wait", sp.WAITING_TEXT, sp.code_text("smp_busy"))
+    assert sp.waiting_status(Lz4Status(Lz4JobState.RUNNING, waiting=True)).detail
+    assert sp.waiting_status(Lz4Status(Lz4JobState.RUNNING, percent=5)) is None
+    assert sp.waiting_status(Lz4Status(Lz4JobState.PAUSED, code="paused_user")) is None

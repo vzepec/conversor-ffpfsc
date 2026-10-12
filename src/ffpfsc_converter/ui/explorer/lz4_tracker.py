@@ -18,15 +18,14 @@ from ffpfsc_converter.ui.explorer.lz4_status_presenters import (
     RESUME_TEXT,
     RESUMING_TEXT,
     ROW_SUBTITLE,
-    WAITING_TEXT,
     can_resume,
     cancel_confirmation,
-    code_text,
     failed_status,
     queued_text,
     result_status,
     row_progress,
     row_subtitle,
+    waiting_status,
 )
 from ffpfsc_converter.ui.explorer.presenters import speed_text
 from ffpfsc_converter.ui.explorer.transfer_panel import TransferPanel
@@ -89,7 +88,7 @@ class Lz4Tracker:
         self._panel.refresh()
 
     def update(self, status: Lz4Status) -> None:
-        """Muestra la fase, la barra, la velocidad y el tiempo restante.
+        """Muestra la fase, la barra, la velocidad y el tiempo restante (o la espera).
 
         Args:
             status (Lz4Status): Estado leído de exfat2ampr.
@@ -97,9 +96,9 @@ class Lz4Tracker:
         row = self._row()
         self._dest = status.dest or self._dest
         row.set_subtitle(row_subtitle(status))
-        if status.waiting:
-            row.set_state("wait", WAITING_TEXT, code_text(status.code, status.message)
-                          if status.code else "", active=True)
+        waiting = waiting_status(status)
+        if waiting is not None:
+            row.set_state(*waiting, active=True)
         else:
             row.set_progress(row_progress(status), speed_text(status.speed_bps),
                              format_eta(status.eta_seconds))

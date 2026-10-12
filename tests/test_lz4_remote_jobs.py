@@ -103,7 +103,7 @@ def test_engine_rejection_is_translated(tmp_path: Path) -> None:
     harness = make_harness(tmp_path, engine)
     harness.remote.start(HOST, REQUEST).join(_JOIN)
     assert harness.kinds() == [Lz4Failed]
-    assert "cola llena" in harness.events[0].message  # type: ignore[attr-defined]
+    assert "en espera" in harness.events[0].message  # type: ignore[attr-defined]
 
 
 def test_pause_and_cancel_send_orders(tmp_path: Path) -> None:

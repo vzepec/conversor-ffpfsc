@@ -11,7 +11,7 @@ from ffpfsc_converter.domain.lz4 import Lz4JobState, Lz4Request
 from ffpfsc_converter.infrastructure.exfat2ampr import E2aClient, E2aHttpError
 
 TIMEOUT = 2.0
-OUTPUT = f"{DEST_INTERNAL.base}/{GAME_OK.title_id}"
+OUTPUT = f"{DEST_INTERNAL.base}/{GAME_OK.title_id}-LZ4"
 
 
 @pytest.fixture
@@ -31,9 +31,20 @@ def client(engine: FakeE2aEngine) -> E2aClient:
 def _start(client: E2aClient) -> Lz4Request:
     """Pide la conversión del juego compatible al almacenamiento interno."""
     source = next(s for s in client.sources() if s.path == GAME_OK.path)
-    request = Lz4Request(source, DEST_INTERNAL.base, level=9, verify=True, remove_source=False)
+    request = Lz4Request(source, DEST_INTERNAL.base, level=9, verify=True, remove_source=False,
+                         name=f"{GAME_OK.title_id}-LZ4")
     client.start(request)
     return request
+
+
+def test_output_over_the_original_fails_without_deleting(engine: FakeE2aEngine,
+                                                         client: E2aClient) -> None:
+    """Si ``<destino>/<TITLE_ID>`` es el propio juego, el motor falla con ``dest_is_source``."""
+    source = next(s for s in client.sources() if s.path == GAME_OK.path)
+    client.start(Lz4Request(source, DEST_INTERNAL.base, 9, True, False))
+    status = client.state()
+    assert status.state is Lz4JobState.ERROR and status.code == "dest_is_source"
+    assert GAME_OK.path in engine.console.games
 
 
 def test_state_idle_then_running(engine: FakeE2aEngine, client: E2aClient) -> None:

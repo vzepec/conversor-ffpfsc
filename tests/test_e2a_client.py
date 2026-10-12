@@ -131,9 +131,19 @@ def test_start_sends_form_fields(engine: FakeE2aEngine, client: E2aClient) -> No
                            "verify": "1", "remove": "0", "overwrite": "1"}
 
 
+def test_start_sends_custom_name(engine: FakeE2aEngine, client: E2aClient) -> None:
+    """Con ``name`` la salida va a ``<destino>/<name>`` en vez de ``<destino>/<TITLE_ID>``."""
+    request = Lz4Request(_source(client, GAME_OK.path), DEST_INTERNAL.base, 9, True, False,
+                         name="PPSA01234-LZ4")
+    client.start(request)
+    assert engine.last("/api/start").params["name"] == "PPSA01234-LZ4"
+    assert client.state().dest == request.output_path == "/data/homebrew/PPSA01234-LZ4"
+
+
 def test_start_image_and_queue(engine: FakeE2aEngine, client: E2aClient) -> None:
     """Una imagen manda ``smp``; con una conversión en curso la nueva queda en cola."""
-    client.start(Lz4Request(_source(client, GAME_OK.path), DEST_INTERNAL.base, 9, True, False))
+    client.start(Lz4Request(_source(client, GAME_OK.path), DEST_INTERNAL.base, 9, True, False,
+                            name=f"{GAME_OK.title_id}-LZ4"))
     image = Lz4Request(_source(client, GAME_IMAGE.path), DEST_INTERNAL.base, 1, False, True)
     assert client.start(image) == 1
     assert engine.last("/api/start").params["smp"] == GAME_IMAGE.smp_title

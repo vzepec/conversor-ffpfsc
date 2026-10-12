@@ -5,6 +5,9 @@ siguiente conversión, así que justo después de ``/api/start`` puede verse
 todavía el resultado anterior: solo se da por terminada la conversión seguida
 cuando antes se la vio en marcha, o cuando el resultado coincide con ella y ya
 pasó un margen prudente.
+
+Una pausa por abrir en la PS5 el juego que se convierte (``paused_game``) no es
+un final: exfat2ampr la reanuda solo al cerrarlo, así que se sigue esperando.
 """
 from __future__ import annotations
 
@@ -12,6 +15,7 @@ import threading
 from dataclasses import dataclass
 
 from ffpfsc_converter.config import (
+    E2A_PAUSED_GAME_CODE,
     E2A_POLL_MAX_FAILURES,
     E2A_POLL_SECONDS,
     E2A_STALE_GRACE_SECONDS,
@@ -20,12 +24,36 @@ from ffpfsc_converter.domain.lz4 import Lz4JobState, Lz4Request, Lz4Status
 from ffpfsc_converter.domain.lz4_events import Lz4Finished, Lz4Progress
 from ffpfsc_converter.errors import Lz4EngineError
 from ffpfsc_converter.services.lz4_deps import Lz4Client, Lz4Deps, Lz4Sink
-from ffpfsc_converter.services.lz4_messages import connection_lost_text
+from ffpfsc_converter.services.lz4_messages import CONNECTION_LOST_TEXT
 from ffpfsc_converter.services.lz4_plan import normalize_remote
 
 _TERMINAL_STATES = frozenset({
     Lz4JobState.DONE, Lz4JobState.ERROR, Lz4JobState.CANCELLED, Lz4JobState.PAUSED,
 })
+
+
+def resumes_by_itself(status: Lz4Status) -> bool:
+    """Indica si la conversión está en pausa porque se abrió el juego y se reanudará sola.
+
+    Args:
+        status (Lz4Status): Estado leído de exfat2ampr.
+
+    Returns:
+        bool: ``True`` si está en pausa con el código ``paused_game``.
+    """
+    return status.state is Lz4JobState.PAUSED and status.code == E2A_PAUSED_GAME_CODE
+
+
+def is_ongoing(status: Lz4Status) -> bool:
+    """Indica si la conversión sigue pendiente: en marcha, en cola o en pausa por el juego.
+
+    Args:
+        status (Lz4Status): Estado leído de exfat2ampr.
+
+    Returns:
+        bool: ``True`` si hay que seguir consultando su avance.
+    """
+    return status.is_active or resumes_by_itself(status)
 
 
 @dataclass(frozen=True)
@@ -95,6 +123,8 @@ class JobFollower:
     def run(self, target: WatchTarget) -> None:
         """Publica el avance hasta que la conversión termine, falle, se cancele o pause.
 
+        La pausa por abrir el juego se publica como avance y no termina el seguimiento.
+
         Args:
             target (WatchTarget): Conversión a seguir.
 
@@ -105,7 +135,7 @@ class JobFollower:
         has_seen_active = False
         while not self._stop.is_set():
             status = self._poll()
-            if status is not None and status.is_active:
+            if status is not None and is_ongoing(status):
                 has_seen_active = has_seen_active or target.matches(status)
                 self._emit(Lz4Progress(self._host, status))
             elif status is not None and self._is_final(status, target, has_seen_active, started):
@@ -127,7 +157,7 @@ class JobFollower:
         except OSError as exc:
             self._failures += 1
             if self._failures >= E2A_POLL_MAX_FAILURES:
-                raise Lz4EngineError(connection_lost_text(self._host)) from exc
+                raise Lz4EngineError(CONNECTION_LOST_TEXT) from exc
             return None
         self._failures = 0
         return status

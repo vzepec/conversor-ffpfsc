@@ -107,7 +107,7 @@ class JobRoutes:
         Returns:
             FakeReply: ``ok``.
         """
-        self.jobs.finish("cancelled", "user_cancel")
+        self.jobs.finish("cancelled", "cancelled")
         return FakeReply(200, _OK)
 
     def _retry(self, request: FakeRequest) -> FakeReply:

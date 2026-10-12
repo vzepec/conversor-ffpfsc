@@ -163,6 +163,8 @@ class E2aClient:
         params = _source_params(request.source, request.dest_base)
         params.update(level=str(request.level), verify=_flag(request.verify),
                       remove=_flag(request.remove_source), overwrite=_flag(request.overwrite))
+        if request.name:
+            params["name"] = request.name
         position = as_object(self._transport.post("/api/start", params)).get("position")
         return position if isinstance(position, int) and not isinstance(position, bool) else 0
 

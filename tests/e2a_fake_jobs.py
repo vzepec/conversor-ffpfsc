@@ -114,6 +114,9 @@ class JobBoard:
             job.stale_left -= 1
             return status_json(self.result, self.queue)
         if job is not None and job.state == "pending":
+            if _overlaps(job.dest, job.game.path):  # el real falla al empezar, sin borrar nada
+                self.finish("error", "dest_is_source")
+                return status_json(self.result, self.queue)
             job.state = "running"
         if job is not None and job.state == "running" and self.auto_step:
             self.advance(job.percent + self.auto_step)
@@ -165,7 +168,7 @@ class JobBoard:
     def pause(self) -> None:
         """Pausa la conversión actual dejando un punto de reanudación."""
         if self.current is not None and self.current.state in ("pending", "running"):
-            self.finish("paused", "user_pause")
+            self.finish("paused", "paused_user")
 
     def resume(self, dest: str) -> bool:
         """Reanuda la conversión en pausa cuya salida es ``dest``.
@@ -217,3 +220,17 @@ class JobBoard:
         return [{"dest": job.dest, "source": job.game.path, "name": job.game.title_id,
                  "stage": "pack", "source_available": True, "active": False,
                  "level": job.level}]
+
+
+def _overlaps(dest: str, source: str) -> bool:
+    """Indica si la salida es el origen, lo contiene o está dentro de él (``dest_is_source``).
+
+    Args:
+        dest (str): Carpeta de salida.
+        source (str): Carpeta o imagen de origen.
+
+    Returns:
+        bool: ``True`` si exfat2ampr rechazaría la conversión.
+    """
+    dest, source = dest.rstrip("/"), source.rstrip("/")
+    return dest == source or source.startswith(f"{dest}/") or dest.startswith(f"{source}/")

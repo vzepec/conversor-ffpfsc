@@ -165,6 +165,12 @@ Si cancelas o falla, al volver a intentarlo con el mismo juego:
 - Para escribir, la app reinicia el FTP con permiso de escritura **solo mientras
   dura la operación** y luego lo vuelve a dejar en solo lectura.
 
+## Comprimir LZ4 en la PS5 (experimental)
+
+**Comprimir LZ4 en la PS5…** convierte la carpeta o imagen seleccionada al formato
+AMPR LZ4 **dentro de la consola** con exfat2ampr (no viene incluido). Requisitos,
+emparejamiento, opciones y riesgos: **[LZ4.md](LZ4.md)**.
+
 ## Datos que guarda la app
 
 En `~/.config/ffpfsc-converter/` (Linux) o `%APPDATA%\ffpfsc-converter\` (Windows):

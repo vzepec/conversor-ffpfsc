@@ -164,6 +164,7 @@ class Lz4Request:
         verify (bool): ``True`` para decodificar y comprobar cada bloque al terminar.
         remove_source (bool): ``True`` para borrar el original tras una conversión correcta.
         overwrite (bool): ``True`` para reemplazar una conversión anterior del mismo juego.
+        name (str): Carpeta de salida dentro de ``dest_base``; vacío = el Title ID.
     """
 
     source: Lz4Source
@@ -172,15 +173,16 @@ class Lz4Request:
     verify: bool
     remove_source: bool
     overwrite: bool = False
+    name: str = ""
 
     @property
     def output_path(self) -> str:
-        """Calcula la carpeta que creará exfat2ampr (``<destino>/<TITLE_ID>``).
+        """Calcula la carpeta que creará exfat2ampr (``<destino>/<name o TITLE_ID>``).
 
         Returns:
             str: Ruta remota del juego convertido.
         """
-        return f"{self.dest_base.rstrip('/')}/{self.source.title_id}"
+        return f"{self.dest_base.rstrip('/')}/{self.name or self.source.title_id}"
 
 
 @dataclass(frozen=True)

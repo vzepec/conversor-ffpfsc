@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from ffpfsc_converter.config import LZ4_SEPARATE_NAME_SUFFIX
 from ffpfsc_converter.domain.lz4 import Lz4Destination, Lz4Source
 
 _MOUNT_ROOT = "mnt"
@@ -77,3 +78,24 @@ def suggest_destination(
     if internal is not None:
         return internal
     return max(writable, key=lambda d: d.free, default=None)
+
+
+def output_name(source: Lz4Source, dest_base: str) -> str:
+    """Elige el nombre de la carpeta de salida para no pisar el original.
+
+    exfat2ampr crea ``<destino>/<TITLE_ID>``; si esa ruta es el propio juego (o lo
+    contiene, o está dentro de él), la conversión fallaría, así que se usa otra carpeta.
+
+    Args:
+        source (Lz4Source): Juego a convertir.
+        dest_base (str): Carpeta de juegos de la unidad de destino.
+
+    Returns:
+        str: ``""`` para el nombre predeterminado (el Title ID), o
+        ``<TITLE_ID>-LZ4`` si el predeterminado choca con el original.
+    """
+    default = normalize_remote(f"{dest_base.rstrip('/')}/{source.title_id}")
+    original = normalize_remote(source.path)
+    clash = (default == original or original.startswith(f"{default}/")
+             or default.startswith(f"{original}/"))
+    return f"{source.title_id}{LZ4_SEPARATE_NAME_SUFFIX}" if clash else ""

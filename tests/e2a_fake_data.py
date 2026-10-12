@@ -192,8 +192,9 @@ def _check_codes(console: FakeConsoleData, game: FakeGame,
         errors.append("space_insufficient")
     elif dest.free < game.size:
         warnings.append("space_low")
-    if output_path(dest.base, game.title_id) in console.existing:
-        warnings.append("already_exists")
+    default = output_path(dest.base, game.title_id)
+    if default in console.existing or default == game.path.rstrip("/"):
+        warnings.append("already_exists")  # el real mira si la carpeta existe: el original cuenta
     return errors, warnings
 
 

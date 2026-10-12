@@ -141,12 +141,13 @@ E2A_POLL_SECONDS = 1.0
 E2A_POLL_MAX_FAILURES = 10
 #: Clave de los ajustes donde se guarda el token de emparejamiento por consola.
 E2A_TOKENS_KEY = "e2a_tokens"
-#: Modos de compresión LZ4: 1-4 rápido, 5-12 HC (más lento al comprimir, igual de rápido
-#: al leer); exfat2ampr recomienda HC 9.
+#: Modos de compresión LZ4: nivel 1 (rápido), HC 9 (el que recomienda exfat2ampr) y HC 12;
+#: los HC tardan más al comprimir pero se leen igual de rápido. La etiqueta larga es la
+#: explicación que la ventana muestra bajo el modo elegido.
 LZ4_PRESETS: tuple[CompressionPreset, ...] = (
-    CompressionPreset("Rápido (LZ4 1)", "Rápido", 1),
-    CompressionPreset("Equilibrado (LZ4 HC 9)", "Equilibrado", 9),
-    CompressionPreset("Máximo (LZ4 HC 12, lento)", "Máximo", 12),
+    CompressionPreset("Termina antes; ocupa algo más.", "Rápido", 1),
+    CompressionPreset("Recomendado.", "Equilibrado", 9),
+    CompressionPreset("Ocupa un poco menos; tarda bastante más.", "Máximo", 12),
 )
 DEFAULT_LZ4_PRESET = LZ4_PRESETS[1]
 #: Cada cuánto se pregunta si exfat2ampr ya responde tras enviarlo al cargador de ELF.
@@ -156,3 +157,9 @@ E2A_START_POLL_SECONDS = 1.0
 E2A_STALE_GRACE_SECONDS = 5.0
 #: Segundos de espera al enviar ``exfat2ampr.elf`` al cargador de ELF de la PS5.
 ELF_SEND_TIMEOUT_SECONDS = 15
+#: Código de pausa de exfat2ampr cuando se abre en la PS5 el juego que se convierte: el
+#: propio motor la reanuda al cerrarlo, así que la app sigue esperando sin pedir nada.
+E2A_PAUSED_GAME_CODE = "paused_game"
+#: Sufijo de la carpeta de salida cuando ``<destino>/<TITLE_ID>`` sería el propio original
+#: (juego ya en ``/data/homebrew`` comprimido a la misma unidad): exfat2ampr lo rechazaría.
+LZ4_SEPARATE_NAME_SUFFIX = "-LZ4"

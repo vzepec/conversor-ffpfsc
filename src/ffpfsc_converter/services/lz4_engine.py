@@ -13,10 +13,10 @@ from ffpfsc_converter.domain.lz4_events import Lz4EngineLaunched
 from ffpfsc_converter.errors import Lz4EngineError, Lz4EngineUnavailableError
 from ffpfsc_converter.services.lz4_deps import Lz4Client, Lz4Deps, Lz4Sink
 from ffpfsc_converter.services.lz4_messages import (
+    ELF_SEND_ERROR_TEXT,
+    LAUNCH_TIMEOUT_TEXT,
     NO_DESTINATION_TEXT,
-    elf_send_error_text,
-    launch_timeout_text,
-    source_missing_text,
+    SOURCE_MISSING_TEXT,
 )
 from ffpfsc_converter.services.lz4_plan import find_source, suggest_destination
 
@@ -54,7 +54,7 @@ def launch_engine(host: str, elf: Path, deps: Lz4Deps, emit: Lz4Sink) -> EngineI
     try:
         deps.elf_sender(host, elf)
     except OSError as exc:
-        raise Lz4EngineUnavailableError(elf_send_error_text(host)) from exc
+        raise Lz4EngineUnavailableError(ELF_SEND_ERROR_TEXT) from exc
     emit(Lz4EngineLaunched(host))
     return _wait_for_engine(host, deps)
 
@@ -80,7 +80,7 @@ def _wait_for_engine(host: str, deps: Lz4Deps) -> EngineInfo:
         if info is not None:
             return info
         if deps.clock() >= deadline:
-            raise Lz4EngineUnavailableError(launch_timeout_text(host))
+            raise Lz4EngineUnavailableError(LAUNCH_TIMEOUT_TEXT)
 
 
 def build_plan(client: Lz4Client, entry_path: str) -> Lz4Plan:
@@ -98,7 +98,7 @@ def build_plan(client: Lz4Client, entry_path: str) -> Lz4Plan:
     """
     source = find_source(client.sources(), entry_path)
     if source is None:
-        raise Lz4EngineError(source_missing_text(entry_path))
+        raise Lz4EngineError(SOURCE_MISSING_TEXT)
     destinations = tuple(client.destinations())
     destination = suggest_destination(destinations, source.path)
     if destination is None:

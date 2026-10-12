@@ -5,6 +5,17 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Añadido (experimental)
+- **Comprimir LZ4 en la PS5…** (sección PS5): convierte el juego seleccionado al
+  formato AMPR LZ4 dentro de la consola con
+  [exfat2ampr](https://github.com/ViiNCENZO10/exfat2ampr) 1.45, que no viene incluido:
+  la app pide el `exfat2ampr.elf` una vez y lo envía al cargador de ELF (9021) cuando
+  hace falta, se empareja con el código de la notificación y muestra el avance en
+  Transferencias con Cancelar y Reanudar. Si abres en la PS5 el juego que se
+  convierte, la fila indica que se reanudará sola al cerrarlo. Textos cortos y sin
+  jerga; el detalle técnico queda en Registros. Su autor no lo probó en consola:
+  conserva el original hasta probar el juego. Guía: [docs/LZ4.md](docs/LZ4.md).
+
 ## [1.6.0] - 2026-10-11
 
 ### Añadido

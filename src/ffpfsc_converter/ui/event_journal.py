@@ -117,7 +117,8 @@ def _lz4_line(event: object) -> JournalEntry | None:
         check = event.plan.check
         return JournalEntry(logging.INFO, f"LZ4 listo: {event.plan.source.path} "
                                           f"(compatible: {check.compatible.value}, "
-                                          f"errores: {list(check.errors)})")
+                                          f"errores: {list(check.errors)}, "
+                                          f"avisos: {list(check.warnings)})")
     if isinstance(event, Lz4Rejected):
         return JournalEntry(logging.WARNING, f"LZ4 rechazado: {list(event.check.errors)}")
     if isinstance(event, Lz4Started):
@@ -129,7 +130,8 @@ def _lz4_line(event: object) -> JournalEntry | None:
     if isinstance(event, Lz4Finished):
         status = event.status
         return _outcome(status.state is Lz4JobState.DONE,
-                        f"LZ4 {status.state.value}: {status.dest} ({status.code})")
+                        f"LZ4 {status.state.value}: {status.dest} ({status.code}) "
+                        f"{status.message}".rstrip())
     if isinstance(event, Lz4Failed):
         return JournalEntry(logging.WARNING, f"LZ4: {event.message}")
     return None

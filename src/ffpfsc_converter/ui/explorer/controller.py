@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from ffpfsc_converter.config import DEFAULT_FTP_PORT
-from ffpfsc_converter.domain.events import EventSink
+from ffpfsc_converter.domain.app_events import AppEventSink
 from ffpfsc_converter.domain.remote import ConsoleTarget, DownloadJob, RemoteEntry
 from ffpfsc_converter.infrastructure.ava1.trust import TrustStore
 from ffpfsc_converter.infrastructure.ftp.listing import join_remote
@@ -56,13 +56,13 @@ class ExplorerController:
         storage (StorageMonitor): Espacio libre de las unidades de la PS5.
     """
 
-    def __init__(self, parent: tk.Misc, theme: ThemeManager, emit: EventSink) -> None:
+    def __init__(self, parent: tk.Misc, theme: ThemeManager, emit: AppEventSink) -> None:
         """Crea la vista y los servicios, y restaura los últimos ajustes.
 
         Args:
             parent (tk.Misc): Contenedor donde se construye la vista.
             theme (ThemeManager): Tema.
-            emit (EventSink): Cola de eventos de la ventana principal.
+            emit (AppEventSink): Cola de eventos de la ventana principal.
         """
         self.theme = theme
         self.view = ExplorerView(parent, theme, ExplorerCallbacks(

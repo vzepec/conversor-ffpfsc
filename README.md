@@ -89,6 +89,9 @@ compresión, subida verificada y reemplazo del original). Desde **Convertir**, c
 comprimido se sube con un clic. La app inicia sola el FTP del helper (en solo lectura y con
 credenciales aleatorias) tras emparejarse una vez. Guía: **[docs/PS5.md](docs/PS5.md)**.
 
+> [!WARNING]
+> **Experimental — Comprimir LZ4 en la PS5:** convierte un juego al formato AMPR LZ4 dentro de la consola con [exfat2ampr](https://github.com/ViiNCENZO10/exfat2ampr) (no incluido; su autor no lo probó en una PS5). Conserva el original hasta probar el juego. Guía: **[docs/LZ4.md](docs/LZ4.md)**.
+
 ### Modos de compresión
 
 | Modo | Nivel zlib | Cuándo usarlo |
@@ -223,6 +226,7 @@ Más en **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 | [📦 Instalación](docs/INSTALLATION.md) | Linux y Windows: requisitos, pasos y solución de problemas |
 | [📖 Guía de uso](docs/USER_GUIDE.md) | Formatos aceptados, opciones, preguntas frecuentes |
 | [🎮 Sección PS5](docs/PS5.md) | Emparejamiento, explorar, descargar, subir y reemplazar |
+| [🧪 LZ4 en la PS5](docs/LZ4.md) | **Experimental**: comprimir en la consola con exfat2ampr |
 | [🏗️ Arquitectura](docs/ARCHITECTURE.md) | Capas, flujo, modelo de hilos, decisiones, cómo extender |
 | [🧑‍💻 Desarrollo](docs/DEVELOPMENT.md) | Entorno, tests, flujo de Git, publicar versiones |
 | [📝 Changelog](CHANGELOG.md) | Historial de cambios |

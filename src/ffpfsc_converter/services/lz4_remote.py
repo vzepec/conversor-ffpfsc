@@ -6,6 +6,7 @@ app solo la pide, la sigue y la controla por la API HTTP del motor.
 """
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Callable
 from http import HTTPStatus
@@ -13,13 +14,15 @@ from http import HTTPStatus
 from ffpfsc_converter.domain.lz4 import Lz4Request
 from ffpfsc_converter.domain.lz4_events import Lz4Failed, Lz4PairingRequired
 from ffpfsc_converter.errors import ConverterError
+from ffpfsc_converter.infrastructure.app_log import LOGGER_NAME
 from ffpfsc_converter.infrastructure.exfat2ampr import E2aHttpError
 from ffpfsc_converter.services.lz4_deps import Lz4Deps, Lz4Sink
 from ffpfsc_converter.services.lz4_flows import Lz4Flows
-from ffpfsc_converter.services.lz4_messages import engine_error_text, network_error_text
+from ffpfsc_converter.services.lz4_messages import NETWORK_ERROR_TEXT, engine_error_text
 from ffpfsc_converter.services.lz4_tracking import FollowerRegistry
 
 _Task = Callable[[], None]
+_LOG = logging.getLogger(LOGGER_NAME)
 
 
 class Lz4Remote:
@@ -169,12 +172,15 @@ class Lz4Remote:
         try:
             task()
         except E2aHttpError as exc:
+            # El usuario ve una frase corta; el código y el detalle en inglés, el registro.
+            _LOG.warning("exfat2ampr respondió HTTP %s (%s): %s", exc.status, exc.code, exc.error)
             if exc.status == HTTPStatus.UNAUTHORIZED:
                 self._deps.settings.forget_token(host)
                 self._emit(Lz4PairingRequired(host, entry_path))
                 return
-            self._emit(Lz4Failed(host, engine_error_text(exc.code or exc.error, exc.error)))
-        except OSError:
-            self._emit(Lz4Failed(host, network_error_text(host)))
+            self._emit(Lz4Failed(host, engine_error_text(exc.code or exc.error)))
+        except OSError as exc:
+            _LOG.warning("exfat2ampr no responde en %s: %s", host, exc)
+            self._emit(Lz4Failed(host, NETWORK_ERROR_TEXT))
         except ConverterError as exc:
             self._emit(Lz4Failed(host, str(exc)))
