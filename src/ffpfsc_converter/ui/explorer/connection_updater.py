@@ -115,6 +115,7 @@ class ConnectionUpdater:
         self._view.set_connected(True)
         self._view.set_browsing_enabled(True)
         self._ctl.refresh_storage()
+        self._ctl.lz4.remote.watch(event.target.host)  # retoma una conversión LZ4 en curso
         pending, self._ctl.pending_on_connect = self._ctl.pending_on_connect, []
         for action in pending:
             action()

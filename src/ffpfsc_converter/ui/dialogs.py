@@ -14,6 +14,7 @@ from ffpfsc_converter.services.preflight import SpaceCheck
 from ffpfsc_converter.ui.presenters import format_size
 
 _IMAGE_FILETYPES = [("Imágenes de juego", "*.exfat *.ffpkg *.ffpfsc"), ("Todos", "*")]
+_ELF_FILETYPES = [("Payload de la PS5", "*.elf"), ("Todos", "*")]
 
 
 def _initial_dir() -> str:
@@ -196,3 +197,14 @@ def confirm(message: str) -> bool:
         bool: ``True`` si el usuario acepta.
     """
     return messagebox.askyesno(APP_TITLE, message)
+
+
+def ask_elf_file() -> Path | None:
+    """Pide el ``exfat2ampr.elf`` que la app enviará al cargador de ELF de la PS5.
+
+    Returns:
+        Path | None: Archivo elegido, o ``None`` si canceló.
+    """
+    file = filedialog.askopenfilename(title="Selecciona exfat2ampr.elf",
+                                      initialdir=_initial_dir(), filetypes=_ELF_FILETYPES)
+    return Path(file) if file else None

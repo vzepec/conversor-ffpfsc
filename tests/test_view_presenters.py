@@ -61,17 +61,33 @@ def test_selection_and_actions() -> None:
     assert vp.selection_text(1) == "1 seleccionado"
     assert vp.selection_text(3) == "3 seleccionados"
     game, text = _entry("Juego", True), _entry("notas.txt")
-    assert vp.action_states(True, False, [game]) == vp.ActionStates(True, True, True, True)
+    assert vp.action_states(True, False, [game]) == vp.ActionStates(True, True, True, True, True)
     assert vp.action_states(True, False, [text]).convert is False
     assert vp.action_states(True, False, [game, game]).convert is False
-    assert vp.action_states(True, False, []) == vp.ActionStates(False, False, True, False)
-    assert vp.action_states(False, False, [game]) == vp.ActionStates(False, False, False, False)
+    assert vp.action_states(True, False, []) == vp.ActionStates(False, False, True, False, False)
+    assert vp.action_states(False, False, [game]) == vp.ActionStates(False, False, False, False,
+                                                                     False)
+
+
+def test_lz4_action_needs_one_game_or_image() -> None:
+    """Habilita «Comprimir LZ4 en la PS5» solo con UNA carpeta o imagen y conexión libre."""
+    game, image = _entry("PPSA01234", True), _entry("Juego.exfat")
+    pkg, text = _entry("Juego.FFPKG"), _entry("notas.txt")
+    assert vp.action_states(True, False, [game]).lz4 is True
+    assert vp.action_states(True, False, [image]).lz4 is True
+    assert vp.action_states(True, False, [pkg]).lz4 is True
+    assert vp.action_states(True, False, [text]).lz4 is False
+    assert vp.action_states(True, False, [game, image]).lz4 is False
+    assert vp.action_states(True, False, []).lz4 is False
+    assert vp.action_states(False, False, [game]).lz4 is False
+    assert vp.action_states(True, True, [game]).lz4 is False
 
 
 def test_writing_pauses_actions_but_keeps_connection() -> None:
     """Mientras se escribe en la PS5 se pausan las acciones y se explica por qué."""
     game = _entry("Juego", True)
-    assert vp.action_states(True, True, [game]) == vp.ActionStates(False, False, False, False)
+    assert vp.action_states(True, True, [game]) == vp.ActionStates(False, False, False, False,
+                                                                   False)
     assert "Escribiendo en la PS5" in vp.selection_text(1, writing=True)
 
 

@@ -11,9 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ffpfsc_converter.domain.events import QueueFinished
+from ffpfsc_converter.domain.lz4 import Lz4JobState
+from ffpfsc_converter.domain.lz4_events import Lz4Finished
 from ffpfsc_converter.domain.pipeline_events import PipelineFinished, UploadFinished
 from ffpfsc_converter.domain.remote_events import DownloadQueueFinished
 from ffpfsc_converter.infrastructure.notify import send_notification
+from ffpfsc_converter.ui.explorer.lz4_status_presenters import finish_title, result_status
 
 _ICON = Path(__file__).resolve().parents[3] / "assets" / "icon.png"
 #: Envía una notificación: recibe título, texto e icono.
@@ -50,6 +53,8 @@ def notification_for(event: object) -> Notification | None:
     if isinstance(event, UploadFinished):
         title = "Subido a la PS5" if event.succeeded else "No se pudo subir a la PS5"
         return Notification(title, _first_line(event.message))
+    if isinstance(event, Lz4Finished) and event.status.state is not Lz4JobState.CANCELLED:
+        return Notification(finish_title(event.status), result_status(event.status).detail)
     if isinstance(event, PipelineFinished) and not event.result.cancelled:
         title = ("Juego reemplazado en la PS5" if event.result.succeeded
                  else "Comprimir y reemplazar no terminó")

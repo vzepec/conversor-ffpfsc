@@ -155,6 +155,7 @@ src/ffpfsc_converter/
         ├── retry_actions.py    # "Reintentar fallidas"
         ├── pipeline_tracker.py  # fila de "comprimir y reemplazar" en Transferencias
         ├── compress_dialog.py, pairing_dialog.py  # diálogos
+        ├── lz4_*.py, elf_dialog.py  # LZ4 en la PS5: acciones, eventos, ventana, fila y textos
         └── presenters.py, view_presenters.py, transfer_presenters.py  # textos puros
 ```
 

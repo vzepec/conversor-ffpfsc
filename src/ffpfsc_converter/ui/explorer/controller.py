@@ -22,6 +22,7 @@ from ffpfsc_converter.services.remote_browser import RemoteBrowser
 from ffpfsc_converter.services.remote_storage import StorageMonitor
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
+from ffpfsc_converter.ui.explorer.lz4_actions import Lz4Actions
 from ffpfsc_converter.ui.explorer.modify_actions import ModifyActions
 from ffpfsc_converter.ui.explorer.retry_actions import RetryActions
 from ffpfsc_converter.ui.explorer.view import ExplorerCallbacks, ExplorerView
@@ -40,6 +41,7 @@ class ExplorerController:
         entries (tuple[RemoteEntry, ...]): Contenido de la carpeta abierta.
         modify (ModifyActions): Eliminar, subir y comprimir y reemplazar.
         retry (RetryActions): Reintento manual de transferencias fallidas.
+        lz4 (Lz4Actions): Compresión LZ4 dentro de la PS5 con exfat2ampr.
         upload_listeners (dict[str, Callable[[object], None]]): Fila de subida → función
             que también recibe sus eventos (la vista Convertir sigue así sus subidas).
         pending_on_connect (list[Callable[[], None]]): Acciones a ejecutar al conectar.
@@ -74,6 +76,7 @@ class ExplorerController:
             on_upload=lambda: self.modify.upload_files(),
             on_delete=lambda: self.modify.delete_selected(),
             on_convert=lambda: self.modify.convert_selected(),
+            on_lz4=lambda: self.lz4.compress_selected(),
         ))
         self._trust = TrustStore(settings_path().parent)
         self.launcher = FtpLauncher(emit, self._trust)
@@ -82,6 +85,7 @@ class ExplorerController:
         self.storage = StorageMonitor(emit, self.launcher.access)
         self.modify = ModifyActions(self, emit, self.launcher.access)
         self.retry = RetryActions(self)
+        self.lz4 = Lz4Actions(self, emit)
         self.target: ConsoleTarget | None = None
         self.path = "/"
         self.entries: tuple[RemoteEntry, ...] = ()

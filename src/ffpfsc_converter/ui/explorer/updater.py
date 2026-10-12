@@ -16,6 +16,7 @@ from ffpfsc_converter.ui.explorer import presenters
 from ffpfsc_converter.ui.explorer.changes_updater import ChangesUpdater
 from ffpfsc_converter.ui.explorer.connection_updater import ConnectionUpdater
 from ffpfsc_converter.ui.explorer.controller import ExplorerController
+from ffpfsc_converter.ui.explorer.lz4_updater import Lz4Updater
 
 
 class ExplorerUpdater:
@@ -39,6 +40,7 @@ class ExplorerUpdater:
             TransferRetrying: self._on_retrying,
             **ChangesUpdater(controller).handlers,
             **ConnectionUpdater(controller).handlers,
+            **Lz4Updater(controller).handlers,
         }
 
     def handles(self, event: object) -> bool:
