@@ -5,15 +5,12 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
-### Cambiado
-- Capturas del README actualizadas con el selector de formato y la etiqueta LZ4; el subtítulo
-  de Convertir menciona LZ4.
-
 ## [1.7.0] - 2026-10-12
 
 ### Cambiado
 - README reescrito para usuarios no técnicos: qué hace, qué necesitas, instalación,
-  uso paso a paso, `.ffpfsc` o LZ4 (experimental) y preguntas frecuentes. Lo técnico
+  uso paso a paso, `.ffpfsc` o LZ4 (experimental) y preguntas frecuentes, con capturas
+  nuevas del selector de formato y la etiqueta LZ4. Lo técnico
   (tecnologías, componentes, arquitectura y desarrollo) pasa a
   [docs/TECHNICAL.md](docs/TECHNICAL.md).
 - En Convertir, al elegir el formato LZ4 se oculta «Rendimiento en la PS5» (solo aplica a
