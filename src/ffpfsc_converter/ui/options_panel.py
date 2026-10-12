@@ -7,11 +7,16 @@ from collections.abc import Callable
 from pathlib import Path
 from tkinter import ttk
 
-from ffpfsc_converter.config import DEFAULT_PRESET, PERFORMANCE_THRESHOLD_GAIN, PRESETS
-from ffpfsc_converter.domain.models import CompressionPreset, ConversionOptions
+from ffpfsc_converter.config import (
+    DEFAULT_PRESET,
+    LZ4_LEVEL_BY_PRESET,
+    PERFORMANCE_THRESHOLD_GAIN,
+    PRESETS,
+)
+from ffpfsc_converter.domain.models import CompressionPreset, ConversionOptions, OutputFormat
 from ffpfsc_converter.infrastructure.settings_store import load_settings
 from ffpfsc_converter.ui import dialogs
-from ffpfsc_converter.ui.preferences import convert_from, save_convert
+from ffpfsc_converter.ui.preferences import convert_from, save_convert, save_output_format
 from ffpfsc_converter.ui.theme import ThemeManager
 from ffpfsc_converter.ui.widgets.basics import Segmented
 from ffpfsc_converter.ui.widgets.flow_frame import FlowFrame
@@ -19,6 +24,7 @@ from ffpfsc_converter.ui.widgets.stepper import Stepper
 
 _PRESETS_BY_LABEL = {p.label: p for p in PRESETS}
 _DEFAULT_OUTPUT_TEXT = "Junto a cada juego"
+_FORMATS = [(OutputFormat.FFPFSC.value, ".ffpfsc"), (OutputFormat.LZ4.value, "LZ4 (experimental)")]
 
 
 class OptionsPanel(ttk.Frame):
@@ -55,6 +61,8 @@ class OptionsPanel(ttk.Frame):
         self._cores_var = tk.IntVar(value=saved.cores or self.cpu_total)
         self._verify_var = tk.BooleanVar(value=saved.full_verify)
         self._performance_var = tk.BooleanVar(value=saved.performance)
+        self._format_var = tk.StringVar(value=saved.output_format.value)
+        self._format_var.trace_add("write", lambda *_args: self._on_format())
         for variable in (self._preset_var, self._cores_var, self._verify_var,
                          self._performance_var):
             variable.trace_add("write", lambda *_args: self._remember())
@@ -74,15 +82,18 @@ class OptionsPanel(ttk.Frame):
         self._fields = FlowFrame(self, gap=m.px(26), line_gap=m.px(10))
         self._fields.grid(row=0, column=0, sticky="ew")
         modes = [(p.label, p.short_label) for p in PRESETS]
+        self._field("FORMATO", lambda box: Segmented(box, self._format_var, _FORMATS,
+                                                     on_preset_changed))
         self._field("MODO", lambda box: Segmented(box, self._preset_var, modes,
                                                   on_preset_changed))
         self._field("NÚCLEOS", lambda box: Stepper(box, theme, self._cores_var,
                                                    (1, self.cpu_total)))
         self._field("VERIFICACIÓN COMPLETA", lambda box: ttk.Checkbutton(
             box, text="  Más lento, más seguro", variable=self._verify_var, style=switch))
-        self._field("RENDIMIENTO EN LA PS5", lambda box: ttk.Checkbutton(
+        self._performance = self._field("RENDIMIENTO EN LA PS5", lambda box: ttk.Checkbutton(
             box, text="  Carga más rápido", variable=self._performance_var,
             command=on_preset_changed, style=switch))
+        self._on_format()
 
     def _build_destination(self) -> None:
         """Crea la línea inferior con la carpeta donde se guardan los ``.ffpfsc``."""
@@ -100,19 +111,24 @@ class OptionsPanel(ttk.Frame):
                                  command=lambda: self._set_output(None))
         self._show_output()
 
-    def _field(self, caption: str, build: Callable[[tk.Misc], tk.Widget]) -> None:
+    def _field(self, caption: str, build: Callable[[tk.Misc], tk.Widget]) -> tk.Widget:
         """Agrega un control con su etiqueta en mayúsculas encima.
 
         Args:
             caption (str): Etiqueta del campo.
             build (Callable[[tk.Misc], tk.Widget]): Crea el control dentro del contenedor
                 que recibe.
+
+        Returns:
+            tk.Widget: Control creado.
         """
         box = ttk.Frame(self._fields, style="Surface.TFrame")
         ttk.Label(box, text=caption, style="CardCaption.TLabel").pack(
             anchor="w", pady=(0, self._metrics.px(4)))
-        build(box).pack(anchor="w", expand=True)  # centrado en el alto de la línea
+        widget = build(box)
+        widget.pack(anchor="w", expand=True)  # centrado en el alto de la línea
         self._fields.add(box)
+        return widget
 
     def selected_preset(self) -> CompressionPreset:
         """Obtiene el modo de compresión elegido.
@@ -153,14 +169,33 @@ class OptionsPanel(ttk.Frame):
         """Reúne las opciones elegidas para lanzar una conversión.
 
         Returns:
-            ConversionOptions: Nivel, núcleos, verificación y umbral de ganancia por bloque.
+            ConversionOptions: Formato, nivel, núcleos, verificación y umbral por bloque.
         """
+        level, output_format = self.selected_preset().level, self.output_format()
+        if output_format is OutputFormat.LZ4:
+            return ConversionOptions(LZ4_LEVEL_BY_PRESET[level], self.cpu_count(),
+                                     self.full_verify(), output_format=output_format)
         return ConversionOptions(
-            compression_level=self.selected_preset().level,
+            compression_level=level,
             cpu_count=self.cpu_count(),
             full_verify=self.full_verify(),
             threshold_gain=PERFORMANCE_THRESHOLD_GAIN if self.is_performance() else 0,
         )
+
+    def output_format(self) -> OutputFormat:
+        """Obtiene el formato de salida elegido.
+
+        Returns:
+            OutputFormat: ``.ffpfsc`` o LZ4.
+        """
+        return OutputFormat(self._format_var.get())
+
+    def _on_format(self) -> None:
+        """Guarda el formato y desactiva «Rendimiento en la PS5» con LZ4 (no aplica)."""
+        save_output_format(self.output_format())
+        if hasattr(self, "_performance"):
+            lz4 = self.output_format() is OutputFormat.LZ4
+            self._performance.state(["disabled"] if lz4 else ["!disabled"])
 
     def _pick_output(self) -> None:
         """Pide la carpeta de destino."""

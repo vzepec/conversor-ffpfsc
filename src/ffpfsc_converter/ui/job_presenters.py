@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import NamedTuple
 
+from ffpfsc_converter.domain.lz4 import Lz4Compat
 from ffpfsc_converter.domain.models import (
     ConversionJob,
     ConversionResult,
@@ -17,6 +18,8 @@ _SEPARATOR = "  ·  "
 #: Píldora y detalle de un ``.ffpfsc`` agregado ya comprimido.
 READY_LABEL = "✓ Ya comprimido"
 READY_DETAIL = "Listo para subir a la PS5"
+LZ4_INCOMPATIBLE_TEXT = "No compatible con LZ4"
+LZ4_IMAGE_TEXT = "LZ4 solo con carpetas"
 
 
 class RowStatus(NamedTuple):
@@ -73,13 +76,15 @@ class SizeText(NamedTuple):
     note: str
 
 
-def size_lines(job: ConversionJob, level: int, performance: bool = False) -> SizeText:
+def size_lines(job: ConversionJob, level: int, performance: bool = False,
+               lz4: bool = False) -> SizeText:
     """Genera el tamaño original, el estimado y el ahorro de un juego.
 
     Args:
         job (ConversionJob): Juego (con tamaño y estimaciones si ya se analizó).
         level (int): Nivel de compresión elegido.
         performance (bool): ``True`` si está activo «Rendimiento en la PS5».
+        lz4 (bool): ``True`` si el formato elegido es LZ4.
 
     Returns:
         SizeText: Por ejemplo ``("48.2 GB →", "≈ 21.7 GB", "−55% estimado")``.
@@ -88,11 +93,27 @@ def size_lines(job: ConversionJob, level: int, performance: bool = False) -> Siz
         return SizeText("calculando…", "", "")
     if job.already_compressed:
         return SizeText(format_size(job.size), "", "ya comprimido")
-    estimate = job.estimate_for(level, performance)
+    if lz4 and (problem := lz4_problem(job)):
+        return SizeText(format_size(job.size), "", problem)
+    estimate = job.lz4_estimate if lz4 else job.estimate_for(level, performance)
     if estimate is None:
         return SizeText(format_size(job.size), "", "estimando…")
     return SizeText(f"{format_size(job.size)} →", f"≈ {format_size(estimate)}",
                     f"{savings_text(job.size, estimate)} estimado")
+
+
+def lz4_problem(job: ConversionJob) -> str:
+    """Explica por qué un juego no se puede comprimir en LZ4 en este equipo.
+
+    Args:
+        job (ConversionJob): Juego analizado.
+
+    Returns:
+        str: ``LZ4_IMAGE_TEXT``, ``LZ4_INCOMPATIBLE_TEXT`` o vacío si se puede.
+    """
+    if job.game_root.is_file():
+        return LZ4_IMAGE_TEXT
+    return LZ4_INCOMPATIBLE_TEXT if job.lz4_compat is Lz4Compat.NO else ""
 
 
 def progress_status(progress: ProgressUpdate, eta: float | None) -> RowStatus:
@@ -147,13 +168,15 @@ def upload_status(done: int, total: int, speed: str, eta: float | None) -> tuple
     return RowStatus("run", f"Subiendo a la PS5 · {percent:.0f}%", detail), percent
 
 
-def queue_summary(jobs: Iterable[ConversionJob], level: int, performance: bool = False) -> str:
+def queue_summary(jobs: Iterable[ConversionJob], level: int, performance: bool = False,
+                  lz4: bool = False) -> str:
     """Resume la cola: cantidad de juegos, tamaño total y estimado.
 
     Args:
         jobs (Iterable[ConversionJob]): Juegos de la cola.
         level (int): Nivel de compresión elegido.
         performance (bool): ``True`` si está activo «Rendimiento en la PS5».
+        lz4 (bool): ``True`` si el formato elegido es LZ4 (lo que no se puede, queda igual).
 
     Returns:
         str: Por ejemplo ``"3 juegos  ·  69.6 GB → ≈ 31.4 GB"``, o vacío si no hay juegos.
@@ -163,10 +186,26 @@ def queue_summary(jobs: Iterable[ConversionJob], level: int, performance: bool =
         return ""
     count = f"{len(items)} juego" + ("s" if len(items) != 1 else "")
     sized = [j for j in items if j.size]
-    finals = [j.size if j.already_compressed else j.estimate_for(level, performance)
-              for j in sized]
+    finals = [_final_size(j, level, performance, lz4) for j in sized]
     if not sized or any(final is None for final in finals):
         return count
     total = sum(j.size for j in sized)
     estimate = sum(final or 0 for final in finals)
     return f"{count}{_SEPARATOR}{format_size(total)} → ≈ {format_size(estimate)}"
+
+
+def _final_size(job: ConversionJob, level: int, performance: bool, lz4: bool) -> int | None:
+    """Elige el peso final de un juego para el resumen de la cola.
+
+    Args:
+        job (ConversionJob): Juego con tamaño.
+        level (int): Nivel de compresión elegido.
+        performance (bool): ``True`` si está activo «Rendimiento en la PS5».
+        lz4 (bool): ``True`` si el formato elegido es LZ4.
+
+    Returns:
+        int | None: Bytes, o ``None`` si aún se estima.
+    """
+    if job.already_compressed or (lz4 and lz4_problem(job)):
+        return job.size
+    return job.lz4_estimate if lz4 else job.estimate_for(level, performance)

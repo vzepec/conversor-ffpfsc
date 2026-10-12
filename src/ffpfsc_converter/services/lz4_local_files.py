@@ -1,0 +1,216 @@
+"""Archivos de la conversión LZ4 en el PC: carpeta de trabajo, perfil y carpeta final.
+
+Todo se escribe junto a la salida (nunca en ``/tmp`` ni en el juego original): la
+carpeta final se arma en ``<salida>.parcial`` y solo al terminar se renombra.
+"""
+from __future__ import annotations
+
+import os
+import shutil
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from pathlib import Path
+
+from ffpfsc_converter.config import (
+    AMPR_FAKELIB_DIR,
+    AMPR_INDEX_FILE,
+    LZ4_BACKUP_SUFFIX,
+    LZ4_PARTIAL_SUFFIX,
+    LZ4_SEPARATE_NAME_SUFFIX,
+    LZ4_WORK_SUFFIX,
+)
+from ffpfsc_converter.domain.models import ConversionJob
+from ffpfsc_converter.infrastructure.ampr_tools import PackPaths
+from ffpfsc_converter.services.ampr_profile import AUDIO_LIST, COMPRESS_LIST, AmprProfile
+
+#: Recibe los bytes copiados hasta ahora; devuelve ``False`` para detener la copia.
+CopyProgress = Callable[[int], bool]
+_PROFILE_NAME = "profile.toml"
+_PACKS_DIR = "paquetes"
+
+
+@dataclass(frozen=True)
+class Lz4Workspace:
+    """Rutas de una conversión LZ4 en el PC.
+
+    Attributes:
+        root (Path): Juego original (solo se lee).
+        work (Path): Carpeta temporal con índice, perfil y paquetes.
+        partial (Path): Carpeta final mientras se arma.
+        output (Path): Carpeta final.
+    """
+
+    root: Path
+    work: Path
+    partial: Path
+    output: Path
+
+    @property
+    def pack_paths(self) -> PackPaths:
+        """Rutas que necesita ``ampr_pack.py``.
+
+        Returns:
+            PackPaths: Juego, índice, perfil y carpeta de paquetes.
+        """
+        return PackPaths(self.root, self.work / AMPR_INDEX_FILE, self.work / _PROFILE_NAME,
+                         self.work / _PACKS_DIR)
+
+
+def lz4_output_path(job: ConversionJob) -> Path:
+    """Calcula la carpeta LZ4 de un trabajo (junto a donde iría su ``.ffpfsc``).
+
+    Args:
+        job (ConversionJob): Trabajo.
+
+    Returns:
+        Path: ``<carpeta de salida>/<nombre>-LZ4``.
+    """
+    return job.output.with_name(f"{job.output.stem}{LZ4_SEPARATE_NAME_SUFFIX}")
+
+
+def workspace_for(job: ConversionJob) -> Lz4Workspace:
+    """Arma las rutas de trabajo de un trabajo.
+
+    Args:
+        job (ConversionJob): Trabajo con ``game_root`` y ``output``.
+
+    Returns:
+        Lz4Workspace: Rutas (todavía no se crea nada).
+    """
+    output = lz4_output_path(job)
+    return Lz4Workspace(job.game_root, output.with_name(f".{output.name}{LZ4_WORK_SUFFIX}"),
+                        output.with_name(f"{output.name}{LZ4_PARTIAL_SUFFIX}"), output)
+
+
+def relative_files(root: Path) -> list[str]:
+    """Lista los archivos del juego con rutas relativas y ``/``, sin seguir enlaces.
+
+    Args:
+        root (Path): Carpeta del juego.
+
+    Returns:
+        list[str]: Rutas relativas de los archivos regulares.
+    """
+    found: list[str] = []
+    for dirpath, _dirs, names in os.walk(root):
+        for name in names:
+            path = Path(dirpath, name)
+            if path.is_file() and not path.is_symlink():
+                found.append(path.relative_to(root).as_posix())
+    return found
+
+
+def write_profile(ws: Lz4Workspace, profile: AmprProfile) -> None:
+    """Escribe el TOML y sus listas en la carpeta de trabajo.
+
+    Args:
+        ws (Lz4Workspace): Rutas de la conversión.
+        profile (AmprProfile): Perfil generado.
+
+    Raises:
+        OSError: Si no se puede escribir.
+    """
+    config = ws.pack_paths.config
+    config.write_text(profile.toml, encoding="utf-8")
+    for name, lines in ((COMPRESS_LIST, profile.compress), (AUDIO_LIST, profile.audio)):
+        (config.parent / name).write_text("".join(f"{line}\n" for line in lines),
+                                          encoding="utf-8")
+
+
+def copy_loose(ws: Lz4Workspace, loose: Iterable[str], progress: CopyProgress) -> bool:
+    """Copia al resultado los archivos que quedan sin empaquetar.
+
+    Args:
+        ws (Lz4Workspace): Rutas de la conversión.
+        loose (Iterable[str]): Rutas relativas que indicó ``ampr_pack.py``.
+        progress (CopyProgress): Avance en bytes; si devuelve ``False`` se detiene.
+
+    Returns:
+        bool: ``True`` si se copió todo; ``False`` si se detuvo.
+
+    Raises:
+        OSError: Si falla la copia o una ruta sale de la carpeta del juego.
+    """
+    copied = 0
+    for relative in loose:
+        source, dest = ws.root / relative, ws.partial / relative
+        if ws.root.resolve() not in source.resolve().parents:
+            raise OSError(f"Ruta fuera del juego: {relative}")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, dest)
+        copied += source.stat().st_size
+        if not progress(copied):
+            return False
+    return True
+
+
+def finish_folder(ws: Lz4Workspace, runtime: Path) -> None:
+    """Completa la carpeta final y la publica en su ruta definitiva.
+
+    Mueve los paquetes y su índice, copia ``ampr_emu.index`` y la biblioteca que los
+    lee (``fakelib/libSceAmpr.sprx``) y publica ``<salida>.parcial`` como ``<salida>``
+    (la interfaz ya confirmó reemplazar una salida anterior).
+
+    Args:
+        ws (Lz4Workspace): Rutas de la conversión.
+        runtime (Path): ``libSceAmpr.sprx`` instalado.
+
+    Raises:
+        OSError: Si falla algún movimiento o copia.
+    """
+    paths = ws.pack_paths
+    for item in paths.output.iterdir():
+        shutil.move(str(item), ws.partial / item.name)
+    shutil.copy2(paths.index, ws.partial / AMPR_INDEX_FILE)
+    fakelib = ws.partial / AMPR_FAKELIB_DIR
+    fakelib.mkdir(exist_ok=True)
+    shutil.copy2(runtime, fakelib / runtime.name)
+    _publish(ws.partial, ws.output)
+
+
+def _publish(partial: Path, output: Path) -> None:
+    """Renombra la carpeta nueva a su ruta final sin perder la anterior si algo falla.
+
+    Args:
+        partial (Path): Carpeta recién armada.
+        output (Path): Ruta definitiva (puede tener una conversión anterior).
+
+    Raises:
+        OSError: Si no se puede renombrar (la anterior queda restaurada).
+    """
+    backup = output.with_name(f"{output.name}{LZ4_BACKUP_SUFFIX}")
+    shutil.rmtree(backup, ignore_errors=True)
+    if output.exists():
+        output.rename(backup)
+    try:
+        partial.rename(output)
+    except OSError:
+        if backup.exists():
+            backup.rename(output)
+        raise
+    shutil.rmtree(backup, ignore_errors=True)
+
+
+def folder_size(folder: Path) -> int:
+    """Suma el tamaño de los archivos de una carpeta.
+
+    Args:
+        folder (Path): Carpeta.
+
+    Returns:
+        int: Bytes totales (``0`` si no existe).
+    """
+    return sum(p.stat().st_size for p in folder.rglob("*") if p.is_file())
+
+
+def discard(ws: Lz4Workspace) -> None:
+    """Borra la carpeta de trabajo y la salida a medias (nunca la salida final).
+
+    La salida final solo aparece al renombrar, en el último paso: si algo falla antes,
+    una conversión anterior en esa ruta queda intacta.
+
+    Args:
+        ws (Lz4Workspace): Rutas de la conversión.
+    """
+    shutil.rmtree(ws.work, ignore_errors=True)
+    shutil.rmtree(ws.partial, ignore_errors=True)

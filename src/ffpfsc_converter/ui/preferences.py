@@ -9,11 +9,13 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from ffpfsc_converter.domain.models import OutputFormat
 from ffpfsc_converter.infrastructure.settings_store import save_settings
 
 #: Claves de los ajustes.
 _PRESET, _CORES, _VERIFY = "convert_preset", "convert_cores", "convert_verify"
 _PERFORMANCE = "convert_ps5_performance"
+_FORMAT = "convert_output_format"
 _OUTPUT = "output_dir"
 _SIZE, _ZOOMED, _VIEW = "window_size", "window_zoomed", "last_view"
 
@@ -27,6 +29,7 @@ class ConvertPreferences:
         cores (int | None): Núcleos elegidos; ``None`` = todos.
         full_verify (bool): Verificación completa activada.
         performance (bool): «Rendimiento en la PS5» activado.
+        output_format (OutputFormat): ``.ffpfsc`` o LZ4.
         output_dir (Path | None): Carpeta de destino; ``None`` = junto a cada juego.
     """
 
@@ -34,6 +37,7 @@ class ConvertPreferences:
     cores: int | None
     full_verify: bool
     performance: bool
+    output_format: OutputFormat
     output_dir: Path | None
 
 
@@ -73,6 +77,7 @@ def convert_from(settings: Mapping[str, object], presets: Collection[str],
         cores=min(max(cores, 1), cpu_total) if isinstance(cores, int) else None,
         full_verify=settings.get(_VERIFY) is True,
         performance=settings.get(_PERFORMANCE) is True,
+        output_format=_format_from(settings.get(_FORMAT)),
         output_dir=folder if folder is not None and folder.is_dir() else None,
     )
 
@@ -115,6 +120,27 @@ def save_convert(preset: str, cores: int, full_verify: bool, performance: bool) 
     """
     save_settings({_PRESET: preset, _CORES: cores, _VERIFY: full_verify,
                    _PERFORMANCE: performance})
+
+
+def save_output_format(output_format: OutputFormat) -> None:
+    """Guarda el formato de salida elegido.
+
+    Args:
+        output_format (OutputFormat): ``.ffpfsc`` o LZ4.
+    """
+    save_settings({_FORMAT: output_format.value})
+
+
+def _format_from(value: object) -> OutputFormat:
+    """Valida el formato guardado (un valor desconocido vuelve a ``.ffpfsc``).
+
+    Args:
+        value (object): Valor leído de los ajustes.
+
+    Returns:
+        OutputFormat: Formato válido.
+    """
+    return next((f for f in OutputFormat if f.value == value), OutputFormat.FFPFSC)
 
 
 def save_output_dir(folder: Path | None) -> None:

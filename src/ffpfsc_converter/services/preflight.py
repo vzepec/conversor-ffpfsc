@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ffpfsc_converter.config import FREE_SPACE_MARGIN
-from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions
+from ffpfsc_converter.domain.models import ConversionJob, ConversionOptions, OutputFormat
 from ffpfsc_converter.infrastructure.filesystem import free_space
 
 
@@ -46,5 +46,8 @@ def check_free_space(job: ConversionJob, options: ConversionOptions) -> SpaceChe
     """
     if not job.size:
         return None
-    estimate = job.estimate_for(options.compression_level, options.is_performance) or job.size
+    if options.output_format is OutputFormat.LZ4:
+        estimate = job.lz4_estimate or job.size
+    else:
+        estimate = job.estimate_for(options.compression_level, options.is_performance) or job.size
     return SpaceCheck(free_space(job.output.parent), int(estimate * FREE_SPACE_MARGIN))

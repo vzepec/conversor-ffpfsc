@@ -195,3 +195,36 @@ THIRD_PARTY_ASSETS: tuple[ThirdPartyAsset, ...] = (
 E2A_INSTALLED_ELF = "exfat2ampr/exfat2ampr.elf"
 AMPR_RUNTIME_FILE = "ampr_emu/libSceAmpr.sprx"
 AMPR_TOOLS_DIR = "ampr_emu/python-tools"
+#: Scripts de ampr_emu (dentro de ``AMPR_TOOLS_DIR``) y archivos que generan.
+AMPR_INDEX_SCRIPT = "build_ampr_index.py"
+AMPR_PACK_SCRIPT = "ampr_pack.py"
+AMPR_INDEX_FILE = "ampr_emu.index"
+AMPR_ASSETS_INDEX = "ampr_assets.index"
+#: Carpeta del juego donde va la biblioteca que lee los paquetes LZ4.
+AMPR_FAKELIB_DIR = "fakelib"
+#: Perfil genérico (sin trazas del juego), con las mismas reglas que exfat2ampr: queda
+#: sin comprimir lo que el juego puede leer sin pasar por libSceAmpr (ejecutables, mmap),
+#: lo ya comprimido (vídeo, audio, archivos) y los archivos en la raíz del juego.
+AMPR_LOOSE_EXTENSIONS = frozenset({
+    ".elf", ".self", ".prx", ".sprx", ".bin", ".dat", ".json", ".xml", ".utoc",
+    ".mp4", ".webm", ".mkv", ".bk2", ".bik", ".usm", ".ogg", ".opus", ".mp3", ".at9",
+    ".wem", ".zip", ".7z", ".rar", ".crc", ".runtime", ".index", ".pak"})
+AMPR_LOOSE_TOP_DIRS = frozenset({
+    "sce_module", "sce_sys", "system", "fakelib", "mods", "save", "trophy2", "uds",
+    "_duplex_", "decrypted", "movie", "movies", "video", "videos", "cinematic", "cutscene"})
+AMPR_LOOSE_NAMES = frozenset({"eboot.bin", "ampr_emu.index", "ampr_commands.bin", "apr_emu.log"})
+AMPR_LOOSE_PREFIXES = ("movie", "soundbank", "wem")
+#: Carpetas de audio: se leen en trozos pequeños y al azar (bloques de 16 KiB).
+AMPR_AUDIO_TOP_DIRS = frozenset({"audio", "sound", "sounds", "sfx", "music", "voice", "voices",
+                                 "vo"})
+#: Niveles LZ4 hasta este valor usan el modo rápido; desde el siguiente, HC.
+LZ4_FAST_MAX_LEVEL = 4
+#: Carpetas temporales de la conversión LZ4 en el PC (dentro de la carpeta de destino).
+LZ4_WORK_SUFFIX = ".lz4-temporal"
+LZ4_PARTIAL_SUFFIX = ".parcial"
+LZ4_BACKUP_SUFFIX = ".anterior"
+#: Estimación del peso LZ4: bloques de 64 KiB muestreados (~32 MB) y nivel HC de referencia.
+LZ4_ESTIMATE_SAMPLE_BLOCKS = 512
+LZ4_ESTIMATE_LEVEL = 9
+#: Nivel LZ4 de cada modo de la vista Convertir (nivel zlib → LZ4): rápido, HC 9 y HC 12.
+LZ4_LEVEL_BY_PRESET = {3: 1, 6: 9, 9: 12}

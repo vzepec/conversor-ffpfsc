@@ -19,7 +19,7 @@ from ffpfsc_converter.domain.events import (
     LogMessage,
     QueueFinished,
 )
-from ffpfsc_converter.domain.models import ConversionJob
+from ffpfsc_converter.domain.models import ConversionJob, OutputFormat
 from ffpfsc_converter.ui import job_presenters as jp
 from ffpfsc_converter.ui import presenters
 from ffpfsc_converter.ui.main_view import MainView
@@ -67,7 +67,8 @@ class ViewUpdater:
             jp.SizeText: Tamaño original, estimado y ahorro.
         """
         options = self._view.options
-        return jp.size_lines(job, options.selected_preset().level, options.is_performance())
+        return jp.size_lines(job, options.selected_preset().level, options.is_performance(),
+                             options.output_format() is OutputFormat.LZ4)
 
     def _on_job_info(self, event: JobInfoReady) -> None:
         """Muestra el nombre del juego y su Title ID y versión.

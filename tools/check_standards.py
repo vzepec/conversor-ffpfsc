@@ -20,7 +20,7 @@ from pathlib import Path
 MAX_LINES = 250
 CHECKED_SUFFIXES = frozenset({".py", ".md", ".sh", ".toml", ".ps1", ".bat"})
 EXCLUDED_DIRS = frozenset({
-    ".git", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "build", "dist",
+    ".git", ".venv", "third_party", "__pycache__", ".pytest_cache", ".ruff_cache", "build", "dist",
 })
 FULL_DOC_DIRS = ("src", "tools")
 BRIEF_DOC_DIRS = ("tests",)

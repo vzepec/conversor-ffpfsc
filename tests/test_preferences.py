@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ffpfsc_converter.domain.models import OutputFormat
 from ffpfsc_converter.ui.preferences import convert_from, window_from
 
 PRESETS = ("Máxima velocidad", "Equilibrado")
@@ -30,3 +31,11 @@ def test_window_preferences_fit_the_screen() -> None:
                           (1920, 1080), views)
     assert (too_big.size, too_big.zoomed, too_big.view) == (None, False, "convert")
     assert window_from({}, (1000, 600), (1920, 1080), views).size is None
+
+
+def test_output_format_is_validated() -> None:
+    """El formato guardado se respeta; uno desconocido vuelve a .ffpfsc."""
+    assert convert_from({"convert_output_format": "lz4"}, PRESETS, 8).output_format \
+        is OutputFormat.LZ4
+    assert convert_from({"convert_output_format": "zip"}, PRESETS, 8).output_format \
+        is OutputFormat.FFPFSC

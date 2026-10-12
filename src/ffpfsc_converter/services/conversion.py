@@ -3,8 +3,7 @@ from __future__ import annotations
 
 import threading
 import time
-from collections.abc import Callable, Iterator, Sequence
-from typing import Protocol
+from collections.abc import Sequence
 
 from ffpfsc_converter.config import PROGRESS_INTERVAL_SECONDS
 from ffpfsc_converter.domain.events import (
@@ -20,6 +19,7 @@ from ffpfsc_converter.domain.models import (
     ConversionOptions,
     ConversionResult,
     JobState,
+    OutputFormat,
 )
 from ffpfsc_converter.infrastructure.filesystem import remove_quietly
 from ffpfsc_converter.infrastructure.mkpfs_adapter import (
@@ -27,36 +27,14 @@ from ffpfsc_converter.infrastructure.mkpfs_adapter import (
     build_pack_command,
     parse_progress,
 )
+from ffpfsc_converter.services.lz4_local import Lz4LocalConversion
+from ffpfsc_converter.services.lz4_local_steps import StepContext
+from ffpfsc_converter.services.process_handle import ProcessFactory, ProcessHandle
 from ffpfsc_converter.timing import PercentEta
 
 _COMPLETE = 100  # porcentaje con el que MkPFS cierra cada fase
 
 
-class ProcessHandle(Protocol):
-    """Contrato mínimo que el runner necesita de un proceso de empaquetado."""
-
-    def lines(self) -> Iterator[str]:
-        """Lee la salida del proceso línea a línea hasta que termina.
-
-        Yields:
-            str: Cada línea no vacía de la salida.
-        """
-        ...
-
-    def wait(self) -> int:
-        """Espera a que el proceso termine.
-
-        Returns:
-            int: Código de salida (``0`` = éxito).
-        """
-        ...
-
-    def terminate(self) -> None:
-        """Termina el proceso si sigue en ejecución."""
-        ...
-
-
-ProcessFactory = Callable[[list[str]], ProcessHandle]
 
 
 class ConversionRunner:
@@ -75,6 +53,8 @@ class ConversionRunner:
         self._process: ProcessHandle | None = None
         self._cancel = threading.Event()
         self._running = False
+        self._lz4 = Lz4LocalConversion(StepContext(emit, process_factory, self._cancel,
+                                                   self._set_process))
 
     @property
     def is_running(self) -> bool:
@@ -145,8 +125,11 @@ class ConversionRunner:
             job (ConversionJob): Trabajo a convertir.
             options (ConversionOptions): Opciones de la conversión.
         """
-        command = build_pack_command(job, options)
         job.state = JobState.RUNNING
+        if options.output_format is OutputFormat.LZ4:
+            self._finish(job, self._lz4.run(job, options))
+            return
+        command = build_pack_command(job, options)
         self._emit(JobStarted(job, " ".join(command)))
         # MkPFS no sabe sobrescribir: si la salida existe pregunta por consola y, sin
         # consola, falla. La interfaz ya pidió confirmación antes de llegar aquí.
@@ -159,6 +142,16 @@ class ConversionRunner:
             return
         return_code = self._follow(job, process)
         self._finish(job, self._build_result(job, return_code, time.monotonic() - started))
+
+    def _set_process(self, process: ProcessHandle | None) -> None:
+        """Registra el proceso en curso para poder terminarlo al cancelar.
+
+        Args:
+            process (ProcessHandle | None): Proceso lanzado, o ``None`` al terminar.
+        """
+        self._process = process
+        if process is not None and self._cancel.is_set():  # cancelado mientras arrancaba
+            process.terminate()
 
     def _follow(self, job: ConversionJob, process: ProcessHandle) -> int:
         """Reenvía la salida del proceso como eventos hasta que termina.
