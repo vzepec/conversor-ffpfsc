@@ -9,6 +9,7 @@ from ffpfsc_converter.domain.remote_events import (
     DownloadQueueFinished,
     DownloadStarted,
     RemoteListing,
+    RemoteLz4Found,
     StorageUpdated,
     TransferRetrying,
 )
@@ -31,6 +32,7 @@ class ExplorerUpdater:
         self._view = controller.view
         self._handlers: dict[type, Callable] = {
             RemoteListing: self._on_listing,
+            RemoteLz4Found: self._on_lz4_found,
             StorageUpdated: self._on_storage,
             DownloadStarted: self._on_download_started,
             DownloadProgress: self._on_download_progress,
@@ -74,6 +76,17 @@ class ExplorerUpdater:
         if target is not None and self._view.is_browsing_enabled:
             text = presenters.connection_text(target.host, target.port, event.path)
             self._view.connection.set_state(True, text)
+
+    def _on_lz4_found(self, event: RemoteLz4Found) -> None:
+        """Marca los juegos que ya están comprimidos en LZ4 (si sigue abierta esa carpeta).
+
+        Args:
+            event (RemoteLz4Found): Carpeta revisada con sus juegos LZ4 marcados.
+        """
+        if event.path != self._ctl.path:
+            return
+        self._ctl.entries = event.entries
+        self._view.remote.update_entries(event.entries)
 
     def _on_storage(self, event: StorageUpdated) -> None:
         """Muestra el espacio libre de las unidades (si sigue habiendo conexión).

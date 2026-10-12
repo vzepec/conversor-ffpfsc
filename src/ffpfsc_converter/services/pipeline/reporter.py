@@ -4,7 +4,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 
-from ffpfsc_converter.config import PROGRESS_INTERVAL_SECONDS
+from ffpfsc_converter.config import LZ4_VERIFY_PHASE, PROGRESS_INTERVAL_SECONDS
 from ffpfsc_converter.domain.events import EventSink
 from ffpfsc_converter.domain.models import ProgressUpdate
 from ffpfsc_converter.domain.pipeline import PipelineStage
@@ -107,4 +107,5 @@ class PipelineReporter:
         """
         detail = PHASE_NAMES.get(progress.phase, progress.phase)
         detail += f"  —  {progress.speed}" if progress.speed else ""
-        self._emit(PipelineProgress(PipelineStage.COMPRESS, float(progress.percent), detail, eta))
+        self._emit(PipelineProgress(PipelineStage.COMPRESS, float(progress.percent), detail, eta,
+                                    can_skip=progress.phase == LZ4_VERIFY_PHASE))

@@ -48,6 +48,7 @@ class TransferRow(ttk.Frame):
         self._name.grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, m.px(_PAD_X)))
         self._subtitle = ttk.Label(body, style="CardSmall.TLabel")
         self._action: ttk.Button | None = None
+        self._secondary: ttk.Button | None = None
         self._label = ttk.Label(body, style="CardSmall.TLabel")
         self._label.grid(row=0, column=1, sticky="w")
         self._bar = ttk.Progressbar(body, maximum=100, style="Thin.Horizontal.TProgressbar")
@@ -150,6 +151,27 @@ class TransferRow(ttk.Frame):
         self._action.state(["!disabled"])
         self._eta.grid(row=0, column=3, rowspan=1, sticky="se")
         self._action.grid(row=1, column=3, sticky="ne", pady=(self._m.px(4), 0))
+
+    def set_secondary(self, text: str, command: Callable[[], None]) -> None:
+        """Muestra un segundo botón (por ejemplo «Saltar verificación»); texto vacío lo oculta.
+
+        Va bajo la velocidad, a la izquierda del botón principal.
+
+        Args:
+            text (str): Texto del botón.
+            command (Callable[[], None]): Acción.
+        """
+        if not text:
+            if self._secondary is not None:
+                self._secondary.grid_remove()
+            self._speed.grid(row=0, column=2, rowspan=2, sticky="e")
+            return
+        if self._secondary is None:
+            self._secondary = ttk.Button(self._body, takefocus=False, style="Card.Small.TButton")
+        self._secondary.configure(text=text, command=command)
+        self._speed.grid(row=0, column=2, rowspan=1, sticky="se")
+        self._secondary.grid(row=1, column=2, sticky="ne", pady=(self._m.px(4), 0),
+                             padx=(0, self._m.px(8)))
 
     def disable_action(self, text: str) -> None:
         """Deshabilita el botón de la fila mientras se atiende (por ejemplo, «Cancelando…»).

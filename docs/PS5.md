@@ -62,7 +62,11 @@ sequenceDiagram
   el espacio libre permite escribir otra ruta. **Accesos rápidos ▾** ofrece
   `/data/homebrew` (la carpeta que vigila ShadowMount+), `/mnt/usb0`, `/mnt/ext0`…
 - Cada elemento lleva una etiqueta: **Juego** (carpeta con Title ID o dentro de
-  `homebrew`), **Comprimido** (`.ffpfsc`) o **Imagen** (`.exfat`/`.ffpkg`).
+  `homebrew`), **LZ4** (juego ya comprimido en LZ4), **Comprimido** (`.ffpfsc`) o
+  **Imagen** (`.exfat`/`.ffpkg`). Para reconocer un juego LZ4 la app revisa por dentro
+  las carpetas de juego (busca `ampr_assets.index`) justo después de mostrarlas; si
+  abres otra carpeta antes, deja de revisar. Un juego LZ4 no se puede **Comprimir y
+  reemplazar** (ya está comprimido).
 - Bajo la tarjeta de conexión, una tarjeta por **unidad** muestra el espacio usado
   y libre: el almacenamiento interno, cada USB y el ampliado (M.2 o USB ampliado);
   la barra se vuelve ámbar con poco espacio. Se consulta al helper (`fs.volumes`)
@@ -155,6 +159,8 @@ Si cancelas o falla, al volver a intentarlo con el mismo juego:
 - Si sigue fallando:
   - en el panel de transferencias, **Reintentar fallidas** vuelve a encolar
     las descargas y subidas fallidas o canceladas (en sus mismas filas);
+  - **Limpiar** quita del panel lo que ya terminó (bien, con error o cancelado) y deja
+    lo que sigue en cola o en curso; lo quitado ya no se reintenta;
   - en "comprimir y reemplazar", **Reintentar** retoma sin repetir lo hecho:
     no vuelve a comprimir si ya estaba comprimido ni a borrar el original si ya
     se había borrado.

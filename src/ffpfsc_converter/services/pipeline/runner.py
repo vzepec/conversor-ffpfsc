@@ -29,7 +29,11 @@ from ffpfsc_converter.services.console_access import ConsoleAccess, restore_noti
 from ffpfsc_converter.services.launch_errors import describe_launch_error
 from ffpfsc_converter.services.lz4_local_files import planned_output
 from ffpfsc_converter.services.pipeline import stages
-from ffpfsc_converter.services.pipeline.compress import Compressor, compress_job
+from ffpfsc_converter.services.pipeline.compress import (
+    CompressControl,
+    Compressor,
+    compress_job,
+)
 from ffpfsc_converter.services.pipeline.plan import build_replace_plan, can_use_lz4
 from ffpfsc_converter.services.pipeline.replace import ReplaceContext, replace_on_console
 from ffpfsc_converter.services.pipeline.reporter import PipelineReporter
@@ -62,6 +66,7 @@ class Ps5ConversionPipeline:
         self._factory, self._compressor = client_factory, compressor
         self._answers: queue.Queue[object] = queue.Queue()
         self._cancel = threading.Event()
+        self._skip = threading.Event()
         self._reporter = PipelineReporter(emit)
         self.busy = False
         self.last: PipelineAttempt | None = None
@@ -111,6 +116,20 @@ class Ps5ConversionPipeline:
             value (PipelineChoice | bool | None): Elección, confirmación, o ``None`` = cancelar.
         """
         self._answers.put(value)
+
+    def skip_verification(self) -> None:
+        """Pide saltar la verificación LZ4 en curso: el juego sigue al reemplazo sin comprobarse."""
+        self._skip.set()
+
+    def _take_skip(self) -> bool:
+        """Consume el pedido de saltar la verificación.
+
+        Returns:
+            bool: ``True`` si se había pedido (una sola vez por pedido).
+        """
+        requested = self._skip.is_set()
+        self._skip.clear()
+        return requested
 
     def cancel(self) -> None:
         """Pide cancelar; las etapas largas se detienen y los archivos locales se conservan."""
@@ -185,6 +204,7 @@ class Ps5ConversionPipeline:
         Raises:
             DownloadCancelledError: Si se cancela o se cierra la ventana sin elegir.
         """
+        stages.ensure_not_lz4(self._factory, target, attempt.entry)
         download = stages.download_stage(self._factory, target, attempt.entry, attempt.work_dir,
                                          self._reporter, self._cancel.is_set)
         attempt.original_size = download.total_bytes
@@ -198,7 +218,8 @@ class Ps5ConversionPipeline:
         choice = self._answers.get()
         if not isinstance(choice, PipelineChoice):
             raise DownloadCancelledError()
-        stages.compress_stage(job, choice, self._compressor, self._reporter, self._cancel.is_set)
+        stages.compress_stage(job, choice, self._compressor, self._reporter,
+                              CompressControl(self._cancel.is_set, self._take_skip))
         attempt.job, attempt.choice = job, choice
 
     def _confirm(self, message: str) -> bool:

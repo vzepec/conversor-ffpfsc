@@ -122,6 +122,7 @@ class ChangesUpdater:
         """
         if self._ctl.modify.tracker is not None:
             self._ctl.modify.tracker.set_progress(event.percent, event.detail, event.eta_seconds)
+            self._ctl.modify.tracker.set_skippable(event.can_skip)
 
     def _on_options(self, event: PipelineOptionsRequired) -> None:
         """Muestra la ventana de compresión y entrega la elección al pipeline.

@@ -42,7 +42,9 @@ La app busca `libSceAmpr` en `eboot.bin` y en `sce_module/`. Las imágenes
 Elige **Formato → LZ4 (experimental)**. Se oculta «Rendimiento en la PS5», que solo usa
 `.ffpfsc`. **Verificación completa** sigue disponible y en LZ4 viene **activada**: compara
 el resultado con el original al terminar (paso 4). Apagarla ahorra tiempo, pero un paquete
-dañado solo se notaría en la PS5; cada formato recuerda su propio valor. La cola muestra
+dañado solo se notaría en la PS5; cada formato recuerda su propio valor. Mientras verifica,
+la fila muestra **Saltar verificación**: termina solo esa comprobación y el juego queda listo
+igual (no se cancela ni se borra nada). La cola muestra
 si cada juego es compatible y su peso estimado; las imágenes y los juegos no compatibles
 se omiten avisando antes. Los modos equivalen a LZ4 rápido (Máxima velocidad), HC 9
 (Equilibrado) y HC 12 (Máxima compresión).
@@ -65,7 +67,9 @@ cancelar; una conversión anterior en la misma ruta solo se reemplaza al final. 
 queda sin empaquetar se **enlaza** al original si está en el mismo disco (no ocupa espacio
 extra: son los mismos archivos, no los edites en la carpeta nueva); si no, se copia. Espacio
 necesario: el de los paquetes, más lo suelto si la salida está en otro disco. El peso
-estimado simula cómo ampr_pack ubica los bloques en páginas de 64 KiB.
+estimado comprime una muestra con el nivel de cada modo (rápido en Máxima velocidad, HC en
+los otros dos) y simula cómo ampr_pack ubica los bloques en páginas de 64 KiB; como es una
+muestra, el resultado real puede variar algunos GB.
 
 Para llevarla a la PS5 usa **Subir a la PS5** en la fila del juego (o **Subir a la
 PS5… → Carpeta…** en la sección PS5): sube la carpeta completa a `<nombre>.part/` y la
@@ -76,7 +80,8 @@ publica con su nombre al final.
 En la ventana de **Comprimir y reemplazar** (sección PS5) aparece **Formato** cuando el
 original es una carpeta. **LZ4** queda desactivado, con el motivo, si el juego no es
 compatible o faltan los componentes. Con LZ4 se oculta «Rendimiento en la PS5» y
-**Verificación completa** empieza activada (puedes apagarla). Además:
+**Verificación completa** empieza activada (puedes apagarla, o pulsar **Saltar
+verificación** en la fila de Transferencias mientras verifica). Además:
 
 - La carpeta LZ4 ocupa el lugar del original **con el mismo nombre**, así que la ruta
   del juego en la PS5 no cambia.
@@ -97,4 +102,10 @@ borrar los temporales al terminar) es igual que con `.ffpfsc`: ver [PS5.md](PS5.
   **Borrar los temporales** si quieres guardar la copia descargada como respaldo.
 - Si el juego convertido no arranca, revisa en ShadowMountPlus que su opción de
   *fakelib* no esté en «Desactivado» (desde el PC no se puede cambiar).
+- **Límite del perfil genérico.** ampr_emu recomienda empaquetar solo lo que se vio al
+  juego leer a través de `libSceAmpr` (con trazas de partidas reales); lo demás queda
+  suelto. La app no tiene esas trazas y empaqueta por tipo de archivo, así que si un
+  juego abre algún archivo empaquetado por otra vía (`mmap` o lectura directa), falla
+  aunque la verificación diga que los datos están bien. Si pasa, busca `ampr_emu.log`
+  en la carpeta del juego en la PS5 y descárgalo para revisarlo.
 - El detalle de cada conversión está en **Registros** (barra lateral).

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import random
 from pathlib import Path
 
 import pytest
@@ -91,8 +92,22 @@ def test_lz4_estimate_counts_loose_files_whole(tmp_path: Path) -> None:
                       ("assets/a.tex", b"\0" * 1_000_000)):
         (root / rel).write_bytes(data)
         files.append(FileEntry(str(root / rel), len(data)))
-    estimate = estimate_lz4(files, root, sample_blocks=16)
-    assert 50_000 <= estimate.total < 100_000 and estimate.loose == 50_000
+    estimate = estimate_lz4(files, root, [1, 9], sample_blocks=16)
+    assert all(50_000 <= total < 100_000 for total in estimate.totals.values())
+    assert estimate.loose == 50_000
+
+
+def test_fast_lz4_is_estimated_bigger_than_hc(tmp_path: Path) -> None:
+    """El modo rápido comprime menos que HC, así que su peso estimado es mayor."""
+    root = tmp_path / "game"
+    (root / "assets").mkdir(parents=True)
+    words = [os.urandom(3).hex() for _ in range(400)]
+    rng = random.Random(1)
+    data = " ".join(rng.choice(words) for _ in range(400_000)).encode()[:2_000_000]
+    (root / "assets/texto.tex").write_bytes(data)
+    files = [FileEntry(str(root / "assets/texto.tex"), len(data))]
+    totals = estimate_lz4(files, root, [1, 9, 12], sample_blocks=32).totals
+    assert totals[1] > totals[9] >= totals[12]
 
 
 def test_blocks_that_save_little_are_stored_raw() -> None:

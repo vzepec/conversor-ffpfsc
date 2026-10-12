@@ -174,8 +174,9 @@ class ConversionJob:
         id (str): Identificador único, usado también como fila de la tabla.
         lz4_compat (Lz4Compat | None): Si el juego admite LZ4 (usa ``libSceAmpr``);
             ``None`` mientras se analiza.
-        lz4_estimate (int | None): Peso estimado de la carpeta LZ4; ``None`` sin estimar.
-        lz4_loose_bytes (int): Parte de ``lz4_estimate`` que queda sin empaquetar (en el
+        lz4_estimates (dict[int, int]): Peso estimado de la carpeta LZ4 por nivel LZ4
+            (vacío mientras se estima).
+        lz4_loose_bytes (int): Parte de ``lz4_estimates`` que queda sin empaquetar (en el
             mismo disco se enlaza y no ocupa espacio extra).
         already_compressed (bool): ``True`` si se agregó un ``.ffpfsc`` ya hecho: no se
             convierte y queda listo para subir a la PS5.
@@ -189,7 +190,7 @@ class ConversionJob:
     estimates: dict[int, int] = field(default_factory=dict)
     performance_estimates: dict[int, int] = field(default_factory=dict)
     lz4_compat: Lz4Compat | None = None
-    lz4_estimate: int | None = None
+    lz4_estimates: dict[int, int] = field(default_factory=dict)
     lz4_loose_bytes: int = 0
     state: JobState = JobState.QUEUED
     id: str = field(default_factory=lambda: uuid.uuid4().hex)

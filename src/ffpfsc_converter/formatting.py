@@ -1,6 +1,8 @@
 """Formatos de texto compartidos por varias capas (sin dependencias)."""
 from __future__ import annotations
 
+from ffpfsc_converter.config import LZ4_VERIFY_PHASE
+
 _SIZE_UNITS = ("B", "KB", "MB", "GB")
 _LAST_SIZE_UNIT = "TB"
 #: Nombres en español de las fases de MkPFS.
@@ -9,6 +11,7 @@ PHASE_NAMES = {
     "write": "Escribiendo",
     "scan": "Escaneando",
     "verify": "Verificando",
+    LZ4_VERIFY_PHASE: "Verificando",
 }
 
 

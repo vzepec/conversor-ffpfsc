@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ffpfsc_converter.config import PRESETS
+from ffpfsc_converter.config import LZ4_VERIFY_PHASE, PRESETS
 from ffpfsc_converter.domain.events import (
     Event,
     JobEstimateReady,
@@ -117,6 +117,7 @@ class ViewUpdater:
         """
         kind, label, detail = jp.progress_status(event.progress, event.eta_seconds)
         self._view.table.set_status(event.job.id, kind, label, detail, event.progress.percent)
+        self._view.table.set_skip(event.job.id, event.progress.phase == LZ4_VERIFY_PHASE)
         self._view.set_status(f"{event.job.source.name}: {label}")
 
     def _on_log_message(self, event: LogMessage) -> None:
@@ -134,6 +135,7 @@ class ViewUpdater:
             event (JobFinished): Evento con el trabajo y su resultado.
         """
         kind, label, detail = jp.result_status(event.job, event.result)
+        self._view.table.set_skip(event.job.id, False)
         self._view.table.set_status(event.job.id, kind, label, detail)
 
     def _on_queue_finished(self, event: QueueFinished) -> None:

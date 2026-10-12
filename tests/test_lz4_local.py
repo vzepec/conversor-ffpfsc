@@ -88,12 +88,14 @@ def test_real_tools_build_a_verified_lz4_folder(tmp_path: Path) -> None:
 @pytest.mark.skipif(installed_components() is None, reason="sin componentes de ampr_emu")
 def test_verification_can_be_skipped(tmp_path: Path) -> None:
     """Sin verificación completa, LZ4 no ejecuta el paso de comprobación pero termina bien."""
+    from ffpfsc_converter.config import LZ4_VERIFY_PHASE
+
     job = create_job(_game(tmp_path / "PPSA01234"))
     events: list[object] = []
     options = ConversionOptions(9, 2, False, output_format=OutputFormat.LZ4)
     ConversionRunner(events.append).start([job], options).join(timeout=300)
     phases = {e.progress.phase for e in events if isinstance(e, JobProgress)}
-    assert {"scan", "compress"} <= phases and "verify" not in phases
+    assert {"scan", "compress"} <= phases and LZ4_VERIFY_PHASE not in phases
     assert next(e for e in events if isinstance(e, JobFinished)).result.succeeded
 
 

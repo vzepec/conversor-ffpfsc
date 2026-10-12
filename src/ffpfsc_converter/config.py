@@ -109,6 +109,8 @@ PS5_FAVORITE_PATHS = (
 )
 #: Carpeta inicial al conectar (la que vigila ShadowMount+).
 PS5_START_PATH = "/data/homebrew"
+#: Carpeta donde se instalan los juegos en cada unidad de la PS5.
+PS5_GAMES_FOLDER = "homebrew"
 #: Porcentaje de uso a partir del cual la barra de una unidad de la PS5 se pinta en ámbar.
 STORAGE_WARN_PERCENT = 85
 #: Puerto del helper de ps5upload (protocolo AVA1), usado para iniciar el FTP.
@@ -176,11 +178,12 @@ AMPR_AUDIO_TOP_DIRS = frozenset({"audio", "sound", "sounds", "sfx", "music", "vo
 LZ4_FAST_MAX_LEVEL = 4
 #: Carpetas temporales de la conversión LZ4 en el PC (dentro de la carpeta de destino).
 LZ4_WORK_SUFFIX = ".lz4-temporal"
+#: Fase de la verificación LZ4 (distinta de la de MkPFS: solo esta se puede saltar).
+LZ4_VERIFY_PHASE = "verify-lz4"
 LZ4_PARTIAL_SUFFIX = ".parcial"
 LZ4_BACKUP_SUFFIX = ".anterior"
-#: Estimación del peso LZ4: bloques de 64 KiB muestreados (~32 MB) y nivel HC de referencia.
+#: Estimación del peso LZ4: bloques de 64 KiB muestreados (~32 MB), comprimidos con cada nivel.
 LZ4_ESTIMATE_SAMPLE_BLOCKS = 512
-LZ4_ESTIMATE_LEVEL = 9
 #: Nivel LZ4 de cada modo de la vista Convertir (nivel zlib → LZ4): rápido, HC 9 y HC 12.
 LZ4_LEVEL_BY_PRESET = {3: 1, 6: 9, 9: 12}
 #: Si durante el empaquetado LZ4 el disco de destino baja de esto, se detiene y limpia.

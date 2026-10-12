@@ -16,11 +16,35 @@ from ffpfsc_converter.services.console_access import ConsoleAccess
 from ffpfsc_converter.services.discovery import create_job
 from ffpfsc_converter.services.integrity import FilePair, IntegrityError, verify_files
 from ffpfsc_converter.services.lz4_local_files import planned_output
-from ffpfsc_converter.services.pipeline.compress import Compressor
+from ffpfsc_converter.services.pipeline.compress import CompressControl, Compressor
 from ffpfsc_converter.services.pipeline.reporter import PipelineReporter
 from ffpfsc_converter.services.preflight import check_free_space
 from ffpfsc_converter.services.remote_client import ClientFactory
 from ffpfsc_converter.services.remote_download import NotEnoughSpaceError, download_with_retries
+from ffpfsc_converter.services.remote_games import ALREADY_LZ4_TEXT, is_lz4_folder
+
+
+def ensure_not_lz4(factory: ClientFactory, target: ConsoleTarget, entry: RemoteEntry) -> None:
+    """Comprueba que una carpeta no esté ya comprimida en LZ4 antes de descargarla.
+
+    Args:
+        factory (ClientFactory): Crea el cliente FTP.
+        target (ConsoleTarget): FTP de solo lectura.
+        entry (RemoteEntry): Elemento a reemplazar.
+
+    Raises:
+        ConverterError: Si la carpeta ya está en LZ4 (no tiene sentido volver a comprimirla).
+        OSError: Si falla el listado.
+    """
+    if not entry.is_dir:
+        return
+    client = factory(target)
+    try:
+        client.connect()
+        if is_lz4_folder(client, entry.path):
+            raise ConverterError(ALREADY_LZ4_TEXT)
+    finally:
+        client.close()
 
 
 def download_stage(factory: ClientFactory, target: ConsoleTarget, entry: RemoteEntry,
@@ -98,7 +122,7 @@ def prepare_stage(local: Path, work_dir: Path, reporter: PipelineReporter) -> Co
 
 
 def compress_stage(job: ConversionJob, choice: PipelineChoice, compressor: Compressor,
-                   reporter: PipelineReporter, should_cancel: Callable[[], bool]) -> None:
+                   reporter: PipelineReporter, control: CompressControl) -> None:
     """Comprime el juego tras comprobar el espacio local.
 
     Args:
@@ -106,7 +130,7 @@ def compress_stage(job: ConversionJob, choice: PipelineChoice, compressor: Compr
         choice (PipelineChoice): Opciones elegidas.
         compressor (Compressor): Función de compresión.
         reporter (PipelineReporter): Publica etapa y progreso.
-        should_cancel (Callable[[], bool]): Devuelve ``True`` si hay que cancelar.
+        control (CompressControl): Cancelación y pedido de saltar la verificación LZ4.
 
     Raises:
         NotEnoughSpaceError: Si no cabe el juego comprimido en este equipo.
@@ -117,8 +141,8 @@ def compress_stage(job: ConversionJob, choice: PipelineChoice, compressor: Compr
     if space is not None and not space.is_enough:
         raise NotEnoughSpaceError(space.needed, free_space(job.output.parent))
     reporter.stage(PipelineStage.COMPRESS, planned_output(job, choice.options).name)
-    result = compressor(job, choice.options, reporter.on_compress, should_cancel)
-    if result.cancelled or should_cancel():
+    result = compressor(job, choice.options, reporter.on_compress, control)
+    if result.cancelled or control.should_cancel():
         raise DownloadCancelledError()
     if not result.succeeded:
         raise ConverterError(f"No se pudo comprimir el juego ({result.message}).")

@@ -40,6 +40,7 @@ class ExplorerCallbacks:
         on_cancel_downloads (Callable[[], None]): Cancelar descargas.
         on_open_destination (Callable[[], None]): Abrir carpeta de descargas.
         on_retry_failed (Callable[[], None]): Reintentar transferencias fallidas.
+        on_clear_transfers (Callable[[], None]): Quitar de la lista lo que ya terminó.
         on_upload (Callable[[], None]): Menú "Subir a la PS5…" → "Archivos…".
         on_upload_folder (Callable[[], None]): Menú "Subir a la PS5…" → "Carpeta…".
         on_delete (Callable[[], None]): Botón "Eliminar".
@@ -57,6 +58,7 @@ class ExplorerCallbacks:
     on_cancel_downloads: Callable[[], None]
     on_open_destination: Callable[[], None]
     on_retry_failed: Callable[[], None]
+    on_clear_transfers: Callable[[], None]
     on_upload: Callable[[], None]
     on_upload_folder: Callable[[], None]
     on_delete: Callable[[], None]
@@ -97,7 +99,8 @@ class ExplorerView(ttk.Frame):
         self._drives.pack(fill="x", pady=(m.px(12), 0))
         self.transfers = TransferPanel(self, theme, TransferActions(
             callbacks.on_change_destination, callbacks.on_open_destination,
-            callbacks.on_retry_failed, callbacks.on_cancel_downloads))
+            callbacks.on_retry_failed, callbacks.on_cancel_downloads,
+            callbacks.on_clear_transfers))
         self.transfers.pack(side="bottom", fill="x", pady=(m.px(12), 0))
         self._actions = ActionBar(self, theme, {
             "download": callbacks.on_download, "convert": callbacks.on_convert,

@@ -10,9 +10,10 @@ from ffpfsc_converter.services.console_access import ConsoleAccess
 from ffpfsc_converter.services.pipeline.plan import is_convertible
 from ffpfsc_converter.services.pipeline.runner import Ps5ConversionPipeline
 from ffpfsc_converter.services.remote_changes import RemoteChanges
+from ffpfsc_converter.services.remote_games import ALREADY_LZ4_TEXT
 from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.explorer import presenters
-from ffpfsc_converter.ui.explorer.pipeline_tracker import PipelineTracker
+from ffpfsc_converter.ui.explorer.pipeline_tracker import PipelineRowActions, PipelineTracker
 
 if TYPE_CHECKING:  # evita la importación circular con el controlador
     from ffpfsc_converter.ui.explorer.controller import ExplorerController
@@ -104,6 +105,9 @@ class ModifyActions:
     def convert_selected(self) -> None:
         """Inicia "comprimir y reemplazar" para la carpeta o imagen seleccionada."""
         entries = self._ctl.view.remote.selected_entries()
+        if len(entries) == 1 and entries[0].is_lz4:
+            dialogs.show_info(ALREADY_LZ4_TEXT)
+            return
         if len(entries) != 1 or not is_convertible(entries[0]):
             dialogs.show_info("Selecciona UNA carpeta de juego o una imagen .exfat / .ffpkg.")
             return
@@ -113,8 +117,8 @@ class ModifyActions:
         assert self._ctl.target is not None and self._ctl.download_dir is not None
         entry = entries[0]
         siblings = [e.name for e in self._ctl.entries]
-        self.tracker = PipelineTracker(self._ctl.view.transfers, entry.name,
-                                       (self.pipeline.cancel, self.retry_pipeline))
+        self.tracker = PipelineTracker(self._ctl.view.transfers, entry.name, PipelineRowActions(
+            self.pipeline.cancel, self.retry_pipeline, self.pipeline.skip_verification))
         self.pipeline.start(entry, self._ctl.target, siblings,
                             self._ctl.download_dir / PIPELINE_WORK_DIR_NAME)
 

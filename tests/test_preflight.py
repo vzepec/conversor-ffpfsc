@@ -49,7 +49,7 @@ def test_lz4_on_the_same_disk_only_needs_the_packs(tmp_path: Path,
     """Con LZ4 en el mismo disco, lo suelto se enlaza: solo cuenta el peso de los paquetes."""
     monkeypatch.setattr(preflight, "free_space", lambda _d: 1000)
     job = _job(tmp_path, 5000, {})
-    job.lz4_estimate, job.lz4_loose_bytes = 3000, 2500
+    job.lz4_estimates, job.lz4_loose_bytes = {1: 3000, 9: 3000, 12: 3000}, 2500
     options = ConversionOptions(9, 1, False, output_format=OutputFormat.LZ4)
     check = preflight.check_free_space(job, options)
     assert check == preflight.SpaceCheck(1000, int(500 * FREE_SPACE_MARGIN))

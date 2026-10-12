@@ -82,7 +82,7 @@ src/ffpfsc_converter/
 │   ├── preflight.py       # Comprobación de espacio libre
 │   ├── conversion.py      # ConversionRunner: cola secuencial con cancelación
 │   ├── ftp_launcher.py    # FtpLauncher: FTP activo → listo; si no, AVA1 + ftp.start
-│   ├── remote_browser.py  # RemoteBrowser: navegar en un hilo propio
+│   ├── remote_browser.py, remote_games.py  # navegar en un hilo propio; juegos y juegos LZ4
 │   ├── downloads.py       # DownloadRunner: cola de descargas con su propia sesión
 │   ├── remote_download.py #   descargar un elemento: espacio, transferencia y reintentos
 │   ├── retry.py           # Reintentos automáticos ante fallos transitorios
@@ -98,7 +98,7 @@ src/ffpfsc_converter/
 │   ├── remote_upload.py   #   subida a .part con REST, verificación y renombre
 │   ├── remote_changes.py  # RemoteChanges: eliminar y subir desde el explorador
 │   ├── remote_folder_*.py # subida de carpetas: archivos, staging .part/ y renombre final
-│   ├── lz4_local*.py      # LZ4 en el PC: pasos (steps), archivos (files) y orquestación
+│   ├── lz4_local*.py, skip_switch.py  # LZ4 en el PC: pasos, archivos, orquestación y «saltar»
 │   ├── ampr_profile.py, ampr_compat.py, lz4_estimator.py  # perfil, compatibilidad, peso
 │   ├── pipeline/          # "Comprimir y reemplazar en la PS5"
 │   │   ├── runner.py      #   orquesta las etapas; reintento manual sin repetir lo hecho
@@ -120,7 +120,7 @@ src/ffpfsc_converter/
     ├── main_view.py       # MainView + ViewCallbacks: vista Convertir
     ├── options_panel.py   # Formato, modo, núcleos, verificación y rendimiento
     ├── destination_row.py # Línea «Guardar en»: carpeta de destino
-    ├── job_list.py        # Filas de la cola (ficha, tamaños, estado, «Subir a la PS5»)
+    ├── job_list.py, job_row.py  # Cola y cada fila (ficha, tamaños, estado y su botón)
     ├── job_presenters.py  # Textos puros de las filas y del resumen de la cola
     ├── convert_upload.py  # Subida a la PS5 de los juegos convertidos
     ├── dialogs.py, upload_dialog.py  # Selectores de archivos y mensajes
@@ -144,9 +144,9 @@ src/ffpfsc_converter/
         ├── connection_bar.py  # tarjeta de conexión (IP, puerto, modo del FTP)
         ├── drives.py      #   tarjetas de unidades con barra de uso
         ├── path_bar.py    #   ruta con tramos clicables y accesos rápidos
-        ├── file_list.py   #   lista de archivos dibujada en un lienzo
+        ├── file_list.py, badge_painter.py  # lista dibujada en un lienzo y sus etiquetas
         ├── action_bar.py  #   acciones sobre la selección
-        ├── transfer_panel.py, transfer_row.py  # descargas y subidas
+        ├── transfer_panel.py, transfer_header.py, transfer_row.py  # descargas y subidas
         ├── controller.py  #   ExplorerController: acciones → servicios
         ├── updater.py     #   ExplorerUpdater: eventos remotos → vista
         ├── connection_updater.py  # conexión, emparejamiento, errores y reconexión

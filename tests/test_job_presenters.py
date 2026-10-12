@@ -115,7 +115,7 @@ def test_lz4_sizes_and_problems(tmp_path: Path) -> None:
     """Con LZ4 se muestra su estimación o, si no sirve, el motivo en pocas palabras."""
     game = tmp_path / "juego"
     game.mkdir()
-    job = ConversionJob(game, game, tmp_path / "juego.ffpfsc", size=1000, lz4_estimate=400,
+    job = ConversionJob(game, game, tmp_path / "juego.ffpfsc", size=1000, lz4_estimates={1: 400},
                         lz4_compat=Lz4Compat.YES)
     assert jp.size_lines(job, 3, lz4=True) == ("1000.0 B →", "≈ 400.0 B", "−60% estimado")
     job.lz4_compat = Lz4Compat.NO
@@ -129,6 +129,7 @@ def test_lz4_sizes_and_problems(tmp_path: Path) -> None:
 def test_lz4_estimate_text() -> None:
     """Muestra el peso LZ4 estimado con su ahorro, o que aún se está analizando."""
     job = _job(size=1000)
-    assert jp.lz4_estimate_text(job) == "analizando…"
-    job.lz4_estimate = 400
-    assert jp.lz4_estimate_text(job) == "≈ 400.0 B (−60%)"
+    assert jp.lz4_estimate_text(job, 3) == "analizando…"
+    job.lz4_estimates = {1: 400, 9: 300}
+    assert jp.lz4_estimate_text(job, 3) == "≈ 400.0 B (−60%)"  # Máxima velocidad = LZ4 rápido
+    assert jp.lz4_estimate_text(job, 6) == "≈ 300.0 B (−70%)"  # Equilibrado = LZ4 HC 9

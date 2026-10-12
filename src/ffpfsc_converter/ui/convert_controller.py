@@ -89,6 +89,7 @@ class ConvertController:
             on_open_output=self.open_output,
             on_upload_all=lambda: self._uploader.upload_all(),
             on_upload_row=lambda row_id: self._uploader.upload_ids({row_id}),
+            on_skip_verify=self.skip_verification,
         )
 
     def handle(self, event: Event) -> None:
@@ -189,6 +190,15 @@ class ConvertController:
             return
         self.view.set_running(True)
         self.runner.start(ready, options)
+
+    def skip_verification(self, row_id: str) -> None:
+        """Salta la verificación LZ4 en curso; el juego queda listo sin comprobarlo.
+
+        Args:
+            row_id (str): Fila del juego que se está verificando.
+        """
+        self.view.table.set_skip(row_id, False)
+        self.runner.skip_verification()
 
     def cancel(self) -> None:
         """Pide cancelar la conversión en curso."""

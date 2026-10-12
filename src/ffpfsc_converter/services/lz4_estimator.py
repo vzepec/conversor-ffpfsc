@@ -1,15 +1,16 @@
 """Estimación del peso de la carpeta LZ4 (formato AMPR) sin convertir el juego.
 
 Los archivos que el perfil genérico deja sueltos cuentan completos; de los que se
-comprimen se leen bloques de 64 KiB al azar (ponderados por tamaño) y se comprimen
-con LZ4 HC y se ubican en páginas de 64 KiB con las mismas reglas que ``ampr_pack.py``
-(un bloque que comprime poco va crudo; los comprimidos no cruzan páginas), porque eso
-decide el peso real. La razón se extrapola a su tamaño total.
+comprimen se leen bloques de 64 KiB al azar (ponderados por tamaño), se comprimen
+con el nivel LZ4 de cada modo (rápido o HC: el rápido comprime menos) y se ubican
+en páginas de 64 KiB con las mismas reglas que ``ampr_pack.py`` (un bloque que
+comprime poco va crudo; los comprimidos no cruzan páginas), porque eso decide el
+peso real. La razón se extrapola a su tamaño total.
 """
 from __future__ import annotations
 
 import random
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,8 +22,8 @@ from ffpfsc_converter.config import (
     AMPR_MIN_SAVINGS_BYTES,
     AMPR_MIN_SAVINGS_RATIO,
     ESTIMATE_SEED,
-    LZ4_ESTIMATE_LEVEL,
     LZ4_ESTIMATE_SAMPLE_BLOCKS,
+    LZ4_FAST_MAX_LEVEL,
     PFSC_BLOCK_SIZE,
 )
 from ffpfsc_converter.domain.models import FileEntry
@@ -34,41 +35,45 @@ class Lz4SizeEstimate:
     """Peso estimado de la carpeta LZ4.
 
     Attributes:
-        total (int): Bytes de la carpeta (sueltos completos + paquetes).
+        totals (dict[int, int]): Bytes de la carpeta (sueltos completos + paquetes) por
+            nivel LZ4.
         loose (int): Bytes que quedan sin empaquetar.
     """
 
-    total: int
+    totals: dict[int, int]
     loose: int
 
 
-def estimate_lz4(files: Sequence[FileEntry], root: Path,
+def estimate_lz4(files: Sequence[FileEntry], root: Path, levels: Iterable[int],
                  sample_blocks: int = LZ4_ESTIMATE_SAMPLE_BLOCKS) -> Lz4SizeEstimate:
-    """Estima los bytes de la carpeta LZ4 de un juego.
+    """Estima los bytes de la carpeta LZ4 de un juego para cada nivel.
+
+    Los bloques se leen una sola vez y se comprimen con cada nivel.
 
     Args:
         files (Sequence[FileEntry]): Archivos del juego (rutas absolutas).
         root (Path): Carpeta del juego, para clasificar cada archivo.
+        levels (Iterable[int]): Niveles LZ4 a estimar.
         sample_blocks (int): Bloques a muestrear entre los que se comprimen.
 
     Returns:
-        Lz4SizeEstimate: Total estimado y la parte que queda suelta.
+        Lz4SizeEstimate: Total estimado por nivel y la parte que queda suelta.
     """
     packed = [f for f in files if classify(_relative(f, root)) is not AmprAction.LOOSE]
     packed_total = sum(f.size for f in packed)
     loose = sum(f.size for f in files) - packed_total
-    if packed_total == 0:
-        return Lz4SizeEstimate(loose, loose)
-    return Lz4SizeEstimate(loose + int(packed_total * _sample_ratio(packed, sample_blocks)),
-                           loose)
+    blocks = _sample_blocks(packed, sample_blocks) if packed_total else []
+    return Lz4SizeEstimate({level: loose + int(packed_total * (block_ratio(blocks, level)
+                                                               if blocks else 1.0))
+                            for level in levels}, loose)
 
 
-def block_ratio(blocks: Sequence[bytes], level: int = LZ4_ESTIMATE_LEVEL) -> float:
+def block_ratio(blocks: Sequence[bytes], level: int) -> float:
     """Calcula cuánto ocuparía una muestra en los paquetes, contando páginas y bloques crudos.
 
     Args:
         blocks (Sequence[bytes]): Bloques leídos (no vacía).
-        level (int): Nivel LZ4 HC.
+        level (int): Nivel LZ4 (hasta ``LZ4_FAST_MAX_LEVEL`` es el modo rápido; luego HC).
 
     Returns:
         float: Bytes ocupados / bytes originales (puede pasar apenas de ``1`` por el relleno).
@@ -76,10 +81,24 @@ def block_ratio(blocks: Sequence[bytes], level: int = LZ4_ESTIMATE_LEVEL) -> flo
     Raises:
         ZeroDivisionError: Si ``blocks`` está vacía.
     """
-    sizes = [stored_size(len(b), len(lz4.block.compress(b, mode="high_compression",
-                                                        compression=level, store_size=False)))
-             for b in blocks]
+    sizes = [stored_size(len(b), len(_compress(b, level))) for b in blocks]
     return packed_end(sizes) / sum(len(b) for b in blocks)
+
+
+def _compress(block: bytes, level: int) -> bytes:
+    """Comprime un bloque como ``ampr_pack``: modo rápido o HC según el nivel.
+
+    Args:
+        block (bytes): Bloque original.
+        level (int): Nivel LZ4.
+
+    Returns:
+        bytes: Bloque comprimido (sin cabecera de tamaño).
+    """
+    if level <= LZ4_FAST_MAX_LEVEL:
+        return lz4.block.compress(block, mode="default", store_size=False)
+    return lz4.block.compress(block, mode="high_compression", compression=level,
+                              store_size=False)
 
 
 def stored_size(raw: int, compressed: int) -> int:
@@ -121,15 +140,15 @@ def packed_end(sizes: Sequence[int]) -> int:
     return position
 
 
-def _sample_ratio(files: Sequence[FileEntry], count: int) -> float:
-    """Lee bloques al azar de los archivos (ponderados por tamaño) y mide su razón.
+def _sample_blocks(files: Sequence[FileEntry], count: int) -> list[bytes]:
+    """Lee bloques al azar de los archivos (ponderados por tamaño).
 
     Args:
         files (Sequence[FileEntry]): Archivos que se comprimen (tamaño total > 0).
         count (int): Bloques a leer.
 
     Returns:
-        float: Razón de la muestra; ``1.0`` si no se pudo leer nada.
+        list[bytes]: Bloques leídos (vacía si no se pudo leer nada).
     """
     rng = random.Random(ESTIMATE_SEED)
     chosen = rng.choices(files, weights=[f.size for f in files], k=count)
@@ -143,7 +162,7 @@ def _sample_ratio(files: Sequence[FileEntry], count: int) -> float:
                     blocks.append(data)
         except OSError:
             continue
-    return block_ratio(blocks) if blocks else 1.0
+    return blocks
 
 
 def _relative(entry: FileEntry, root: Path) -> str:

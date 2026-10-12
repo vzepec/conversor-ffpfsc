@@ -9,7 +9,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ffpfsc_converter.config import AMPR_RUNTIME_FILE, AMPR_TOOLS_DIR, PROGRESS_INTERVAL_SECONDS
@@ -18,12 +18,14 @@ from ffpfsc_converter.domain.models import ConversionJob, ProgressUpdate
 from ffpfsc_converter.infrastructure.ampr_tools import AmprTools
 from ffpfsc_converter.infrastructure.third_party import installed
 from ffpfsc_converter.services.process_handle import ProcessFactory, ProcessHandle
+from ffpfsc_converter.services.skip_switch import SkipSwitch
 from ffpfsc_converter.timing import PercentEta
 
 #: Reconoce una línea de avance de una herramienta.
 Parser = Callable[[str], ProgressUpdate | None]
 #: Revisa cada línea; devuelve un motivo para detener la herramienta, o ``None``.
 Guard = Callable[[str], str | None]
+SKIPPED_TEXT = "Verificación omitida a pedido del usuario."
 
 
 @dataclass(frozen=True)
@@ -49,12 +51,14 @@ class StepContext:
         cancel (threading.Event): Se activa al cancelar.
         set_process (Callable[[ProcessHandle | None], None]): Registra el proceso en curso
             para que el runner pueda terminarlo al cancelar.
+        skip (SkipSwitch): Pedido de saltar el paso opcional en curso.
     """
 
     emit: EventSink
     process_factory: ProcessFactory
     cancel: threading.Event
     set_process: Callable[[ProcessHandle | None], None]
+    skip: SkipSwitch = field(default_factory=SkipSwitch)
 
 
 class StepFailedError(Exception):
@@ -122,6 +126,36 @@ class ToolRunner:
             detail = next((line for line in reversed(lines) if line.strip()), "")
             raise StepFailedError(f"Falló el paso «{phase}» (código {code}): {detail}")
         return lines or [""]
+
+    def run_optional(self, command: list[str], phase: str) -> bool:
+        """Ejecuta un paso que el usuario puede saltar (la verificación).
+
+        Si se salta, su proceso se termina y la conversión sigue como si hubiera
+        terminado bien; no es una cancelación, así que no se borra nada.
+
+        Args:
+            command (list[str]): Comando a ejecutar.
+            phase (str): Fase que se muestra.
+
+        Returns:
+            bool: ``True`` si terminó o se saltó; ``False`` si se canceló.
+
+        Raises:
+            OSError: Si no se puede lanzar el proceso.
+            StepFailedError: Si falla sin que se haya pedido saltarlo.
+        """
+        self._ctx.skip.begin()
+        try:
+            done = bool(self.run(command, phase))
+        except StepFailedError:
+            if not self._ctx.skip.end():
+                raise
+            done = True
+        skipped = self._ctx.skip.end()
+        if skipped and not self._ctx.cancel.is_set():
+            self._ctx.emit(LogMessage(SKIPPED_TEXT))
+            return True
+        return done
 
     def copy_progress(self) -> Callable[[int], bool]:
         """Crea el aviso de avance de la copia de archivos sueltos (fase ``write``).

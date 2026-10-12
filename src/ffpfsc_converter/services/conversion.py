@@ -30,6 +30,7 @@ from ffpfsc_converter.infrastructure.mkpfs_adapter import (
 from ffpfsc_converter.services.lz4_local import Lz4LocalConversion
 from ffpfsc_converter.services.lz4_local_steps import StepContext
 from ffpfsc_converter.services.process_handle import ProcessFactory, ProcessHandle
+from ffpfsc_converter.services.skip_switch import SkipSwitch
 from ffpfsc_converter.timing import PercentEta
 
 _COMPLETE = 100  # porcentaje con el que MkPFS cierra cada fase
@@ -53,8 +54,9 @@ class ConversionRunner:
         self._process: ProcessHandle | None = None
         self._cancel = threading.Event()
         self._running = False
+        self._skip = SkipSwitch()
         self._lz4 = Lz4LocalConversion(StepContext(emit, process_factory, self._cancel,
-                                                   self._set_process))
+                                                   self._set_process, self._skip))
 
     @property
     def is_running(self) -> bool:
@@ -101,6 +103,19 @@ class ConversionRunner:
         process = self._process
         if process is not None:
             process.terminate()
+
+    def skip_verification(self) -> bool:
+        """Salta la verificación LZ4 en curso: el juego queda listo sin comprobarlo.
+
+        Returns:
+            bool: ``True`` si había una verificación que saltar.
+        """
+        if not self._skip.request():
+            return False
+        process = self._process
+        if process is not None:
+            process.terminate()
+        return True
 
     def _run_queue(self, jobs: list[ConversionJob], options: ConversionOptions) -> None:
         """Convierte los trabajos en orden y publica ``QueueFinished`` al terminar.

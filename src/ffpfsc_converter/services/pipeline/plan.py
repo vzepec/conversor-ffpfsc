@@ -26,14 +26,17 @@ def can_use_lz4(entry: RemoteEntry) -> bool:
 
 
 def is_convertible(entry: RemoteEntry) -> bool:
-    """Indica si un elemento de la PS5 se puede comprimir a ``.ffpfsc``.
+    """Indica si un elemento de la PS5 se puede comprimir y reemplazar.
 
     Args:
         entry (RemoteEntry): Elemento remoto.
 
     Returns:
-        bool: ``True`` para carpetas y para imágenes ``.exfat``/``.ffpkg``.
+        bool: ``True`` para carpetas (salvo las ya comprimidas en LZ4) y para imágenes
+        ``.exfat``/``.ffpkg``.
     """
+    if entry.is_lz4:
+        return False
     return entry.is_dir or PurePosixPath(entry.name).suffix.lower() in IMAGE_EXTENSIONS
 
 

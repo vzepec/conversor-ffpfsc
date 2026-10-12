@@ -29,12 +29,14 @@ class PipelineProgress:
         percent (float): Porcentaje de la etapa (0-100).
         detail (str): Texto de progreso (bytes, velocidad, fase de MkPFS…).
         eta_seconds (float | None): Tiempo restante estimado; ``None`` si aún no se sabe.
+        can_skip (bool): ``True`` mientras se verifica un LZ4 (se puede saltar).
     """
 
     stage: PipelineStage
     percent: float
     detail: str
     eta_seconds: float | None = None
+    can_skip: bool = False
 
 
 @dataclass(frozen=True)

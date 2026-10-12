@@ -47,7 +47,7 @@ def check_free_space(job: ConversionJob, options: ConversionOptions) -> SpaceChe
     if not job.size:
         return None
     if options.output_format is OutputFormat.LZ4:
-        estimate = job.lz4_estimate or job.size
+        estimate = job.lz4_estimates.get(options.compression_level) or job.size
         if same_device(job.game_root, job.output.parent):  # lo suelto se enlaza
             estimate -= min(job.lz4_loose_bytes, estimate)
     else:

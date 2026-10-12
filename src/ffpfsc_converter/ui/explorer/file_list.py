@@ -10,20 +10,16 @@ import tkinter as tk
 from collections.abc import Callable, Iterable
 from tkinter import ttk
 
-from PIL import ImageTk
-
 from ffpfsc_converter.domain.remote import RemoteEntry
 from ffpfsc_converter.ui.explorer import presenters
+from ffpfsc_converter.ui.explorer.badge_painter import BadgePainter
 from ffpfsc_converter.ui.explorer.view_presenters import entry_badge
 from ffpfsc_converter.ui.theme import Palette, ThemeManager
-from ffpfsc_converter.ui.theme.shapes import render_rounded
 from ffpfsc_converter.ui.widgets.scroll_frame import autohide
 from ffpfsc_converter.ui.widgets.text_fit import elide
 
 _ROW, _PAD, _SIZE_W, _DATE_W, _ICON_W = 36, 14, 110, 140, 28
 _CTRL, _SHIFT = 0x0004, 0x0001
-_BADGE_COLORS = {"wait": ("surface2", "muted"), "ok": ("ok_soft", "ok"),
-                 "warn": ("warn_soft", "warn")}
 
 
 class FileList(ttk.Frame):
@@ -44,7 +40,7 @@ class FileList(ttk.Frame):
         self._theme, self._on_open, self._on_select = theme, on_open, on_select
         self._entries: list[RemoteEntry] = []
         self._selected: set[int] = set()
-        self._badges: dict[tuple[int, int, str], ImageTk.PhotoImage] = {}
+        self._badges = BadgePainter(self, theme)
         self._anchor = self._focus = 0
         self._empty = "Conecta la PS5 para ver sus archivos."
         self._build_header()
@@ -96,6 +92,19 @@ class FileList(ttk.Frame):
         self._anchor = self._focus = 0
         self._empty = "Esta carpeta está vacía."
         self._canvas.yview_moveto(0)
+        self._redraw()
+        self._on_select()
+
+    def update_entries(self, entries: Iterable[RemoteEntry]) -> None:
+        """Actualiza los datos de los mismos elementos sin perder la selección ni el desplazamiento.
+
+        Args:
+            entries (Iterable[RemoteEntry]): Los elementos mostrados, con datos nuevos.
+        """
+        updated = list(entries)
+        if [e.path for e in updated] != [e.path for e in self._entries]:
+            return  # la carpeta cambió mientras se revisaba: lo nuevo ya se mostró
+        self._entries = updated
         self._redraw()
         self._on_select()
 
@@ -194,23 +203,6 @@ class FileList(ttk.Frame):
             self._draw_row(index, entry, width, p)
         c.configure(scrollregion=(0, 0, width, max(row * len(self._entries), 1)))
 
-    def _badge_image(self, width: int, height: int, color: str) -> ImageTk.PhotoImage:
-        """Obtiene (y guarda) el fondo redondeado y suavizado de una etiqueta.
-
-        Args:
-            width (int): Ancho en píxeles.
-            height (int): Alto en píxeles.
-            color (str): Color de relleno.
-
-        Returns:
-            ImageTk.PhotoImage: Imagen lista para el lienzo.
-        """
-        key = (width, height, color)
-        if key not in self._badges:
-            image = render_rounded((width, height), self._m.px(5), color, None)
-            self._badges[key] = ImageTk.PhotoImage(image, master=self)
-        return self._badges[key]
-
     def _draw_row(self, index: int, entry: RemoteEntry, width: int, p: Palette) -> None:
         """Dibuja una fila: fondo, icono, nombre, etiqueta, tamaño y fecha.
 
@@ -233,16 +225,11 @@ class FileList(ttk.Frame):
         size_x = date_x - m.px(_DATE_W)
         x, room = pad + m.px(_ICON_W), size_x - m.px(_SIZE_W) - pad - m.px(_ICON_W) - m.px(12)
         badge = entry_badge(entry)
-        badge_w = fonts.small_bold.measure(badge.text) + m.px(14) if badge else 0
+        badge_w = self._badges.width(badge)
         name = elide(entry.name, fonts.body, max(room - badge_w - m.px(10), m.px(40)))
         c.create_text(x, middle, text=name, anchor="w", fill=p.text, font=fonts.body)
         if badge:
-            bx = x + fonts.body.measure(name) + m.px(10)
-            fill, ink = (getattr(p, a) for a in _BADGE_COLORS[badge.kind])
-            c.create_image(bx, middle, image=self._badge_image(badge_w, m.px(18), fill),
-                           anchor="w")
-            c.create_text(bx + badge_w / 2, middle, text=badge.text, fill=ink,
-                          font=fonts.small_bold)
+            self._badges.draw(c, badge, (x + fonts.body.measure(name) + m.px(10), middle), p)
         for text, right in ((presenters.entry_size_text(entry) or "—", size_x),
                             (presenters.modified_text(entry.modified), date_x)):
             c.create_text(right, middle, text=text, anchor="e", fill=p.muted, font=fonts.body)

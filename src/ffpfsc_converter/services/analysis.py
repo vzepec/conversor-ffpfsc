@@ -8,6 +8,7 @@ from __future__ import annotations
 import threading
 from collections.abc import Sequence
 
+from ffpfsc_converter.config import LZ4_LEVEL_BY_PRESET
 from ffpfsc_converter.domain.events import EventSink, JobEstimateReady, JobInfoReady, JobSizeReady
 from ffpfsc_converter.domain.lz4 import Lz4Compat
 from ffpfsc_converter.domain.models import ConversionJob, FileEntry, SourceKind
@@ -59,8 +60,8 @@ def _analyze_lz4(job: ConversionJob, files: Sequence[FileEntry]) -> None:
         job.lz4_compat = Lz4Compat.UNKNOWN
         return
     job.lz4_compat = detect_compat(job.game_root)
-    estimate = estimate_lz4(files, job.game_root)
-    job.lz4_estimate, job.lz4_loose_bytes = estimate.total, estimate.loose
+    estimate = estimate_lz4(files, job.game_root, LZ4_LEVEL_BY_PRESET.values())
+    job.lz4_estimates, job.lz4_loose_bytes = estimate.totals, estimate.loose
 
 
 def start_analysis(job: ConversionJob, levels: Sequence[int], emit: EventSink) -> threading.Thread:

@@ -10,7 +10,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from ffpfsc_converter.config import AMPR_ASSETS_INDEX, LZ4_MIN_FREE_BYTES
+from ffpfsc_converter.config import AMPR_ASSETS_INDEX, LZ4_MIN_FREE_BYTES, LZ4_VERIFY_PHASE
 from ffpfsc_converter.domain.events import JobStarted
 from ffpfsc_converter.domain.models import (
     ConversionJob,
@@ -128,7 +128,7 @@ class Lz4LocalConversion:
             return False
         summary = parse_pack_summary(lines)
         verify = tools.verify_command(paths.output / AMPR_ASSETS_INDEX, ws.root)
-        if options.full_verify and not runner.run(verify, "verify"):
+        if options.full_verify and not runner.run_optional(verify, LZ4_VERIFY_PHASE):
             return False
         ws.partial.mkdir()
         if not copy_loose(ws, summary.loose_paths, runner.copy_progress()):

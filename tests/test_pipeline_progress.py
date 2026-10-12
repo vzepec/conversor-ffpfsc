@@ -47,6 +47,7 @@ def test_compress_stage_receives_throttled_mkpfs_progress(
     job = ConversionJob(image, image, tmp_path / "juego.ffpfsc", size=100)
     seen: list[ProgressUpdate] = []
     result = compress.compress_job(job, ConversionOptions(3, 2, False),
-                                   lambda progress, _eta: seen.append(progress), lambda: False)
+                                   lambda progress, _eta: seen.append(progress),
+                                   compress.CompressControl(lambda: False))
     assert result.succeeded
     assert 1 <= len(seen) < 20 and seen[-1].percent == 100

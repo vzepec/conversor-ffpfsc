@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import NamedTuple
 
+from ffpfsc_converter.config import LZ4_LEVEL_BY_PRESET
 from ffpfsc_converter.domain.lz4 import Lz4Compat
 from ffpfsc_converter.domain.models import (
     ConversionJob,
@@ -100,25 +101,40 @@ def size_lines(job: ConversionJob, level: int, performance: bool = False,
         return SizeText(format_size(job.size), "", "ya comprimido")
     if lz4 and (problem := lz4_problem(job)):
         return SizeText(format_size(job.size), "", problem)
-    estimate = job.lz4_estimate if lz4 else job.estimate_for(level, performance)
+    estimate = lz4_estimate(job, level) if lz4 else job.estimate_for(level, performance)
     if estimate is None:
         return SizeText(format_size(job.size), "", "estimando…")
     return SizeText(f"{format_size(job.size)} →", f"≈ {format_size(estimate)}",
                     f"{savings_text(job.size, estimate)} estimado")
 
 
-def lz4_estimate_text(job: ConversionJob) -> str:
-    """Formatea el peso estimado de la carpeta LZ4 (no depende del modo).
+def lz4_estimate(job: ConversionJob, level: int) -> int | None:
+    """Obtiene el peso LZ4 estimado para un modo.
 
     Args:
         job (ConversionJob): Trabajo analizado.
+        level (int): Nivel del modo elegido (el de ``.ffpfsc``; se traduce al de LZ4).
+
+    Returns:
+        int | None: Bytes estimados, o ``None`` si aún se estima.
+    """
+    return job.lz4_estimates.get(LZ4_LEVEL_BY_PRESET.get(level, level))
+
+
+def lz4_estimate_text(job: ConversionJob, level: int) -> str:
+    """Formatea el peso estimado de la carpeta LZ4 para un modo.
+
+    Args:
+        job (ConversionJob): Trabajo analizado.
+        level (int): Nivel del modo elegido.
 
     Returns:
         str: Por ejemplo ``"≈ 80.2 GB (−21%)"``, o ``PENDING_TEXT`` si aún no hay estimación.
     """
-    if job.lz4_estimate is None:
+    estimate = lz4_estimate(job, level)
+    if estimate is None:
         return PENDING_TEXT
-    return f"≈ {format_size(job.lz4_estimate)} ({savings_text(job.size, job.lz4_estimate)})"
+    return f"≈ {format_size(estimate)} ({savings_text(job.size, estimate)})"
 
 
 def lz4_problem(job: ConversionJob) -> str:
@@ -227,4 +243,4 @@ def _final_size(job: ConversionJob, level: int, performance: bool, lz4: bool) ->
     """
     if job.already_compressed or (lz4 and lz4_problem(job)):
         return job.size
-    return job.lz4_estimate if lz4 else job.estimate_for(level, performance)
+    return lz4_estimate(job, level) if lz4 else job.estimate_for(level, performance)

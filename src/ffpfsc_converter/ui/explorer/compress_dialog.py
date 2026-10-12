@@ -167,10 +167,10 @@ class CompressDialog(Modal):
     def _refresh(self) -> None:
         """Muestra el peso estimado y el resumen según el formato y las opciones."""
         job, lz4 = self._request.job, self._is_lz4()
+        level = _PRESETS_BY_LABEL[self._preset.get()].level
         if lz4:
-            text = jp.lz4_estimate_text(job)
+            text = jp.lz4_estimate_text(job, level)
         else:
-            level = _PRESETS_BY_LABEL[self._preset.get()].level
             text = presenters.estimate_text(job, level, self._performance.get())
         self._estimate.configure(text=f"Peso estimado: {text}")
         plan = self._request.lz4_plan if lz4 else self._request.plan
