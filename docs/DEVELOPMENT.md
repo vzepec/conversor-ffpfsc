@@ -63,6 +63,7 @@ los tests.
 | `test_job_presenters.py`, `test_view_presenters.py` | textos de las filas de la cola y de la vista PS5 |
 | `test_make_icon.py` | generación de `assets/icon.png` y `assets/icon.ico` |
 | `test_code_standards.py` | que el repositorio cumpla las rules y que el verificador detecte cada violación |
+| `test_imports.py` | que todos los módulos se importen (detecta imports de módulos borrados) |
 
 La UI de Tkinter no tiene tests automáticos: por eso toda la lógica de texto
 vive en funciones puras (`ui/presenters.py`, `ui/job_presenters.py`,
