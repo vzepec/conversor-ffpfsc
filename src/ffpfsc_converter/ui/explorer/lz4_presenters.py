@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from ffpfsc_converter.domain.lz4 import Lz4Check, Lz4Compat, Lz4Request, Lz4Source
 from ffpfsc_converter.formatting import format_size
 
-LZ4_ACTION_TEXT = "Comprimir LZ4 en la PS5…"
-LZ4_SHORT_TEXT = "LZ4…"
-LZ4_TITLE = "Comprimir LZ4 en la PS5"
+LZ4_ACTION_TEXT = "Comprimir en LZ4 en la PS5"
+LZ4_SHORT_TEXT = "LZ4"
+LZ4_TITLE = "Comprimir en LZ4 en la PS5"
 #: Aviso de ``/api/check`` cuando ya hay una conversión del juego en el destino.
 ALREADY_EXISTS = "already_exists"
 ENGINE_LAUNCHED_TEXT = "Iniciando exfat2ampr en la PS5…"
