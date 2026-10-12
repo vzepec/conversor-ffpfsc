@@ -84,3 +84,29 @@ class DownloadCancelledError(ConverterError):
     def __init__(self) -> None:
         """Crea el error con un mensaje para el usuario."""
         super().__init__("Descarga cancelada")
+
+
+class Lz4EngineUnavailableError(ConverterError):
+    """exfat2ampr no responde en la PS5 y no se pudo iniciar."""
+
+
+class Lz4PairingError(ConverterError):
+    """exfat2ampr rechazó el código de emparejamiento o bloqueó los intentos."""
+
+
+class Lz4EngineError(ConverterError):
+    """exfat2ampr rechazó una orden.
+
+    Attributes:
+        code (str): Código estable que devolvió (``queue_full``, ``dest_unavailable``…).
+    """
+
+    def __init__(self, message: str, code: str = "") -> None:
+        """Crea el error con un mensaje para el usuario.
+
+        Args:
+            message (str): Motivo en español neutro.
+            code (str): Código de exfat2ampr, si lo dio.
+        """
+        super().__init__(message)
+        self.code = code

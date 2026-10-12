@@ -120,3 +120,32 @@ PAIRING_CODE_TIMEOUT_SECONDS = 55
 PIPELINE_WORK_DIR_NAME = "ffpfsc-temporal"
 #: Esperas (s) antes de cada reintento automático tras un corte de conexión.
 RETRY_DELAYS_SECONDS = (3.0, 10.0, 20.0)
+
+# --------------------------------------------------- LZ4 en la PS5 (exfat2ampr)
+#: Puerto de la API HTTP de exfat2ampr (convierte juegos a AMPR LZ4 dentro de la PS5).
+E2A_HTTP_PORT = 6972
+#: Puerto del cargador de ELF de la PS5 (etaHEN, elfldr): ahí se envía exfat2ampr.
+ELF_LOADER_PORT = 9021
+#: Clave de los ajustes con la ruta del ``exfat2ampr.elf`` que eligió el usuario (no se
+#: incluye en la app: se descarga de github.com/ViiNCENZO10/exfat2ampr/releases).
+E2A_ELF_PATH_KEY = "e2a_elf_path"
+#: Página de descargas de exfat2ampr, para mostrarla cuando falta el ELF.
+E2A_RELEASES_URL = "https://github.com/ViiNCENZO10/exfat2ampr/releases"
+#: Segundos de espera de cada petición a la API (``/api/sources`` recorre los discos).
+E2A_HTTP_TIMEOUT_SECONDS = 20
+#: Segundos que se espera a que exfat2ampr responda tras enviarlo al cargador de ELF.
+E2A_START_TIMEOUT_SECONDS = 30
+#: Cada cuánto se consulta el avance de la conversión.
+E2A_POLL_SECONDS = 1.0
+#: Fallos de red seguidos al consultar el avance antes de darlo por perdido.
+E2A_POLL_MAX_FAILURES = 10
+#: Clave de los ajustes donde se guarda el token de emparejamiento por consola.
+E2A_TOKENS_KEY = "e2a_tokens"
+#: Modos de compresión LZ4: 1-4 rápido, 5-12 HC (más lento al comprimir, igual de rápido
+#: al leer); exfat2ampr recomienda HC 9.
+LZ4_PRESETS: tuple[CompressionPreset, ...] = (
+    CompressionPreset("Rápido (LZ4 1)", "Rápido", 1),
+    CompressionPreset("Equilibrado (LZ4 HC 9)", "Equilibrado", 9),
+    CompressionPreset("Máximo (LZ4 HC 12, lento)", "Máximo", 12),
+)
+DEFAULT_LZ4_PRESET = LZ4_PRESETS[1]
