@@ -19,8 +19,8 @@ from ffpfsc_converter.ui import dialogs
 from ffpfsc_converter.ui.preferences import convert_from, save_convert, save_output_format
 from ffpfsc_converter.ui.theme import ThemeManager
 from ffpfsc_converter.ui.widgets.basics import Segmented
-from ffpfsc_converter.ui.widgets.collapsible import Collapsible
 from ffpfsc_converter.ui.widgets.flow_frame import FlowFrame
+from ffpfsc_converter.ui.widgets.reveal_box import RevealBox
 from ffpfsc_converter.ui.widgets.stepper import Stepper
 
 _PRESETS_BY_LABEL = {p.label: p for p in PRESETS}
@@ -72,7 +72,10 @@ class OptionsPanel(ttk.Frame):
         self._build_destination()
 
     def _build_fields(self, theme: ThemeManager, on_preset_changed: Callable[[], None]) -> None:
-        """Crea los campos comunes y, en una franja plegable, los que solo usa ``.ffpfsc``.
+        """Crea los campos en una misma línea flexible; los que solo usa ``.ffpfsc`` se ocultan.
+
+        Verificación completa y «Rendimiento en la PS5» van en cajas que aparecen y
+        desaparecen con una animación, sin dejar de compartir línea con los demás campos.
 
         Args:
             theme (ThemeManager): Tema.
@@ -80,33 +83,33 @@ class OptionsPanel(ttk.Frame):
                 el rendimiento en la PS5.
         """
         m, switch = self._metrics, theme.switch_style("surface")
-        common = FlowFrame(self, gap=m.px(26), line_gap=m.px(10))
-        common.grid(row=0, column=0, sticky="ew")
+        flow = FlowFrame(self, gap=m.px(26), line_gap=m.px(10))
+        flow.grid(row=0, column=0, sticky="ew")
         modes = [(p.label, p.short_label) for p in PRESETS]
-        self._field(common, "FORMATO", lambda box: Segmented(box, self._format_var, _FORMATS,
-                                                             on_preset_changed))
-        self._field(common, "MODO", lambda box: Segmented(box, self._preset_var, modes,
-                                                          on_preset_changed))
-        self._field(common, "NÚCLEOS", lambda box: Stepper(box, theme, self._cores_var,
-                                                           (1, self.cpu_total)))
-        self._ffpfsc_only = Collapsible(self)
-        self._ffpfsc_only.grid(row=1, column=0, sticky="ew")
-        extra = FlowFrame(self._ffpfsc_only.inner, gap=m.px(26), line_gap=m.px(10))
-        extra.pack(fill="x", pady=(m.px(10), 0))  # el espacio se pliega con la franja
-        self._field(extra, "VERIFICACIÓN COMPLETA", lambda box: ttk.Checkbutton(
-            box, text="  Más lento, más seguro", variable=self._verify_var, style=switch))
-        self._field(extra, "RENDIMIENTO EN LA PS5", lambda box: ttk.Checkbutton(
+        self._field(flow, "FORMATO", lambda box: Segmented(box, self._format_var, _FORMATS,
+                                                           on_preset_changed))
+        self._field(flow, "MODO", lambda box: Segmented(box, self._preset_var, modes,
+                                                        on_preset_changed))
+        self._field(flow, "NÚCLEOS", lambda box: Stepper(box, theme, self._cores_var,
+                                                         (1, self.cpu_total)))
+        self._ffpfsc_only = [RevealBox(flow, flow.refresh) for _ in range(2)]
+        verify, performance = self._ffpfsc_only
+        self._field(flow, "VERIFICACIÓN COMPLETA", lambda box: ttk.Checkbutton(
+            box, text="  Más lento, más seguro", variable=self._verify_var, style=switch),
+            verify)
+        self._field(flow, "RENDIMIENTO EN LA PS5", lambda box: ttk.Checkbutton(
             box, text="  Carga más rápido", variable=self._performance_var,
-            command=on_preset_changed, style=switch))
+            command=on_preset_changed, style=switch), performance)
         if self.output_format() is OutputFormat.LZ4:
-            self._ffpfsc_only.collapse(animate=False)
+            for box in self._ffpfsc_only:
+                box.hide(animate=False)
 
     def _build_destination(self) -> None:
         """Crea la línea inferior con la carpeta donde se guardan los ``.ffpfsc``."""
         m = self._metrics
-        ttk.Separator(self).grid(row=2, column=0, sticky="ew", pady=(m.px(12), m.px(8)))
+        ttk.Separator(self).grid(row=1, column=0, sticky="ew", pady=(m.px(12), m.px(8)))
         dest = ttk.Frame(self, style="Surface.TFrame")
-        dest.grid(row=3, column=0, sticky="ew")
+        dest.grid(row=2, column=0, sticky="ew")
         ttk.Label(dest, text="GUARDAR EN", style="CardCaption.TLabel").pack(side="left")
         self._outdir_label = ttk.Label(dest, style="Card.TLabel")
         self._outdir_label.pack(side="left", padx=(m.px(10), 0))
@@ -117,8 +120,8 @@ class OptionsPanel(ttk.Frame):
                                  command=lambda: self._set_output(None))
         self._show_output()
 
-    def _field(self, flow: FlowFrame, caption: str,
-               build: Callable[[tk.Misc], tk.Widget]) -> tk.Widget:
+    def _field(self, flow: FlowFrame, caption: str, build: Callable[[tk.Misc], tk.Widget],
+               reveal: RevealBox | None = None) -> tk.Widget:
         """Agrega un control con su etiqueta en mayúsculas encima.
 
         Args:
@@ -126,16 +129,19 @@ class OptionsPanel(ttk.Frame):
             caption (str): Etiqueta del campo.
             build (Callable[[tk.Misc], tk.Widget]): Crea el control dentro del contenedor
                 que recibe.
+            reveal (RevealBox | None): Caja animada donde va (si se puede ocultar).
 
         Returns:
             tk.Widget: Control creado.
         """
-        box = ttk.Frame(flow, style="Surface.TFrame")
+        box = ttk.Frame(reveal.inner if reveal else flow, style="Surface.TFrame")
         ttk.Label(box, text=caption, style="CardCaption.TLabel").pack(
             anchor="w", pady=(0, self._metrics.px(4)))
         widget = build(box)
         widget.pack(anchor="w", expand=True)  # centrado en el alto de la línea
-        flow.add(box)
+        if reveal:
+            box.pack(anchor="nw")
+        flow.add(reveal or box)
         return widget
 
     def selected_preset(self) -> CompressionPreset:
@@ -199,16 +205,15 @@ class OptionsPanel(ttk.Frame):
         return OutputFormat(self._format_var.get())
 
     def _on_format(self) -> None:
-        """Guarda el formato y pliega (LZ4) o despliega (``.ffpfsc``) sus opciones propias.
+        """Guarda el formato y oculta (LZ4) o muestra (``.ffpfsc``) sus opciones propias.
 
         La verificación completa y «Rendimiento en la PS5» solo existen en ``.ffpfsc``: LZ4
         siempre verifica y no usa el umbral por bloque de MkPFS.
         """
         save_output_format(self.output_format())
-        if self.output_format() is OutputFormat.LZ4:
-            self._ffpfsc_only.collapse()
-        else:
-            self._ffpfsc_only.expand()
+        lz4 = self.output_format() is OutputFormat.LZ4
+        for box in self._ffpfsc_only:
+            box.hide() if lz4 else box.show()
 
     def _pick_output(self) -> None:
         """Pide la carpeta de destino."""
