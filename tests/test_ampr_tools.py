@@ -7,6 +7,7 @@ import pytest
 from ffpfsc_converter.infrastructure.ampr_tools import (
     AmprTools,
     PackPaths,
+    packed_file_total,
     parse_pack_progress,
     parse_pack_summary,
 )
@@ -41,3 +42,9 @@ def test_summary_is_read_from_the_last_json() -> None:
     assert summary.loose_paths == ("eboot.bin",) and summary.stored_bytes == 40
     with pytest.raises(ValueError):
         parse_pack_summary(["sin resumen"])
+
+
+def test_packed_file_total() -> None:
+    """Lee cuántos archivos anuncia empaquetar la fase ``packing``."""
+    assert packed_file_total("[pack  10%] packing: files 0/13, 0 B/12.5 MiB, elapsed 0") == 13
+    assert packed_file_total("[pack   0%] planning: files 0/18, current=x") is None

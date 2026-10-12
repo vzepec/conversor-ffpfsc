@@ -228,3 +228,5 @@ LZ4_ESTIMATE_SAMPLE_BLOCKS = 512
 LZ4_ESTIMATE_LEVEL = 9
 #: Nivel LZ4 de cada modo de la vista Convertir (nivel zlib → LZ4): rápido, HC 9 y HC 12.
 LZ4_LEVEL_BY_PRESET = {3: 1, 6: 9, 9: 12}
+#: Si durante el empaquetado LZ4 el disco de destino baja de esto, se detiene y limpia.
+LZ4_MIN_FREE_BYTES = 2 * 1024**3

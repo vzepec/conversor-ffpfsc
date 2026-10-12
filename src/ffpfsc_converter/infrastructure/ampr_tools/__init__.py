@@ -8,9 +8,10 @@ from __future__ import annotations
 from ffpfsc_converter.infrastructure.ampr_tools.commands import AmprTools, PackPaths
 from ffpfsc_converter.infrastructure.ampr_tools.output import (
     PackSummary,
+    packed_file_total,
     parse_pack_progress,
     parse_pack_summary,
 )
 
-__all__ = ["AmprTools", "PackPaths", "PackSummary", "parse_pack_progress",
-           "parse_pack_summary"]
+__all__ = ["AmprTools", "PackPaths", "PackSummary", "packed_file_total",
+           "parse_pack_progress", "parse_pack_summary"]

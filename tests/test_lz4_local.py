@@ -126,3 +126,47 @@ def test_missing_components_and_images_fail_with_a_clear_message(tmp_path: Path)
     components = Lz4Components(AmprTools(tmp_path), tmp_path / "libSceAmpr.sprx")
     result = Lz4LocalConversion(ctx, lambda: components).run(create_job(image), LZ4)
     assert result.message == FOLDERS_ONLY_TEXT and not result.succeeded
+
+
+@pytest.mark.skipif(installed_components() is None, reason="sin componentes de ampr_emu")
+def test_real_tools_without_audio_keep_unlisted_files_loose(tmp_path: Path) -> None:
+    """Sin carpeta de audio, lo que no está en las listas (``.pak``) queda suelto."""
+    game = _game(tmp_path / "PPSA01234")
+    for path in (game / "audio").iterdir():
+        path.unlink()
+    (game / "audio").rmdir()
+    (game / "assets/archivo.pak").write_bytes(os.urandom(200_000))
+    job = create_job(game)
+    assert _run(job, LZ4).result.succeeded
+    assert (job.output / "assets/archivo.pak").is_file()
+    assert (job.output / "assets/ruido.tex").exists() is False
+
+
+@pytest.mark.skipif(installed_components() is None, reason="sin componentes de ampr_emu")
+def test_packing_more_files_than_planned_is_stopped(tmp_path: Path) -> None:
+    """Si ``ampr_pack`` anuncia más archivos de los previstos, se detiene y no queda nada."""
+    job = create_job(_game(tmp_path / "PPSA01234"))
+    processes: list[_FakeProcess] = []
+
+    def factory(command: list[str]) -> _FakeProcess:
+        """Simula el índice bien y un empaquetado que anuncia 999 archivos."""
+        lines = ["[pack  10%] packing: files 0/999, 0 B/1 GiB"] if "pack" in command else []
+        processes.append(_FakeProcess(lines, 0))
+        return processes[-1]
+
+    finished = _run(job, LZ4, factory)
+    assert not finished.result.succeeded and "999" in finished.result.message
+    assert processes[-1].terminated and not workspace_for(job).work.exists()
+
+
+@pytest.mark.skipif(installed_components() is None, reason="sin componentes de ampr_emu")
+def test_packing_stops_when_the_disk_runs_low(tmp_path: Path,
+                                             monkeypatch: pytest.MonkeyPatch) -> None:
+    """Si el disco de destino se queda sin espacio, se detiene y no queda nada."""
+    import ffpfsc_converter.services.lz4_local as lz4_local
+    monkeypatch.setattr(lz4_local, "free_space", lambda _path: 0)
+    job = create_job(_game(tmp_path / "PPSA01234"))
+    lines = ["[pack  10%] packing: files 0/1, 0 B/1 GiB"]
+    finished = _run(job, LZ4, lambda cmd: _FakeProcess(lines if "pack" in cmd else [], 0))
+    assert finished.result.message == lz4_local.DISK_FULL_TEXT
+    assert not workspace_for(job).work.exists()

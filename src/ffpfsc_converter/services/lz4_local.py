@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
+from pathlib import Path
 
-from ffpfsc_converter.config import AMPR_ASSETS_INDEX
+from ffpfsc_converter.config import AMPR_ASSETS_INDEX, LZ4_MIN_FREE_BYTES
 from ffpfsc_converter.domain.events import JobStarted
 from ffpfsc_converter.domain.models import (
     ConversionJob,
@@ -17,7 +18,12 @@ from ffpfsc_converter.domain.models import (
     ConversionResult,
     SourceKind,
 )
-from ffpfsc_converter.infrastructure.ampr_tools import parse_pack_progress, parse_pack_summary
+from ffpfsc_converter.infrastructure.ampr_tools import (
+    packed_file_total,
+    parse_pack_progress,
+    parse_pack_summary,
+)
+from ffpfsc_converter.infrastructure.filesystem import free_space
 from ffpfsc_converter.services.ampr_profile import build_profile
 from ffpfsc_converter.services.lz4_local_files import (
     Lz4Workspace,
@@ -40,6 +46,9 @@ from ffpfsc_converter.services.lz4_local_steps import (
 MISSING_COMPONENTS_TEXT = ("Faltan los componentes de LZ4. Vuelve a ejecutar el instalador "
                            "con conexión a internet.")
 FOLDERS_ONLY_TEXT = "LZ4 solo funciona con carpetas de juego, no con imágenes."
+PROFILE_IGNORED_TEXT = ("Se detuvo: iba a empaquetar más archivos de los previstos "
+                        "({found} en vez de {expected}).")
+DISK_FULL_TEXT = "Se detuvo: el disco de destino se estaba quedando sin espacio."
 
 
 class Lz4LocalConversion:
@@ -109,10 +118,12 @@ class Lz4LocalConversion:
         tools, paths = components.tools, ws.pack_paths
         if not runner.run(tools.index_command(ws.root, paths.index), "scan"):
             return False
-        write_profile(ws, build_profile(relative_files(ws.root), options.compression_level,
-                                        options.cpu_count))
+        profile = build_profile(relative_files(ws.root), options.compression_level,
+                                options.cpu_count)
+        write_profile(ws, profile)
         lines = runner.run(tools.pack_command(paths, options.cpu_count), "compress",
-                           parse_pack_progress)
+                           parse_pack_progress,
+                           _pack_guard(len(profile.compress) + len(profile.audio), ws.work))
         if not lines:
             return False
         summary = parse_pack_summary(lines)
@@ -124,3 +135,36 @@ class Lz4LocalConversion:
             return False
         finish_folder(ws, components.runtime)
         return True
+
+
+def _pack_guard(expected: int, work: Path) -> Callable[[str], str | None]:
+    """Crea el control que detiene ``ampr_pack.py`` si va a empaquetar de más o sin espacio.
+
+    Si el perfil no se aplicara, empaquetaría todo el juego (incluido lo incompresible) y
+    podría llenar el disco: se corta en cuanto anuncia cuántos archivos procesará. Además,
+    en cada línea de avance se comprueba que queden ``LZ4_MIN_FREE_BYTES`` libres.
+
+    Args:
+        expected (int): Archivos en las listas del perfil.
+        work (Path): Carpeta de trabajo (en el disco de destino).
+
+    Returns:
+        Callable[[str], str | None]: Recibe cada línea; devuelve el motivo para detenerlo.
+    """
+    def check(line: str) -> str | None:
+        """Compara la cantidad anunciada con la prevista.
+
+        Args:
+            line (str): Línea de ``ampr_pack.py``.
+
+        Returns:
+            str | None: Motivo si anunció más archivos; ``None`` si no.
+        """
+        found = packed_file_total(line)
+        if found is None:
+            return None
+        if found > expected:
+            return PROFILE_IGNORED_TEXT.format(found=found, expected=expected)
+        return DISK_FULL_TEXT if free_space(work) < LZ4_MIN_FREE_BYTES else None
+
+    return check

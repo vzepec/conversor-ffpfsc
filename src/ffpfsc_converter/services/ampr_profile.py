@@ -24,6 +24,22 @@ from ffpfsc_converter.config import (
 COMPRESS_LIST = "compress.txt"
 AUDIO_LIST = "audio.txt"
 _GLOB_SPECIAL = "*?["
+#: Reglas de ``ampr_pack.py``; cada una se escribe solo si su lista tiene archivos.
+_COMPRESS_RULE = f"""
+[[rule]]
+action = "compress"
+include_from = ["{COMPRESS_LIST}"]
+block_size = "64KiB"
+layout = "mixed"
+"""
+_AUDIO_RULE = f"""
+[[rule]]
+action = "compress"
+include_from = ["{AUDIO_LIST}"]
+block_size = "16KiB"
+layout = "random"
+hot = true
+"""
 
 
 class AmprAction(Enum):
@@ -95,19 +111,23 @@ def build_profile(files: Iterable[str], level: int, workers: int) -> AmprProfile
         action = classify(relative)
         if action is not AmprAction.LOOSE:
             groups[action].append(escape_glob(relative))
-    return AmprProfile(_toml(level, workers), tuple(groups[AmprAction.COMPRESS]),
-                       tuple(groups[AmprAction.AUDIO]))
+    compress, audio = tuple(groups[AmprAction.COMPRESS]), tuple(groups[AmprAction.AUDIO])
+    rules = (_COMPRESS_RULE if compress else "") + (_AUDIO_RULE if audio else "")
+    return AmprProfile(_toml(level, workers) + rules, compress, audio)
 
 
 def _toml(level: int, workers: int) -> str:
-    """Escribe el TOML: todo suelto salvo las listas, deduplicado y con auto-suelto.
+    """Escribe la sección ``[pack]``: todo suelto salvo las reglas, deduplicado y auto-suelto.
+
+    Las reglas se agregan aparte y solo si su lista tiene archivos: en ``ampr_pack.py`` una
+    regla con ``include_from`` vacío vale ``**`` (todos los archivos).
 
     Args:
         level (int): Nivel LZ4.
         workers (int): Procesos de compresión.
 
     Returns:
-        str: Contenido del perfil.
+        str: Contenido del perfil sin reglas.
     """
     mode = "fast" if level <= LZ4_FAST_MAX_LEVEL else "hc"
     return f"""# Perfil genérico generado por Conversor FFPFSC (sin trazas del juego).
@@ -120,17 +140,4 @@ compression_level = {level}
 acceleration = 1
 deduplicate = true
 auto_loose_large_files = true
-
-[[rule]]
-action = "compress"
-include_from = ["{COMPRESS_LIST}"]
-block_size = "64KiB"
-layout = "mixed"
-
-[[rule]]
-action = "compress"
-include_from = ["{AUDIO_LIST}"]
-block_size = "16KiB"
-layout = "random"
-hot = true
 """

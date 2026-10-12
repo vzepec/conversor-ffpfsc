@@ -22,6 +22,8 @@ from ffpfsc_converter.timing import PercentEta
 
 #: Reconoce una línea de avance de una herramienta.
 Parser = Callable[[str], ProgressUpdate | None]
+#: Revisa cada línea; devuelve un motivo para detener la herramienta, o ``None``.
+Guard = Callable[[str], str | None]
 
 
 @dataclass(frozen=True)
@@ -81,32 +83,39 @@ class ToolRunner:
         """
         self._ctx = ctx
         self._job = job
+        self._stopped = ""
 
-    def run(self, command: list[str], phase: str, parser: Parser | None = None) -> list[str]:
+    def run(self, command: list[str], phase: str, parser: Parser | None = None,
+            guard: Guard | None = None) -> list[str]:
         """Ejecuta una herramienta, publica su avance y devuelve su salida.
 
         Args:
             command (list[str]): Comando a ejecutar.
             phase (str): Fase que se muestra (``scan``, ``compress``, ``verify``).
             parser (Parser | None): Reconoce las líneas de avance; ``None`` = sin avance.
+            guard (Guard | None): Detiene la herramienta si algo va mal (por ejemplo,
+                si va a empaquetar más archivos de los previstos).
 
         Returns:
             list[str]: Líneas de salida (al menos una); vacía si se canceló.
 
         Raises:
             OSError: Si no se puede lanzar el proceso.
-            StepFailedError: Si termina con un código distinto de 0.
+            StepFailedError: Si termina con un código distinto de 0 o la detuvo ``guard``.
         """
         if self._ctx.cancel.is_set():
             return []
+        self._stopped = ""
         self._ctx.emit(JobProgress(self._job, ProgressUpdate(0, phase), None))
         process = self._ctx.process_factory(command)
         self._ctx.set_process(process)
         try:
-            lines = self._follow(process, phase, parser)
+            lines = self._follow(process, phase, parser, guard)
             code = process.wait()
         finally:
             self._ctx.set_process(None)
+        if self._stopped:
+            raise StepFailedError(self._stopped)
         if self._ctx.cancel.is_set():
             return []
         if code != 0:
@@ -140,13 +149,17 @@ class ToolRunner:
 
         return report
 
-    def _follow(self, process: ProcessHandle, phase: str, parser: Parser | None) -> list[str]:
+    def _follow(self, process: ProcessHandle, phase: str, parser: Parser | None,
+                guard: Guard | None) -> list[str]:
         """Lee la salida, reenvía el avance (limitado) y el registro.
+
+        Si ``guard`` da un motivo, termina el proceso y lo guarda en ``_stopped``.
 
         Args:
             process (ProcessHandle): Proceso lanzado.
             phase (str): Fase que se muestra.
             parser (Parser | None): Reconoce las líneas de avance.
+            guard (Guard | None): Revisa cada línea.
 
         Returns:
             list[str]: Todas las líneas leídas.
@@ -155,6 +168,9 @@ class ToolRunner:
         eta, last, in_json = PercentEta(), 0.0, False
         for line in process.lines():
             lines.append(line)
+            if guard and not self._stopped and (reason := guard(line)):
+                self._stopped = reason
+                process.terminate()
             update = parser(line) if parser else None
             if update is None:
                 in_json = in_json or line.rstrip() == "{"

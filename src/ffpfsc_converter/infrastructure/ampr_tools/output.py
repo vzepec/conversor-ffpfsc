@@ -10,6 +10,8 @@ from ffpfsc_converter.domain.models import ProgressUpdate
 
 #: ``[pack  10%] packing: files 0/13, 0 B/12.5 MiB, elapsed 00:00:00``
 _PROGRESS = re.compile(r"^\[pack\s+(\d{1,3})%\]\s+([\w-]+):")
+#: En la fase ``packing``, ``files H/N``: N es la cantidad de archivos que se empaquetan.
+_PACKING_TOTAL = re.compile(r"\]\s+packing:\s+files\s+\d+/(\d+)")
 
 
 @dataclass(frozen=True)
@@ -43,6 +45,19 @@ def parse_pack_progress(line: str) -> ProgressUpdate | None:
     if match is None:
         return None
     return ProgressUpdate(min(int(match.group(1)), 100), match.group(2))
+
+
+def packed_file_total(line: str) -> int | None:
+    """Lee cuántos archivos va a empaquetar ``ampr_pack.py`` (fase ``packing``).
+
+    Args:
+        line (str): Línea de la salida.
+
+    Returns:
+        int | None: Cantidad de archivos, o ``None`` si la línea no la indica.
+    """
+    match = _PACKING_TOTAL.search(line)
+    return int(match.group(1)) if match else None
 
 
 def json_tail(lines: Sequence[str]) -> str:

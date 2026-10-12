@@ -47,3 +47,12 @@ def test_profile_lists_and_mode() -> None:
     assert 'compression_mode = "fast"' in fast.toml
     assert 'compression_mode = "hc"' in hc.toml and "compression_level = 12" in hc.toml
     assert "workers = 1" in hc.toml and 'default_action = "loose"' in hc.toml
+
+
+def test_empty_lists_do_not_produce_rules() -> None:
+    """Sin archivos de audio no hay regla de audio: en ampr_pack una lista vacía vale «**»."""
+    profile = build_profile(["eboot.bin", "assets/a.tex"], 9, 4)
+    assert profile.audio == () and "audio.txt" not in profile.toml
+    assert "compress.txt" in profile.toml
+    nothing = build_profile(["eboot.bin", "movies/a.mp4"], 9, 4)
+    assert "[[rule]]" not in nothing.toml
