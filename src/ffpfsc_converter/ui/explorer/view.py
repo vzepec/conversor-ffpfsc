@@ -40,7 +40,8 @@ class ExplorerCallbacks:
         on_cancel_downloads (Callable[[], None]): Cancelar descargas.
         on_open_destination (Callable[[], None]): Abrir carpeta de descargas.
         on_retry_failed (Callable[[], None]): Reintentar transferencias fallidas.
-        on_upload (Callable[[], None]): Botón "Subir archivo".
+        on_upload (Callable[[], None]): Menú "Subir a la PS5…" → "Archivos…".
+        on_upload_folder (Callable[[], None]): Menú "Subir a la PS5…" → "Carpeta…".
         on_delete (Callable[[], None]): Botón "Eliminar".
         on_convert (Callable[[], None]): Botón "Comprimir y reemplazar".
         on_lz4 (Callable[[], None]): Botón "Comprimir LZ4 en la PS5".
@@ -58,6 +59,7 @@ class ExplorerCallbacks:
     on_open_destination: Callable[[], None]
     on_retry_failed: Callable[[], None]
     on_upload: Callable[[], None]
+    on_upload_folder: Callable[[], None]
     on_delete: Callable[[], None]
     on_convert: Callable[[], None]
     on_lz4: Callable[[], None]
@@ -102,7 +104,7 @@ class ExplorerView(ttk.Frame):
         self._actions = ActionBar(self, theme, {
             "download": callbacks.on_download, "convert": callbacks.on_convert,
             "lz4": callbacks.on_lz4, "upload": callbacks.on_upload,
-            "delete": callbacks.on_delete})
+            "upload_folder": callbacks.on_upload_folder, "delete": callbacks.on_delete})
         self._actions.pack(side="bottom", fill="x", pady=(m.px(10), 0))
         self._path = PathBar(self, theme, PS5_FAVORITE_PATHS,
                              (callbacks.on_go_up, callbacks.on_go_to, callbacks.on_refresh))

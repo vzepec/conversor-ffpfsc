@@ -74,6 +74,7 @@ class ExplorerController:
             on_open_destination=self.open_destination,
             on_retry_failed=lambda: self.retry.retry_failed(),
             on_upload=lambda: self.modify.upload_files(),
+            on_upload_folder=lambda: self.modify.upload_folder(),
             on_delete=lambda: self.modify.delete_selected(),
             on_convert=lambda: self.modify.convert_selected(),
             on_lz4=lambda: self.lz4.compress_selected(),

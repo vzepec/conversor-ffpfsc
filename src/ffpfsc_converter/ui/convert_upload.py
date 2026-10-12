@@ -152,7 +152,7 @@ class ConvertedUploader:
         """
         busy = {"pending", "uploading", "done"}
         return [j for j in self._jobs() if j.state is JobState.SUCCEEDED
-                and j.output.is_file() and self._status.get(j.id) not in busy]
+                and j.output.exists() and self._status.get(j.id) not in busy]
 
     def _set(self, job: ConversionJob, kind: str, label: str, detail: str,
              percent: float | None = None) -> None:

@@ -2,7 +2,7 @@
 
 La sección **PS5** permite navegar por los archivos de una PS5 con el payload
 de [ps5upload](https://github.com/phantomptr/ps5upload) cargado, descargar
-archivos o carpetas completas, subir archivos, eliminar y **comprimir y
+archivos o carpetas completas, subir archivos o carpetas, eliminar y **comprimir y
 reemplazar** un juego directamente en la consola.
 
 ## Requisitos
@@ -157,8 +157,13 @@ Si cancelas o falla, al volver a intentarlo con el mismo juego:
 
 ## Subir y eliminar
 
-- **Subir archivo…** sube archivos de este equipo a la carpeta abierta (como
-  `.part`, verificados y luego renombrados; una subida cortada se reanuda).
+- **Subir a la PS5… → Archivos…** sube archivos de este equipo a la carpeta abierta
+  (como `.part`, verificados y luego renombrados; una subida cortada se reanuda).
+- **Subir a la PS5… → Carpeta…** sube una carpeta completa (por ejemplo, un juego
+  convertido a LZ4 en el PC) en una sola fila. Va primero a `<nombre>.part/`, archivo por
+  archivo con la misma verificación, y solo al final se renombra a `<nombre>`: un corte
+  nunca deja en `homebrew` una carpeta a medias, y al reintentar se saltan los archivos
+  ya completos. Si ya existe una carpeta con ese nombre, no se sobrescribe.
 - **Eliminar** borra en la PS5 los elementos seleccionados, tras confirmar con
   la lista exacta de rutas. Lo ejecuta el helper, que **se niega** a borrar raíces,
   carpetas de primer nivel (`/data`, `/mnt/usb0`) y puntos de montaje.
@@ -195,4 +200,4 @@ En `~/.config/ffpfsc-converter/` (Linux) o `%APPDATA%\ffpfsc-converter\` (Window
 | Windows: falla una descarga o compresión con rutas muy largas | Los juegos tienen carpetas profundas. Usa una carpeta de descargas corta (por ejemplo `D:\PS5`) o activa las [rutas largas de Windows](https://learn.microsoft.com/es-es/windows/win32/fileio/maximum-file-path-limitation). |
 | Windows: el firewall pregunta por la app | Basta permitirla en redes privadas. La app solo abre conexiones salientes hacia la PS5 (9120 y el FTP en modo pasivo). |
 | Transferencias de ~10 MB/s | Es el límite de la red, no de la app (medido: 9 MB/s con 1 conexión y 10 MB/s con 4). Conecta la PS5 **y** este equipo por cable a un router o switch gigabit. |
-| *El original ya se borró…* | La subida falló tras borrar (solo en el modo "borrar primero"): sube el `.ffpfsc` de la carpeta temporal con **Subir archivo…**. |
+| *El original ya se borró…* | La subida falló tras borrar (solo en el modo "borrar primero"): sube el `.ffpfsc` de la carpeta temporal con **Subir a la PS5… → Archivos…**. |

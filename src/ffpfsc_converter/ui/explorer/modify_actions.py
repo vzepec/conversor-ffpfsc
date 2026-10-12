@@ -71,11 +71,19 @@ class ModifyActions:
         if files:
             self.upload_paths(files, self._ctl.path)
 
+    def upload_folder(self) -> None:
+        """Sube una carpeta de este equipo (por ejemplo, un juego LZ4) a la carpeta abierta."""
+        if not self._ready():
+            return
+        folder = dialogs.ask_upload_folder()
+        if folder:
+            self.upload_paths([folder], self._ctl.path)
+
     def upload_paths(self, files: list[Path], remote_dir: str) -> list[str]:
-        """Sube archivos concretos a una carpeta de la PS5 (con filas en el panel).
+        """Sube archivos o carpetas concretos a una carpeta de la PS5 (con filas en el panel).
 
         Args:
-            files (list[Path]): Archivos locales.
+            files (list[Path]): Archivos o carpetas locales (una fila cada uno).
             remote_dir (str): Carpeta remota de destino.
 
         Returns:

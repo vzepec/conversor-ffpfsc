@@ -11,7 +11,9 @@ from ffpfsc_converter.ui.theme import ThemeManager
 from ffpfsc_converter.ui.widgets.basics import icon_button
 
 #: Botón → (texto completo, texto corto para ventanas angostas).
-_LABELS = {"lz4": (LZ4_ACTION_TEXT, LZ4_SHORT_TEXT), "upload": ("Subir archivo…", "Subir…")}
+_LABELS = {"lz4": (LZ4_ACTION_TEXT, LZ4_SHORT_TEXT), "upload": ("Subir a la PS5…", "Subir…")}
+#: Opciones del menú «Subir a la PS5…» → acción.
+_UPLOAD_MENU = (("Archivos…", "upload"), ("Carpeta…", "upload_folder"))
 
 
 class ActionBar(ttk.Frame):
@@ -25,7 +27,7 @@ class ActionBar(ttk.Frame):
             parent (tk.Misc): Contenedor.
             theme (ThemeManager): Tema.
             actions (dict[str, Callable[[], None]]): Acciones ``"download"``, ``"convert"``,
-                ``"lz4"``, ``"upload"`` y ``"delete"``.
+                ``"lz4"``, ``"upload"`` (archivos), ``"upload_folder"`` y ``"delete"``.
         """
         m = theme.metrics
         super().__init__(parent, style="Bar.TFrame", padding=(m.px(12), m.px(8)))
@@ -41,9 +43,14 @@ class ActionBar(ttk.Frame):
                                style="Alt.Small.TButton"),
             "delete": icon_button(self, theme, "Eliminar", "trash", actions["delete"],
                                   style="Alt.SmallDanger.TButton", role="bad"),
-            "upload": icon_button(self, theme, _LABELS["upload"][0], "upload", actions["upload"],
-                                  style="Alt.SmallGhost.TButton"),
+            "upload": icon_button(self, theme, _LABELS["upload"][0], "upload",
+                                  self._show_upload_menu, style="Alt.SmallGhost.TButton"),
         }
+        self._upload_menu = tk.Menu(self, tearoff=False)
+        for label, key in _UPLOAD_MENU:
+            self._upload_menu.add_command(label=label, command=actions[key])
+        self._paint_menu(theme)
+        theme.on_change(lambda _p: self._paint_menu(theme))
         for key in ("download", "convert", "lz4"):
             self._buttons[key].pack(side="left", padx=(0, m.px(8)))
         self._buttons["delete"].pack(side="right")
@@ -61,6 +68,24 @@ class ActionBar(ttk.Frame):
         self._count.configure(text=text)
         for key, button in self._buttons.items():
             button.state(["!disabled"] if getattr(states, key) else ["disabled"])
+
+    def _show_upload_menu(self) -> None:
+        """Despliega «Archivos…» y «Carpeta…» bajo el botón «Subir a la PS5…»."""
+        button = self._buttons["upload"]
+        self._upload_menu.tk_popup(button.winfo_rootx(),
+                                   button.winfo_rooty() + button.winfo_height())
+
+    def _paint_menu(self, theme: ThemeManager) -> None:
+        """Aplica los colores del tema al menú (no es un widget ttk).
+
+        Args:
+            theme (ThemeManager): Tema actual.
+        """
+        p = theme.palette
+        self._upload_menu.configure(background=p.surface, foreground=p.text,
+                                    activeborderwidth=0, activebackground=p.accent_soft,
+                                    activeforeground=p.text, relief="flat", bd=1,
+                                    font=theme.fonts.body)
 
     def _fit_labels(self) -> None:
         """Acorta los textos de algunos botones si la barra no alcanza para todos."""

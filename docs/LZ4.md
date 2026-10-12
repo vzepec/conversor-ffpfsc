@@ -129,8 +129,9 @@ cancelar; una conversión anterior en la misma ruta solo se reemplaza al final. 
 queda sin empaquetar se **enlaza** al original si está en el mismo disco (no ocupa espacio
 extra: son los mismos archivos, no los edites en la carpeta nueva); si no, se copia. Espacio
 necesario: el de los paquetes, más lo suelto si la salida está en otro disco. El peso
-estimado simula cómo ampr_pack ubica los bloques en páginas de 64 KiB. Subir la carpeta a
-la PS5 desde la app todavía no está disponible: cópiala a `homebrew/` por FTP. El juego
+estimado simula cómo ampr_pack ubica los bloques en páginas de 64 KiB. Para llevarla a la
+PS5 usa **Subir a la PS5** en la fila del juego (o **Subir a la PS5… → Carpeta…** en la
+sección PS5): sube la carpeta completa y la publica al final. El juego
 necesita que ShadowMountPlus cargue su `fakelib`: si no arranca, revisa que su opción
 de fakelib no esté en «Desactivado» (exfat2ampr la ajusta solo; desde el PC no se puede).
 

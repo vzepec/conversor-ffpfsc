@@ -20,6 +20,10 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   las herramientas de [ampr_emu](https://github.com/drakmor/ampr_emu) 0.4.2.1
   (perfil genérico, verificación byte a byte contra el original) y deja una carpeta
   `<juego>-LZ4`. Solo carpetas de juego; el original nunca se modifica.
+- **Subir carpetas a la PS5**: «Subir a la PS5… → Carpeta…» en la sección PS5 y «Subir a
+  la PS5» para los juegos convertidos a LZ4 en Convertir. La carpeta va primero a
+  `<nombre>.part/` (cada archivo verificado, con reintentos y reanudación) y se publica
+  con su nombre al final; nunca sobrescribe una carpeta existente.
 - Los instaladores descargan `exfat2ampr.elf` y lo necesario de ampr_emu en
   `third_party/` (fuera de Git) desde sus páginas oficiales, con su SHA-256
   comprobado. Sin internet avisan y siguen. Nueva dependencia: `lz4`.

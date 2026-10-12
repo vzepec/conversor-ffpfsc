@@ -90,6 +90,14 @@ class RemoteClient(Protocol):
         """
         ...
 
+    def make_dir(self, remote_path: str) -> None:
+        """Crea una carpeta remota (si ya existe, no hace nada).
+
+        Args:
+            remote_path (str): Ruta de la carpeta.
+        """
+        ...
+
 
 #: Crea un cliente para una consola (en la app, ``FtpClient``).
 ClientFactory = Callable[[ConsoleTarget], RemoteClient]
