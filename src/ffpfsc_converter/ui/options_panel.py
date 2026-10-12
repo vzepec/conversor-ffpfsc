@@ -139,8 +139,8 @@ class OptionsPanel(ttk.Frame):
             anchor="w", pady=(0, self._metrics.px(4)))
         widget = build(box)
         widget.pack(anchor="w", expand=True)  # centrado en el alto de la línea
-        if reveal:
-            box.pack(anchor="nw")
+        if reveal:  # ocupa el alto de la línea para centrar el control como los demás
+            box.pack(anchor="nw", fill="y", expand=True)
         flow.add(reveal or box)
         return widget
 

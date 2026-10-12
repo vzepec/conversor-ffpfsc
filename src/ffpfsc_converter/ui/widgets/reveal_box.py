@@ -56,6 +56,7 @@ class RevealBox(ttk.Frame):
         self._fraction, self._job = 1.0, None
         self._on_visibility = on_visibility
         self.inner.bind("<Configure>", lambda _e: self._apply(), add="+")
+        self.bind("<Configure>", lambda _e: self._stretch(), add="+")
 
     def flow_width(self) -> int:
         """Ancho completo del contenido, para ubicarla sin importar la animación.
@@ -115,6 +116,16 @@ class RevealBox(ttk.Frame):
         elif target == 0 and not self.is_hidden:
             self.is_hidden = True
             self._on_visibility()
+
+    def _stretch(self) -> None:
+        """Estira el contenido al alto de la línea (si es mayor) para centrar los controles.
+
+        Nunca lo achica por debajo de su alto natural: al encogerse la caja solo lo
+        recorta, así la animación no obliga a reacomodar los controles en cada cuadro.
+        """
+        height = max(self.winfo_height(), self.inner.winfo_reqheight())
+        if int(self.inner.place_info().get("height") or 0) != height:
+            self.inner.place_configure(height=height)
 
     def _apply(self) -> None:
         """Ajusta el tamaño de la caja a la fracción visible del contenido."""
