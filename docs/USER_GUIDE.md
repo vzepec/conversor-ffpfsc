@@ -60,6 +60,7 @@ sola ante cortes. Más detalles en [PS5.md](PS5.md).
 
 | Opción | Efecto |
 |--------|--------|
+| **Formato** | `.ffpfsc` (recomendado) o **LZ4 (experimental)**, ver [LZ4.md](LZ4.md). Con LZ4 se ocultan **Verificación completa** y **Rendimiento en la PS5**, que solo aplican a `.ffpfsc` (LZ4 siempre verifica). |
 | **Máxima velocidad (nivel 3)** | Recomendado. Casi la misma compresión que el nivel 9 en mucho menos tiempo. |
 | **Equilibrado (nivel 6)** | Algo más pequeño, algo más lento. |
 | **Máxima compresión (nivel 9)** | El más pequeño; puede tardar varias veces más. |

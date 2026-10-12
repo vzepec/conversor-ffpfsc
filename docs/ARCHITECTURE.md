@@ -138,7 +138,7 @@ src/ffpfsc_converter/
     │   ├── round_styles.py, widget_styles.py  # botones, tarjetas, píldoras, campos y barras
     │   └── manager.py     #   ThemeManager: aplica, guarda y cambia el tema en vivo
     ├── widgets/           # Segmented, Stepper, Tile, StatusDot, DropZone, ScrollFrame,
-    │                      # FlowFrame (opciones en varias líneas si no caben),
+    │                      # FlowFrame (opciones en varias líneas), Collapsible (plegar animado),
     │                      # Modal (base de los diálogos) y ajuste de textos
     └── explorer/          # Vista PS5
         ├── view.py        #   ExplorerView: compone las piezas de la vista

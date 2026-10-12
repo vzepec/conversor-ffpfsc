@@ -16,8 +16,13 @@ PADDING = {"padx": 10, "pady": 6}
 EVENT_POLL_MS = 100
 #: Tiempo máximo (ms) que la UI dedica a eventos por ciclo antes de ceder el control a Tk.
 EVENT_BUDGET_MS = 40
+#: Duración (ms) y pausa entre cuadros (ms) de las animaciones de plegar y desplegar.
+ANIMATION_MS = 200
+ANIMATION_FRAME_MS = 15
 
 __all__ = [
+    "ANIMATION_FRAME_MS",
+    "ANIMATION_MS",
     "DARK",
     "EVENT_BUDGET_MS",
     "EVENT_POLL_MS",
