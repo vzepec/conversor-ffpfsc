@@ -5,6 +5,12 @@ el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Cambiado
+- README reescrito para usuarios no técnicos: qué hace, qué necesitas, instalación,
+  uso paso a paso, `.ffpfsc` o LZ4 (experimental) y preguntas frecuentes. Lo técnico
+  (tecnologías, componentes, arquitectura y desarrollo) pasa a
+  [docs/TECHNICAL.md](docs/TECHNICAL.md).
+
 ### Añadido (experimental)
 - **Comprimir LZ4 en la PS5…** (sección PS5): convierte el juego seleccionado al
   formato AMPR LZ4 dentro de la consola con

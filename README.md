@@ -4,242 +4,187 @@
 
 # Conversor FFPFSC
 
-### Comprime tus juegos de PS5 a `.ffpfsc` arrastrando y soltando
+### Comprime tus juegos de PS5 a `.ffpfsc` o LZ4 arrastrando y soltando
 
-**Carpeta de juego · `.exfat` · `.ffpkg` &nbsp;→&nbsp; `.ffpfsc`**
+**Carpeta de juego · `.exfat` · `.ffpkg` &nbsp;→&nbsp; `.ffpfsc` o LZ4 (experimental)**
 
 [![Versión](https://img.shields.io/badge/versión-1.6.0-6366f1?style=for-the-badge)](CHANGELOG.md)
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#-instalación)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#-instalación)
-[![MkPFS](https://img.shields.io/badge/motor-MkPFS-0ea5e9?style=for-the-badge)](https://github.com/PSBrew/MkPFS)
-[![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
-[![Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?style=for-the-badge&logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 
 <br/>
 
-<img src="docs/assets/convertir.png" alt="Vista Convertir con dos juegos en la cola (tema oscuro)" width="820"/>
+<img src="docs/assets/convertir.png" alt="Pestaña Convertir con dos juegos en la cola" width="820"/>
 <br/><br/>
-<img src="docs/assets/ps5.png" alt="Vista PS5 con las unidades, los archivos y las transferencias (tema claro)" width="820"/>
+<img src="docs/assets/ps5.png" alt="Pestaña PS5 con las unidades, los archivos y las transferencias" width="820"/>
 
 <br/>
 
-[Características](#-características) •
+[Qué hace](#-qué-hace) •
+[Qué necesitas](#-qué-necesitas) •
 [Instalación](#-instalación) •
-[Uso](#-uso) •
-[Arquitectura](#-arquitectura) •
-[Desarrollo](#-desarrollo) •
-[Documentación](#-documentación)
+[Cómo se usa](#-cómo-se-usa) •
+[Preguntas frecuentes](#-preguntas-frecuentes) •
+[Más información](#-más-información)
 
 </div>
 
 ---
 
-## ✨ Características
+## 🎮 Qué hace
 
-<table>
-<tr>
-<td width="50%" valign="top">
+Los juegos de PS5 ocupan mucho espacio. Esta app los **comprime** para que ocupen
+bastante menos (a menudo la mitad) y se sigan pudiendo jugar con **ShadowMount+** en
+una PS5 con jailbreak.
 
-### 🖱️ Arrastrar y soltar
-Suelta una o varias carpetas o imágenes sobre la ventana. El programa
-encuentra solo el `eboot.bin` o la imagen aunque esté varios niveles más
-adentro.
+- 🖱️ **Arrastra y suelta** la carpeta del juego (o su imagen `.exfat` / `.ffpkg`) en la
+  ventana. La app encuentra el juego aunque esté dentro de otras carpetas.
+- 🏷️ **Reconoce el juego**: muestra su nombre, su código (por ejemplo `PPSA01234`) y su versión.
+- 📏 **Te dice cuánto pesará** antes de empezar, y avisa si no te alcanza el espacio.
+- 📋 **Pon varios juegos en cola** y deja que se compriman uno tras otro.
+- 🛡️ **Tu juego original nunca se modifica.** Si algo falla o cancelas, se borra lo que
+  quedó a medias.
+- 📶 **Gestiona la PS5 desde el PC** (pestaña **PS5**): mira el espacio libre, descarga,
+  sube archivos o carpetas, borra, y **comprime y reemplaza** un juego que ya está en la
+  consola en un solo paso.
 
-### 🏷️ Nombre oficial del juego
-Lee `sce_sys/param.json` (también dentro de `.exfat`) y muestra título,
-Title ID y versión, priorizando el idioma del juego y luego español.
+### Dos formatos para elegir
 
-### 📏 Estimación antes de convertir
-Calcula en segundos el **peso final** para cada modo comprimiendo una muestra
-aleatoria de bloques, y avisa si no hay espacio suficiente en destino.
-
-### 🎨 Tema claro y oscuro
-Sigue al tema del sistema (o el que elijas) y se ve nítida en pantallas HiDPI.
-
-</td>
-<td width="50%" valign="top">
-
-### ⚡ Máxima velocidad
-Usa todos los núcleos de la CPU y el backend **zlib-ng**, el único seguro para
-el descompresor de la PS5. Con **Rendimiento en la PS5**, los bloques que casi no
-se reducen quedan sin comprimir para que los juegos grandes carguen más rápido.
-
-### 📋 Cola de conversión
-Convierte varios juegos seguidos con progreso, velocidad en vivo y registro
-completo de MkPFS.
-
-### 🛡️ Seguro por diseño
-Verificación de estructura siempre (o completa, opcional), confirmación antes
-de sobrescribir y borrado automático de salidas incompletas al cancelar o fallar.
-
-### 🔔 Aviso de versiones nuevas
-Si hay una versión publicada más nueva, un botón verde te lleva a descargarla.
-
-</td>
-</tr>
-</table>
-
-### 🎮 Explorador de la PS5
-
-Sección **PS5** para una consola con el payload de [ps5upload](https://github.com/phantomptr/ps5upload)
-**6.x** (incluido en [`payload/`](payload/)): espacio libre de cada unidad, **descargar**,
-**subir**, **eliminar** y **comprimir y reemplazar** un juego en un solo paso (descarga,
-compresión, subida verificada y reemplazo del original). Desde **Convertir**, cada juego
-comprimido se sube con un clic. La app inicia sola el FTP del helper (en solo lectura y con
-credenciales aleatorias) tras emparejarse una vez. Guía: **[docs/PS5.md](docs/PS5.md)**.
+| | `.ffpfsc` (recomendado) | LZ4 (experimental) |
+|:--|:--|:--|
+| **Qué es** | Una imagen comprimida que ShadowMount+ monta como cualquier juego | Una carpeta con los recursos del juego empaquetados en LZ4 |
+| **Juegos** | Todos | Solo los compatibles (la app te lo indica) |
+| **Para qué** | Ahorrar espacio | Que el juego cargue más rápido, aunque ahorre menos |
+| **Dónde se comprime** | En tu PC | En tu PC o directamente en la PS5 |
 
 > [!WARNING]
-> **Experimental — LZ4 (formato AMPR):** comprime un juego en LZ4 dentro de la PS5 con [exfat2ampr](https://github.com/ViiNCENZO10/exfat2ampr) o en este equipo (vista Convertir, formato LZ4) con [ampr_emu](https://github.com/drakmor/ampr_emu); el instalador los descarga. Solo juegos compatibles; conserva el original hasta probar el juego. Guía: **[docs/LZ4.md](docs/LZ4.md)**.
+> **LZ4 es experimental.** Usa herramientas de otros proyectos
+> ([ampr_emu](https://github.com/drakmor/ampr_emu) y
+> [exfat2ampr](https://github.com/ViiNCENZO10/exfat2ampr)) que todavía están en pruebas, y
+> un juego convertido podría no arrancar. **Conserva el original** hasta comprobar que el
+> convertido funciona. Guía: **[docs/LZ4.md](docs/LZ4.md)**.
 
-### Modos de compresión
+---
 
-| Modo | Nivel zlib | Cuándo usarlo |
-|:-----|:----------:|:--------------|
-| 🚀 **Máxima velocidad** *(por defecto)* | 3 | Casi siempre: compresión muy cercana al máximo en mucho menos tiempo. |
-| ⚖️ **Equilibrado** | 6 | Un poco más pequeño a cambio de algo más de tiempo. |
-| 🗜️ **Máxima compresión** | 9 | Cuando cada GB cuenta y no importa esperar. |
+## 🧰 Qué necesitas
+
+- Un PC con **Windows 10/11** o **Linux** (probado en Ubuntu).
+- Espacio libre en el disco para el juego comprimido.
+- Para jugar: una **PS5 con jailbreak** y **ShadowMount+**.
+- Para la pestaña PS5 (opcional): el payload **ps5upload 6.x** cargado en la consola. Viene
+  incluido en la carpeta [`payload/`](payload/); los pasos están en [docs/PS5.md](docs/PS5.md).
 
 ---
 
 ## 📦 Instalación
 
-Funciona en **Linux** y **Windows 10/11** (64 bits) con **Python 3.10+**.
+<details open>
+<summary><b>🪟 Windows 10/11</b></summary>
+
+1. Instala [Python](https://www.python.org/downloads/windows/) (versión 3.10 o más nueva).
+   Durante la instalación, marca la casilla **Add python.exe to PATH**.
+2. Descarga este proyecto: botón verde **Code → Download ZIP**, y descomprímelo.
+3. Haz doble clic en **`instalar.bat`** y espera a que termine.
+
+Aparecerá el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú Inicio.
+
+</details>
 
 <details open>
-<summary><b>🐧 Linux</b> (probado en Ubuntu)</summary>
+<summary><b>🐧 Linux</b></summary>
+
+Abre una terminal y escribe:
 
 ```bash
-git clone git@github.com:vzepec/conversor-ffpfsc.git
+git clone https://github.com/vzepec/conversor-ffpfsc.git
 cd conversor-ffpfsc
 ./instalar.sh
 ```
 
-El instalador añade `python3-tk` y `python3-venv` si faltan, crea `.venv/`,
-instala [MkPFS](https://github.com/PSBrew/MkPFS), `zlib-ng` y `tkinterdnd2`, y crea
-el acceso directo en el Escritorio y en el menú de aplicaciones.
+Puede pedirte tu contraseña para instalar lo que falte. Al terminar tendrás el acceso
+directo **Conversor FFPFSC** en el Escritorio y en el menú de aplicaciones.
 
 </details>
 
-<details open>
-<summary><b>🪟 Windows</b> 10/11</summary>
+El instalador también descarga los componentes de LZ4. Si en ese momento no tienes
+internet, no pasa nada: todo lo demás funciona igual y puedes volver a instalar después.
 
-1. Instala [Python 3.10+](https://www.python.org/downloads/windows/) marcando
-   **Add python.exe to PATH** (tkinter viene incluido).
-2. Descarga el repositorio (`git clone` o **Code → Download ZIP**) y descomprímelo.
-3. Haz doble clic en **`instalar.bat`**.
-
-Se crea el acceso directo **Conversor FFPFSC** en el Escritorio y en el menú
-Inicio. Puedes arrastrar un juego sobre el acceso directo para abrirlo ya en la cola.
-
-</details>
-
-📖 Requisitos detallados y solución de problemas: **[docs/INSTALLATION.md](docs/INSTALLATION.md)**
+📖 Problemas al instalar: **[docs/INSTALLATION.md](docs/INSTALLATION.md)**
 
 ---
 
-## 🚀 Uso
+## 🚀 Cómo se usa
 
-```text
- ┌─────────────────────┐     ┌────────────────────┐     ┌────────────────────┐
- │ 1. Arrastra el juego│ ──▶ │ 2. Revisa nombre y │ ──▶ │ 3. ▶ Convertir     │
- │    a la ventana     │     │    peso estimado   │     │    → Juego.ffpfsc  │
- └─────────────────────┘     └────────────────────┘     └────────────────────┘
-```
+1. Abre **Conversor FFPFSC**.
+2. **Arrastra** la carpeta del juego (o su `.exfat` / `.ffpkg`) a la ventana, o usa
+   **Elegir carpeta…** / **Elegir imagen…**.
+3. Revisa el nombre del juego y el **peso estimado**.
+4. Elige el **formato** (`.ffpfsc` o LZ4) y el **modo**:
 
-Abre la app desde el acceso directo, o desde la terminal:
+   | Modo | Cuándo usarlo |
+   |:--|:--|
+   | 🚀 **Máxima velocidad** *(por defecto)* | Casi siempre: comprime casi igual que el máximo, en mucho menos tiempo. |
+   | ⚖️ **Equilibrado** | Un poco más pequeño, a cambio de algo más de tiempo. |
+   | 🗜️ **Máxima compresión** | Cuando cada GB cuenta y no te importa esperar. |
 
-```text
-./abrir.sh "$HOME/Juegos/Mi Juego" otro.exfat     # Linux
-abrir.bat "D:\Juegos\Mi Juego" otro.exfat         # Windows
-```
+5. Pulsa **▶ Convertir**. Verás el avance, la velocidad y el tiempo que falta.
+6. Cuando termine, pulsa **Subir a la PS5** en la fila del juego para enviarlo a la
+   consola, o cópialo tú mismo a la carpeta `homebrew` de la PS5.
 
-📖 Guía completa con opciones y preguntas frecuentes: **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**
+💡 **Rendimiento en la PS5**: actívalo con juegos grandes. Ocupan algo más, pero cargan más
+rápido.
 
----
-
-## 🏗️ Arquitectura
-
-Arquitectura en capas donde **las dependencias solo apuntan hacia abajo** y la
-interfaz nunca habla directamente con MkPFS:
-
-```mermaid
-flowchart LR
-    UI["🖼️ ui<br/><sub>Tkinter</sub>"] --> SVC["⚙️ services<br/><sub>casos de uso</sub>"]
-    SVC --> INFRA["🔌 infrastructure<br/><sub>MkPFS · disco · SO</sub>"]
-    UI --> DOM["📐 domain<br/><sub>modelos · eventos</sub>"]
-    SVC --> DOM
-    INFRA --> DOM
-```
-
-```text
-src/ffpfsc_converter/
-├── config.py          # todas las constantes
-├── errors.py          # errores con mensajes para el usuario
-├── domain/            # modelos y eventos — Python puro
-├── infrastructure/    # adaptador MkPFS, sistema de archivos, escritorio
-├── services/          # descubrir · metadatos · estimar · analizar · convertir
-└── ui/                # vistas, presentadores (textos), tema y widgets propios
-```
-
-Los servicios corren en hilos de fondo y publican **eventos tipados** en una
-cola; la ventana los consume en el hilo de Tkinter. Detalles, diagramas de
-secuencia y decisiones técnicas en **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+📖 Guía completa con todas las opciones: **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)**
 
 ---
 
-## 🧑‍💻 Desarrollo
+## ❓ Preguntas frecuentes
 
-```bash
-./instalar.sh --dev            # + pytest y ruff (Windows: instalar.ps1 -Dev)
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+**¿Se borra o se modifica mi juego original?**
+No. Para comprimir, la app solo lo lee. Nunca borra un juego por su cuenta: solo cuando tú
+lo pides (**Eliminar**, **Comprimir y reemplazar** o la opción de borrar el original de LZ4),
+siempre con confirmación y mostrando la ruta exacta. Al reemplazar, primero comprueba que la
+copia comprimida esté bien.
 
-pytest                         # tests
-ruff check src tests tools     # lint
-python tools/check_standards.py  # ≤ 250 líneas por archivo y docstrings completas
-python -m ffpfsc_converter     # ejecutar desde el código
-```
+**¿Cuánto tarda?**
+Depende del juego y de tu PC: desde unos minutos hasta más de una hora en juegos de cientos
+de GB. La app muestra el tiempo que falta.
 
-El repositorio define **rules** obligatorias en [`.claude/rules/`](.claude/rules/), verificadas
-automáticamente por `pytest`:
+**¿Y si se corta la conexión mientras subo un juego a la PS5?**
+La subida se reintenta sola y, si hace falta, sigue desde donde quedó.
 
-- 📏 **Ningún archivo supera 250 líneas**; si crece, se modulariza.
-- 📝 **Toda función documentada** en español neutro: descripción breve, `Args`, `Returns` y `Raises`.
-- 🧹 **Código limpio** y ✅ **buenas prácticas** con una definición de terminado clara.
+**¿Qué formato elijo?**
+`.ffpfsc` si quieres ahorrar espacio y que funcione con cualquier juego. LZ4 solo si
+quieres probar a que un juego compatible cargue más rápido (experimental).
 
-Además incluye **skills de Claude Code** en [`.claude/skills/`](.claude/skills/) con guías detalladas:
+**¿La app me avisa si hay una versión nueva?**
+Sí: aparece un botón verde en la barra lateral.
 
-| Skill | Define |
-|:------|:-------|
-| [`ffpfsc-architecture`](.claude/skills/ffpfsc-architecture/SKILL.md) | Capas, reglas de importación y dónde va cada cambio |
-| [`ffpfsc-clean-code`](.claude/skills/ffpfsc-clean-code/SKILL.md) | Nombres, funciones, tipos, docstrings y manejo de errores |
-| [`ffpfsc-best-practices`](.claude/skills/ffpfsc-best-practices/SKILL.md) | Hilos y Tkinter, MkPFS, tests, Git y checklist antes de commitear |
-
-Más en **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
+📖 Más preguntas en **[docs/USER_GUIDE.md](docs/USER_GUIDE.md#6-preguntas-frecuentes)**
 
 ---
 
-## 📚 Documentación
+## 📚 Más información
 
-| Documento | Contenido |
-|:----------|:----------|
-| [📦 Instalación](docs/INSTALLATION.md) | Linux y Windows: requisitos, pasos y solución de problemas |
-| [📖 Guía de uso](docs/USER_GUIDE.md) | Formatos aceptados, opciones, preguntas frecuentes |
-| [🎮 Sección PS5](docs/PS5.md) | Emparejamiento, explorar, descargar, subir y reemplazar |
-| [🧪 LZ4](docs/LZ4.md) | **Experimental**: comprimir en LZ4 en la PS5 (exfat2ampr) o en el PC (ampr_emu) |
-| [🏗️ Arquitectura](docs/ARCHITECTURE.md) | Capas, flujo, modelo de hilos, decisiones, cómo extender |
-| [🧑‍💻 Desarrollo](docs/DEVELOPMENT.md) | Entorno, tests, flujo de Git, publicar versiones |
-| [📝 Changelog](CHANGELOG.md) | Historial de cambios |
+| Documento | Para qué |
+|:----------|:---------|
+| [📖 Guía de uso](docs/USER_GUIDE.md) | Todas las opciones de la pestaña Convertir y preguntas frecuentes |
+| [🎮 Pestaña PS5](docs/PS5.md) | Conectar la consola, descargar, subir, borrar y comprimir y reemplazar |
+| [🧪 LZ4 (experimental)](docs/LZ4.md) | Comprimir en LZ4 en el PC o en la PS5 |
+| [📦 Instalación](docs/INSTALLATION.md) | Pasos detallados y solución de problemas |
+| [📝 Novedades](CHANGELOG.md) | Qué cambió en cada versión |
+| [🛠️ Información técnica](docs/TECHNICAL.md) | Para desarrolladores: arquitectura, componentes y cómo contribuir |
 
 ---
 
 ## 🙏 Créditos
 
-- **[MkPFS](https://github.com/PSBrew/MkPFS)** de PSBrew: el motor que genera las imágenes PFS/PFSC.
-- **[zlib-ng](https://github.com/zlib-ng/zlib-ng)**: compresión rápida y compatible con la PS5.
-- **[ps5upload](https://github.com/phantomptr/ps5upload)** de PhantomPtr: el helper de la PS5, su
-  servidor FTP y la especificación del protocolo AVA1 que implementa la vista PS5.
-- **[tkinterdnd2](https://github.com/Eliav2/tkinterdnd2)**: arrastrar y soltar en Tkinter.
+- **[MkPFS](https://github.com/PSBrew/MkPFS)** de PSBrew: el motor que crea los `.ffpfsc`.
+- **[ps5upload](https://github.com/phantomptr/ps5upload)** de PhantomPtr: el payload de la PS5
+  que usa la pestaña PS5.
+- **[ampr_emu](https://github.com/drakmor/ampr_emu)** de drakmor y
+  **[exfat2ampr](https://github.com/ViiNCENZO10/exfat2ampr)** de V-10: el formato LZ4 (AMPR).
+- **[zlib-ng](https://github.com/zlib-ng/zlib-ng)** y **[tkinterdnd2](https://github.com/Eliav2/tkinterdnd2)**.
 
 > [!IMPORTANT]
 > Esta herramienta está pensada para respaldar **juegos de tu propiedad**.
