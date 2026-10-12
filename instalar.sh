@@ -23,6 +23,8 @@ fi
 "$VENV/bin/python" -m pip install -q --upgrade pip
 "$VENV/bin/python" -m pip install -q --upgrade -e "$APP_DIR$EXTRAS"
 chmod +x "$APP_DIR/abrir.sh"
+# Componentes de LZ4 (exfat2ampr y ampr_emu): opcionales; sin internet se avisa y sigue.
+"$VENV/bin/python" "$APP_DIR/tools/fetch_third_party.py" || true
 
 DESKTOP_FILE_CONTENT="[Desktop Entry]
 Type=Application

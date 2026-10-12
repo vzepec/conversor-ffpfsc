@@ -10,6 +10,9 @@ dist/
 .coverage
 htmlcov/
 
+# Archivos de terceros que descarga el instalador (tools/fetch_third_party.py)
+third_party/
+
 # Imágenes de juegos (nunca se versionan)
 *.ffpfsc
 *.ffpkg

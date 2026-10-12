@@ -6,6 +6,7 @@ ajustable, agrégalo en este archivo con un comentario que explique su origen.
 from __future__ import annotations
 
 from ffpfsc_converter.domain.models import CompressionPreset
+from ffpfsc_converter.domain.third_party import ThirdPartyAsset
 
 APP_TITLE = "Conversor FFPFSC (PS5)"
 #: Nombre de la clase de la ventana en Linux; Tk lo publica como ``Conversor-ffpfsc``
@@ -163,3 +164,34 @@ E2A_PAUSED_GAME_CODE = "paused_game"
 #: Sufijo de la carpeta de salida cuando ``<destino>/<TITLE_ID>`` sería el propio original
 #: (juego ya en ``/data/homebrew`` comprimido a la misma unidad): exfat2ampr lo rechazaría.
 LZ4_SEPARATE_NAME_SUFFIX = "-LZ4"
+
+# ------------------------------------------------- archivos de terceros (LZ4)
+#: Carpeta (junto a la app, fuera de Git) donde el instalador deja los archivos de terceros.
+THIRD_PARTY_DIR_NAME = "third_party"
+#: Bloque de lectura al descargar y al calcular el SHA-256.
+THIRD_PARTY_CHUNK_BYTES = 1024 * 1024
+#: Segundos de espera de red de cada descarga.
+THIRD_PARTY_TIMEOUT_SECONDS = 60
+_E2A_RELEASE = "https://github.com/ViiNCENZO10/exfat2ampr/releases/download/v1.45"
+_AMPR_RELEASE = "https://github.com/drakmor/ampr_emu/releases/download/0.4.2.1"
+#: Lo que descarga el instalador (GPL-3.0; cada uno desde su página oficial y con su huella):
+#: exfat2ampr comprime en LZ4 dentro de la PS5; ampr_emu aporta el empaquetador en Python
+#: (LZ4 en el PC) y la biblioteca que el juego convertido carga para leer sus paquetes.
+THIRD_PARTY_ASSETS: tuple[ThirdPartyAsset, ...] = (
+    ThirdPartyAsset(
+        "exfat2ampr 1.45", f"{_E2A_RELEASE}/exfat2ampr.elf",
+        "025a0d8f59f4cccd9a10c891929a658c5cbed0a309aa59d60eb903ffad27bcb8",
+        "exfat2ampr/exfat2ampr.elf"),
+    ThirdPartyAsset(
+        "libSceAmpr.sprx (ampr_emu 0.4.2.1)", f"{_AMPR_RELEASE}/libSceAmpr.sprx",
+        "69e6c4d5e4f5fb83c9e01815db5861c4c75734acbf4595cafa50d4c218116d1a",
+        "ampr_emu/libSceAmpr.sprx"),
+    ThirdPartyAsset(
+        "herramientas de ampr_emu 0.4.2.1", f"{_AMPR_RELEASE}/ampr-emu-0.4.2.1-fix.zip",
+        "9f146f58767f3200a7b619be25d1c32bf3418186e9de4266f81a94d14922d13b",
+        "ampr_emu/python-tools", "ampr-pack-tools-windows-x64/python-tools/"),
+)
+#: Rutas (dentro de ``third_party/``) que usa la app.
+E2A_INSTALLED_ELF = "exfat2ampr/exfat2ampr.elf"
+AMPR_RUNTIME_FILE = "ampr_emu/libSceAmpr.sprx"
+AMPR_TOOLS_DIR = "ampr_emu/python-tools"

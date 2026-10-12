@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ffpfsc_converter.config import E2A_ELF_PATH_KEY
+from ffpfsc_converter.config import E2A_ELF_PATH_KEY, E2A_INSTALLED_ELF
 from ffpfsc_converter.services.lz4_settings import Lz4Settings
 
 
@@ -45,7 +45,7 @@ def test_damaged_tokens_are_ignored(tmp_path: Path) -> None:
 
 def test_elf_path_is_remembered_while_it_exists(tmp_path: Path) -> None:
     """Devuelve el ELF elegido y ``None`` si se borró o nunca se eligió."""
-    settings = Lz4Settings(tmp_path / "settings.json")
+    settings = Lz4Settings(tmp_path / "settings.json", tmp_path / "third_party")
     assert settings.elf_path() is None
     elf = tmp_path / "exfat2ampr.elf"
     elf.write_bytes(b"\x7fELF")
@@ -59,4 +59,18 @@ def test_elf_path_ignores_invalid_value(tmp_path: Path) -> None:
     """Un valor que no es texto no se toma como ruta."""
     path = tmp_path / "settings.json"
     path.write_text(json.dumps({E2A_ELF_PATH_KEY: 3}), encoding="utf-8")
-    assert Lz4Settings(path).elf_path() is None
+    assert Lz4Settings(path, tmp_path / "third_party").elf_path() is None
+
+
+def test_installed_elf_is_used_when_none_was_chosen(tmp_path: Path) -> None:
+    """Sin un ELF elegido usa el que dejó el instalador; el elegido tiene prioridad."""
+    third_party = tmp_path / "third_party"
+    installed = third_party / E2A_INSTALLED_ELF
+    installed.parent.mkdir(parents=True)
+    installed.write_bytes(b"\x7fELF")
+    settings = Lz4Settings(tmp_path / "settings.json", third_party)
+    assert settings.elf_path() == installed
+    chosen = tmp_path / "otro.elf"
+    chosen.write_bytes(b"\x7fELF")
+    settings.save_elf_path(chosen)
+    assert settings.elf_path() == chosen

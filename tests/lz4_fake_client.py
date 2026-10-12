@@ -173,8 +173,9 @@ class FakeClient:
 
 def make_deps(engine: FakeEngine, settings_file: Path, clock: FakeClock) -> Lz4Deps:
     """Crea dependencias falsas: motor en memoria, ajustes temporales y reloj falso."""
+    settings = Lz4Settings(settings_file, settings_file.parent / "third_party")
     return Lz4Deps(client_factory=engine.factory, elf_sender=engine.send_elf,
-                   settings=Lz4Settings(settings_file), sleep=clock.sleep, clock=clock.clock)
+                   settings=settings, sleep=clock.sleep, clock=clock.clock)
 
 
 @dataclass

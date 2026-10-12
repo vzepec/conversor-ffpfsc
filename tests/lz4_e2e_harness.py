@@ -99,7 +99,7 @@ def make_flow(tmp_path: Path, is_engine_up: bool = False, is_paired: bool = Fals
     """
     engine = FakeE2aEngine()
     loader = FakeElfLoader(on_receive=lambda _elf: engine.start())
-    settings = Lz4Settings(tmp_path / "settings.json")
+    settings = Lz4Settings(tmp_path / "settings.json", tmp_path / "third_party")
     elf = tmp_path / "exfat2ampr.elf"
     elf.write_bytes(ELF_BYTES)
     settings.save_elf_path(elf)
